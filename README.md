@@ -1,14 +1,17 @@
-# 🚀 GigChain.io - AI-Powered Contract Generation
+# 🚀 GigChain.io - AI-Powered Web3 Contract Generation
 
-**GigChain.io** es una plataforma que utiliza inteligencia artificial para generar contratos Web3 inteligentes para la economía gig, con soporte para escrow automático en Polygon usando USDC.
+**GigChain.io** es una plataforma completa que utiliza inteligencia artificial para generar contratos Web3 inteligentes para la economía gig, con soporte para escrow automático en Polygon usando USDC. Construido desde cero con FastAPI, React, y deployment en VPS.
 
 ## ✨ Características
 
 - 🤖 **AI Agent Chaining**: Negociación, generación y resolución de disputas con múltiples agents
 - 🔗 **Web3 Integration**: Contratos listos para deploy en Polygon con USDC escrow
+- ⚛️ **React Frontend**: Interfaz moderna con Thirdweb wallet integration
+- 🚀 **FastAPI Backend**: API de alta performance con documentación automática
 - 📊 **Rule-based Fallback**: Sistema híbrido que usa IA para casos complejos y reglas para casos simples
 - 🐳 **Docker Ready**: Deployment containerizado con Docker Compose
-- 🔒 **Production Ready**: Nginx reverse proxy, rate limiting, y configuración de seguridad
+- 🌐 **VPS Deployment**: Setup automatizado para DigitalOcean y otros VPS
+- 🔒 **Production Ready**: Nginx reverse proxy, rate limiting, SSL, y configuración de seguridad
 
 ## 🏗️ Arquitectura
 
