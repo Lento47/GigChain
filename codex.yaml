@@ -1,0 +1,89 @@
+name: gigchain-prompt-setup
+on:
+# Run manually from Codex UI or API
+workflow_dispatch: {}
+
+
+# Enable container caching to speed up subsequent runs
+caching:
+container: true
+
+
+env:
+PROJECT_NAME: GigChain.io
+PROMPT_VERSION: v2025-10-01
+DEFAULT_BRANCH: main
+PROMPT_PATH: PROMPT.md
+README_PROMPT_PATH: README_PROMPT.md
+
+
+# Reference secret names you’ll add in Codex → Secrets
+secrets:
+- name: OPENAI_API_KEY
+- name: THIRDWEB_API_KEY
+- name: STRIPE_SECRET
+
+
+jobs:
+build:
+runs-on: ubuntu-latest
+container:
+image: python:3.12-slim
+
+
+steps:
+- name: Checkout
+run: |
+git config --global user.email "codex-bot@gigchain.io"
+git config --global user.name "codex-bot"
+# The repo is already mounted in Codex workspaces; if not, uncomment:
+# git clone "$GIT_URL" repo && cd repo
+
+
+- name: Install deps (optional)
+run: |
+python -m pip install --no-cache-dir --upgrade pip
+pip install pytest
+
+
+- name: Write PROMPT.md
+run: |
+cat > "$PROMPT_PATH" <<'PROMPT'
+{{PROMPT_MD}}
+PROMPT
+
+
+- name: Write README_PROMPT.md
+run: |
+cat > "$README_PROMPT_PATH" <<'READMEP'
+{{README_PROMPT}}
+READMEP
+
+
+- name: Format check (optional)
+run: |
+printf "PROMPT.md lines: %s\n" "$(wc -l < "$PROMPT_PATH")"
+
+
+- name: Run tests (if repo has pytest)
+run: |
+if [ -f requirements.txt ]; then pip install -r requirements.txt || true; fi
+if [ -d tests ]; then pytest -q || true; fi
+
+
+- name: Create branch + commit
+run: |
+ts="$(date +%Y%m%d-%H%M%S)"
+branch="feature/prompt-setup-$PROMPT_VERSION-$ts"
+git checkout -b "$branch" || git switch -c "$branch"
+git add "$PROMPT_PATH" "$README_PROMPT_PATH"
+git commit -m "chore(prompt): add $PROMPT_PATH + README ($PROMPT_VERSION)"
+# push requires a token; if Codex provides GIT_TOKEN, uncomment:
+# git push -u origin "$branch"
+echo "\nCreated branch: $branch"
+
+
+- name: Output artifact info
+run: |
+echo "PROMPT at: $PROMPT_PATH"
+echo "README at: $README_PROMPT_PATH"
