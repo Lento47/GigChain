@@ -145,9 +145,15 @@ def _determine_total_amount(amounts: ParsedAmounts, role: Optional[str]) -> Opti
 
 
 def _derive_risks(total_days: int, amounts: ParsedAmounts) -> List[str]:
-    risks: List[str] = [
-        "Dependencia de verificación on-chain (Polygon) para liberar fondos",
-    ]
+    risks: List[str] = []
+    
+    # Only add blockchain risk for contracts with actual amounts or complex scenarios
+    has_amounts = amounts.desired is not None or amounts.offer is not None or amounts.other
+    
+    if has_amounts:
+        # Add blockchain risk for any contract with financial terms
+        risks.append("Dependencia de verificación on-chain (Polygon) para liberar fondos")
+    
     if total_days <= 7:
         risks.append("Plazo ajustado: aumenta probabilidad de retrasos o entregas parciales")
     if amounts.desired is not None and amounts.offer is not None:
@@ -228,3 +234,56 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+# Agent integration functions
+def parsed_to_dict(parsed_amounts: ParsedAmounts, role: Optional[str], total_amount: float, total_days: int, risks: List[str]) -> Dict[str, Any]:
+    """Convert parsed contract data to dictionary format for agents."""
+    return {
+        "amounts": {
+            "offer": parsed_amounts.offer,
+            "desired": parsed_amounts.desired,
+            "other": parsed_amounts.other,
+            "total": total_amount
+        },
+        "role": role,
+        "timeline": total_days,
+        "risks": risks
+    }
+
+
+def parse_input(text: str) -> ParsedAmounts:
+    """Parse input text to extract amounts and return ParsedAmounts."""
+    amounts_raw = _extract_amounts(text)
+    return _classify_amounts(text, amounts_raw)
+
+
+def full_flow(text: str) -> Dict[str, Any]:
+    """Full AI-powered flow with agent chaining for complex negotiations."""
+    from agents import chain_agents, AgentInput
+    
+    parsed = parse_input(text)
+    role = _detect_role(text)
+    total_amount = _determine_total_amount(parsed, role) or 5000.0
+    total_days = _extract_days(text) or 14
+    total_days = max(total_days, 5)
+    risks = _derive_risks(total_days, parsed)
+    
+    # Adjust complexity logic: only trigger AI for actual negotiations or high-risk scenarios
+    has_negotiation = parsed.desired is not None and parsed.offer is not None
+    complexity = "low" if not risks and not has_negotiation else "medium" if len(risks) < 2 else "high"
+    input_data = AgentInput(
+        parsed=parsed_to_dict(parsed, role, total_amount, total_days, risks),
+        role=role or "cliente", 
+        complexity=complexity
+    )
+    
+    if complexity == "low":
+        return generate_contract(text)  # Rule-based fallback
+    else:
+        ai_output = chain_agents(input_data)
+        return {
+            "contract_id": f"gig_{_dt.datetime.now().isoformat()}",
+            "json": ai_output,
+            "escrow_ready": True  # Para Thirdweb deploy
+        }
