@@ -8,6 +8,10 @@ import logging
 import os
 from datetime import datetime
 from typing import Dict, Any, Optional
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Import existing modules
 from contract_ai import full_flow, generate_contract

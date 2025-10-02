@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ThirdwebProvider, ConnectWallet, useContract, useContractWrite } from '@thirdweb-dev/react';
+import { ThirdwebProvider, ConnectButton, useContract, useContractWrite } from '@thirdweb-dev/react';
+import { Polygon } from '@thirdweb-dev/chains';
 import axios from 'axios';
 import { Wallet, FileText, Zap, Shield } from 'lucide-react';
 import './App.css';
@@ -210,7 +211,7 @@ function ContractDisplay({ contract }) {
 function App() {
   return (
     <ThirdwebProvider 
-      activeChain="polygon"
+      activeChain={Polygon}
       clientId={import.meta.env.VITE_THIRDWEB_CLIENT_ID}
     >
       <div className="app">
@@ -224,10 +225,9 @@ function App() {
               AI-Powered Web3 Contract Generation
             </div>
           </div>
-          <ConnectWallet 
+          <ConnectButton 
             theme="dark"
             modalTitle="Connect to GigChain"
-            modalTitleIcon=""
           />
         </header>
 
