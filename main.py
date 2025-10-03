@@ -1,6 +1,6 @@
 """GigChain.io FastAPI Backend - Production-ready API server."""
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
@@ -18,9 +18,9 @@ load_dotenv()
 
 # Import existing modules
 from contract_ai import full_flow, generate_contract
-from agents import chain_agents, AgentInput
+from agents import chain_agents, AgentInput, get_agent_status
 from security.template_security import validate_template_security, SecurityValidationResult
-from chat_ai import chat_manager, get_chat_response
+from chat_enhanced import chat_manager
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -412,16 +412,7 @@ async def validate_wallet(request: WalletValidationRequest):
 @app.get("/api/agents/status")
 async def agents_status():
     """Check AI agent availability and configuration."""
-    return {
-        "openai_configured": bool(os.getenv('OPENAI_API_KEY')),
-        "agents_available": [
-            "NegotiationAgent",
-            "ContractGeneratorAgent", 
-            "DisputeResolverAgent"
-        ],
-        "model": "gpt-4o-mini",
-        "timestamp": datetime.now().isoformat()
-    }
+    return get_agent_status()
 
 # Template security endpoints
 @app.post("/api/templates/validate")
@@ -560,7 +551,7 @@ async def template_security_info():
 async def send_chat_message(request: ChatMessage):
     """
     Envía un mensaje al chat con IA y obtiene respuesta.
-    Soporta múltiples tipos de agentes especializados.
+    Soporta múltiples tipos de agentes especializados con persistencia.
     """
     try:
         logger.info(f"Processing chat message from user: {request.user_id or 'anonymous'}")
@@ -568,8 +559,15 @@ async def send_chat_message(request: ChatMessage):
         # Generar o usar session_id existente
         session_id = request.session_id or str(uuid.uuid4())
         
-        # Obtener respuesta del chat
-        response_data = get_chat_response(
+        # Si no existe la sesión, crearla
+        if not chat_manager.db.get_session(session_id):
+            chat_manager.create_session(
+                user_id=request.user_id,
+                agent_type=request.context.get("agent_type", "contract") if request.context else "contract"
+            )
+        
+        # Obtener respuesta del chat mejorado
+        response_data = await chat_manager.process_message(
             message=request.message,
             session_id=session_id,
             user_id=request.user_id,
@@ -602,7 +600,7 @@ async def send_chat_message(request: ChatMessage):
 @app.post("/api/chat/session")
 async def create_chat_session(user_id: Optional[str] = None, agent_type: str = "contract"):
     """
-    Crea una nueva sesión de chat.
+    Crea una nueva sesión de chat con persistencia.
     """
     try:
         session_id = chat_manager.create_session(user_id, agent_type)
@@ -611,7 +609,8 @@ async def create_chat_session(user_id: Optional[str] = None, agent_type: str = "
             "session_id": session_id,
             "agent_type": agent_type,
             "created_at": datetime.now().isoformat(),
-            "message": "Sesión de chat creada exitosamente"
+            "message": "Sesión de chat creada exitosamente",
+            "available_agents": chat_manager.get_available_agents()
         }
         
     except Exception as e:
@@ -625,18 +624,18 @@ async def create_chat_session(user_id: Optional[str] = None, agent_type: str = "
         )
 
 @app.get("/api/chat/session/{session_id}/history")
-async def get_chat_history(session_id: str):
+async def get_chat_history(session_id: str, limit: int = 50):
     """
-    Obtiene el historial de una sesión de chat.
+    Obtiene el historial de una sesión de chat con persistencia.
     """
     try:
-        history = chat_manager.get_session_history(session_id)
+        history = chat_manager.get_session_history(session_id, limit)
         
-        if history is None:
+        if not history:
             return JSONResponse(
                 status_code=404,
                 content={
-                    "error": "Sesión no encontrada",
+                    "error": "Sesión no encontrada o sin historial",
                     "timestamp": datetime.now().isoformat()
                 }
             )
@@ -716,6 +715,40 @@ async def get_available_agents():
                 "timestamp": datetime.now().isoformat()
             }
         )
+
+# WebSocket endpoint para chat en tiempo real
+@app.websocket("/ws/chat/{session_id}")
+async def websocket_chat(websocket: WebSocket, session_id: str):
+    """
+    WebSocket para chat en tiempo real con persistencia.
+    """
+    connection_id = str(uuid.uuid4())
+    
+    try:
+        await chat_manager.websocket_manager.connect(websocket, connection_id, session_id)
+        
+        while True:
+            # Recibir mensaje del cliente
+            data = await websocket.receive_text()
+            message_data = json.loads(data)
+            
+            # Procesar mensaje
+            response = await chat_manager.process_message(
+                message=message_data.get("message", ""),
+                session_id=session_id,
+                user_id=message_data.get("user_id"),
+                context=message_data.get("context", {})
+            )
+            
+            # Enviar respuesta (ya se envía automáticamente en process_message)
+            logger.info(f"WebSocket message processed for session {session_id}")
+            
+    except WebSocketDisconnect:
+        logger.info(f"WebSocket disconnected: {connection_id}")
+    except Exception as e:
+        logger.error(f"WebSocket error: {str(e)}")
+    finally:
+        chat_manager.websocket_manager.disconnect(connection_id, session_id)
 
 # Error handlers
 @app.exception_handler(404)

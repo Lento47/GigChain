@@ -15,13 +15,26 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true
+    sourcemap: true,
+    rollupOptions: {
+      external: [],
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          thirdweb: ['@thirdweb-dev/react', '@thirdweb-dev/sdk']
+        }
+      }
+    }
   },
   optimizeDeps: {
     include: [
       '@thirdweb-dev/react',
       '@thirdweb-dev/sdk',
-      '@thirdweb-dev/chains'
+      '@thirdweb-dev/chains',
+      'buffer',
+      'process',
+      'stream-browserify',
+      'util'
     ],
     exclude: [
       'thirdweb-dev-wallets-evm-connectors-phantom'
@@ -29,5 +42,20 @@ export default defineConfig({
   },
   define: {
     global: 'globalThis',
+    'process.env': {}
+  },
+  resolve: {
+    alias: {
+      buffer: 'buffer',
+      process: 'process/browser',
+      stream: 'stream-browserify',
+      util: 'util',
+      crypto: 'crypto-browserify',
+      os: 'os-browserify/browser',
+      path: 'path-browserify',
+      fs: false,
+      net: false,
+      tls: false
+    }
   }
 })

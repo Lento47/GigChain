@@ -9,6 +9,15 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Polyfills for Node.js modules in browser
+      if (typeof global === 'undefined') {
+        var global = globalThis;
+      }
+      if (typeof process === 'undefined') {
+        var process = { env: {} };
+      }
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

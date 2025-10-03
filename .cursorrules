@@ -83,5 +83,40 @@ python test_api.py
 curl http://localhost:5000/health
 ```
 
+## 🔍 **VERIFICACIÓN OBLIGATORIA DE AMBIENTE**
+
+### **ANTES DE CUALQUIER CAMBIO - VERIFICAR SIEMPRE:**
+1. **Leer archivo .env** - Verificar variables de entorno configuradas
+2. **Verificar estado del servidor** - `curl http://localhost:5000/health`
+3. **Comprobar dependencias** - `pip list` y `npm list` (si aplica)
+4. **Revisar logs** - Verificar que no hay errores críticos
+5. **Confirmar configuración** - Preguntar al usuario si necesita agregar algo al ambiente
+
+### **NO MODIFICAR .env SIN PERMISO:**
+- **PROHIBIDO**: Modificar, crear o eliminar archivo .env
+- **PERMITIDO**: Solo leer .env para verificar configuración
+- **RAZÓN**: Usuario ya configuró todo el ambiente
+- **CUANDO**: Preguntar antes de sugerir cambios de configuración
+
+### **COMANDOS DE VERIFICACIÓN:**
+```bash
+# Verificar ambiente (SIEMPRE ANTES DE TRABAJAR)
+cat .env                           # Verificar variables de entorno
+curl http://localhost:5000/health  # Verificar estado del servidor
+pip list | grep -E "(fastapi|openai|uvicorn)"  # Verificar dependencias Python
+cd frontend && npm list | grep -E "(react|vite)"  # Verificar dependencias Frontend
+
+# Frontend (en terminal separada)
+cd frontend && npm run dev
+
+# Tests adicionales
+python test_agents_enhanced.py
+curl http://localhost:5000/api/agents/status
+```
+
+### **PROTOCOLO DE VERIFICACIÓN:**
+- **ANTES DE CUALQUIER DESARROLLO**: Leer .env, verificar servidor, revisar dependencias, preguntar al usuario
+- **SI ALGO FALLA**: NO asumir, NO modificar .env, NO instalar sin confirmación, SÍ reportar estado actual
+
 ---
 *Configuración para desarrollo local - Sin Docker hasta finalizar proyecto*

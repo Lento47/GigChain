@@ -1,0 +1,3543 @@
+import React, { useState, useEffect } from 'react';
+import { ThirdwebProvider, ConnectWallet, useContract, useContractWrite, useAddress, useDisconnect } from '@thirdweb-dev/react';
+import { Polygon, Mumbai } from '@thirdweb-dev/chains';
+import axios from 'axios';
+import { Wallet, FileText, Zap, Shield, User, Globe, MapPin, Star, Code, Camera, Music, Linkedin, Github, Menu, Home, Settings, BarChart3, MessageSquare, Eye, Send, Search } from 'lucide-react';
+import WalletConnection from './components/WalletConnection';
+import ContractStatus from './components/ContractStatus';
+import ThirdwebStatus from './components/ThirdwebStatus';
+import StatsWidget, { RealTimeStats } from './components/StatsWidget';
+import ChartWidget, { RevenueChart, ContractsChart } from './components/ChartWidget';
+import NotificationCenter, { NotificationProvider, useNotifications } from './components/NotificationCenter';
+import { useWallet } from './hooks/useWallet';
+import './App.css';
+
+// API Configuration
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+// Dashboard Metrics Hook
+const useDashboardMetrics = () => {
+  const [metrics, setMetrics] = useState({
+    activeContracts: 0,
+    totalEarnings: 0,
+    averageRating: 0,
+    completedProjects: 0,
+    recentActivity: []
+  });
+
+  const [contracts, setContracts] = useState([]);
+
+  // Load contracts from localStorage or API
+  React.useEffect(() => {
+    const loadContracts = () => {
+      try {
+        const savedContracts = localStorage.getItem('gigchain-contracts');
+        const contractsData = savedContracts ? JSON.parse(savedContracts) : [];
+        setContracts(contractsData);
+        
+        // Calculate metrics based on contracts
+        const activeContracts = contractsData.filter(c => c.status === 'active' || c.status === 'in-progress').length;
+        const completedProjects = contractsData.filter(c => c.status === 'completed').length;
+        
+        // Calculate total earnings from completed contracts
+        const totalEarnings = contractsData
+          .filter(c => c.status === 'completed' && c.paidAmount)
+          .reduce((sum, c) => sum + (c.paidAmount || 0), 0);
+        
+        // Calculate average rating
+        const ratings = contractsData
+          .filter(c => c.rating && c.rating > 0)
+          .map(c => c.rating);
+        const averageRating = ratings.length > 0 
+          ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length 
+          : 0;
+        
+        // Generate recent activity
+        const recentActivity = contractsData
+          .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))
+          .slice(0, 3)
+          .map(contract => {
+            const timeDiff = new Date() - new Date(contract.updatedAt || contract.createdAt);
+            const hours = Math.floor(timeDiff / (1000 * 60 * 60));
+            const days = Math.floor(hours / 24);
+            
+            let timeAgo;
+            if (hours < 1) timeAgo = 'Hace menos de 1 hora';
+            else if (hours < 24) timeAgo = `Hace ${hours} horas`;
+            else timeAgo = `Hace ${days} días`;
+            
+            return {
+              id: contract.id,
+              type: contract.status === 'completed' ? 'payment' : 
+                    contract.status === 'active' ? 'contract' : 'message',
+              title: contract.status === 'completed' ? 'Pago recibido' :
+                     contract.status === 'active' ? 'Nuevo contrato generado' :
+                     'Mensaje del cliente',
+              description: `${contract.title} - $${contract.amount || contract.paidAmount || 0}`,
+              timeAgo: timeAgo
+            };
+          });
+        
+        setMetrics({
+          activeContracts,
+          totalEarnings,
+          averageRating: Math.round(averageRating * 10) / 10,
+          completedProjects,
+          recentActivity
+        });
+      } catch (error) {
+        console.error('Error loading contracts:', error);
+      }
+    };
+
+    loadContracts();
+    
+    // Listen for contract updates
+    const handleStorageChange = () => {
+      loadContracts();
+    };
+    
+    // Listen for new contract events from job applications
+    const handleContractCreated = (event) => {
+      const newContract = event.detail;
+      setContracts(prev => [newContract, ...prev]);
+      loadContracts(); // Recalculate metrics
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('contractCreated', handleContractCreated);
+    
+    // Also check periodically for updates
+    const interval = setInterval(loadContracts, 30000); // Every 30 seconds
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('contractCreated', handleContractCreated);
+      clearInterval(interval);
+    };
+  }, []);
+
+  const addContract = (contract) => {
+    const newContract = {
+      ...contract,
+      id: Date.now().toString(),
+      status: 'active',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    const updatedContracts = [...contracts, newContract];
+    setContracts(updatedContracts);
+    localStorage.setItem('gigchain-contracts', JSON.stringify(updatedContracts));
+  };
+
+  const updateContractStatus = (contractId, status, additionalData = {}) => {
+    const updatedContracts = contracts.map(contract => 
+      contract.id === contractId 
+        ? { ...contract, status, updatedAt: new Date().toISOString(), ...additionalData }
+        : contract
+    );
+    
+    setContracts(updatedContracts);
+    localStorage.setItem('gigchain-contracts', JSON.stringify(updatedContracts));
+  };
+
+  return {
+    metrics,
+    contracts,
+    addContract,
+    updateContractStatus
+  };
+};
+
+// Wallet validation utility
+const isValidEthereumAddress = (address) => {
+  if (!address) return false;
+  // Basic Ethereum address validation (42 characters, starts with 0x)
+  return /^0x[a-fA-F0-9]{40}$/.test(address);
+};
+
+const isValidContractAddress = (address) => {
+  if (!address) return false;
+  // Same validation as Ethereum address for now
+  return isValidEthereumAddress(address);
+};
+
+// Utility to get wallet info (for demonstration)
+const getWalletInfo = async (address) => {
+  if (!isValidEthereumAddress(address)) {
+    return { valid: false, error: 'Invalid address format' };
+  }
+  
+  // In a real implementation, you would query the blockchain
+  // For now, we'll just return basic validation
+  return {
+    valid: true,
+    address: address,
+    type: 'Ethereum-compatible',
+    network: 'Polygon/Mumbai'
+  };
+};
+
+// Freelancer Profile Component
+function FreelancerProfile({ formData, handleInputChange, walletValidation }) {
+  return (
+    <div className="profile-section freelancer-profile">
+      <div className="profile-header">
+        <User size={24} />
+        <h3>Perfil del Freelancer</h3>
+        <p>Completa tu perfil profesional para generar más confianza</p>
+      </div>
+
+      <div className="profile-grid">
+        {/* Basic Info */}
+        <div className="profile-group">
+          <h4>Información Básica</h4>
+          <div className="form-row">
+            <div className="field-group">
+              <label htmlFor="freelancerName">Nombre Completo *</label>
+              <input
+                type="text"
+                id="freelancerName"
+                name="freelancerName"
+                value={formData.freelancerName}
+                onChange={handleInputChange}
+                placeholder="Juan Pérez"
+                required
+              />
+            </div>
+            <div className="field-group">
+              <label htmlFor="freelancerTitle">Título Profesional *</label>
+              <input
+                type="text"
+                id="freelancerTitle"
+                name="freelancerTitle"
+                value={formData.freelancerTitle}
+                onChange={handleInputChange}
+                placeholder="Desarrollador Full Stack"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="field-group">
+              <label htmlFor="freelancerLocation">
+                <MapPin size={16} />
+                Ubicación
+              </label>
+              <input
+                type="text"
+                id="freelancerLocation"
+                name="freelancerLocation"
+                value={formData.freelancerLocation}
+                onChange={handleInputChange}
+                placeholder="Madrid, España"
+              />
+            </div>
+            <div className="field-group">
+              <label htmlFor="freelancerRate">
+                <Star size={16} />
+                Tarifa por Hora (USD)
+              </label>
+              <input
+                type="number"
+                id="freelancerRate"
+                name="freelancerRate"
+                value={formData.freelancerRate}
+                onChange={handleInputChange}
+                placeholder="50"
+                min="0"
+                step="0.01"
+              />
+            </div>
+          </div>
+
+          <div className="field-group">
+            <label htmlFor="freelancerBio">Biografía Profesional *</label>
+            <textarea
+              id="freelancerBio"
+              name="freelancerBio"
+              value={formData.freelancerBio}
+              onChange={handleInputChange}
+              placeholder="Desarrollador con 5+ años de experiencia en React, Node.js y blockchain. Especializado en aplicaciones Web3 y contratos inteligentes."
+              rows={3}
+              required
+            />
+          </div>
+        </div>
+
+        {/* Skills & Experience */}
+        <div className="profile-group">
+          <h4>Habilidades y Experiencia</h4>
+          <div className="field-group">
+            <label htmlFor="freelancerSkills">Habilidades Técnicas *</label>
+            <input
+              type="text"
+              id="freelancerSkills"
+              name="freelancerSkills"
+              value={formData.freelancerSkills}
+              onChange={handleInputChange}
+              placeholder="React, Node.js, Solidity, Web3, TypeScript, PostgreSQL"
+              required
+            />
+          </div>
+          <div className="field-group">
+            <label htmlFor="freelancerExperience">Años de Experiencia *</label>
+            <select
+              id="freelancerExperience"
+              name="freelancerExperience"
+              value={formData.freelancerExperience}
+              onChange={handleInputChange}
+              required
+            >
+              <option value="">Selecciona experiencia</option>
+              <option value="0-1">0-1 años</option>
+              <option value="1-3">1-3 años</option>
+              <option value="3-5">3-5 años</option>
+              <option value="5-10">5-10 años</option>
+              <option value="10+">10+ años</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Social Links */}
+        <div className="profile-group">
+          <h4>Redes Sociales y Portfolio</h4>
+          <div className="social-links-grid">
+            <div className="field-group">
+              <label htmlFor="freelancerLinkedIn">
+                <Linkedin size={16} />
+                LinkedIn
+              </label>
+              <input
+                type="url"
+                id="freelancerLinkedIn"
+                name="freelancerLinkedIn"
+                value={formData.freelancerLinkedIn}
+                onChange={handleInputChange}
+                placeholder="https://linkedin.com/in/tu-perfil"
+              />
+            </div>
+            <div className="field-group">
+              <label htmlFor="freelancerGithub">
+                <Github size={16} />
+                GitHub
+              </label>
+              <input
+                type="url"
+                id="freelancerGithub"
+                name="freelancerGithub"
+                value={formData.freelancerGithub}
+                onChange={handleInputChange}
+                placeholder="https://github.com/tu-usuario"
+              />
+            </div>
+            <div className="field-group">
+              <label htmlFor="freelancerPortfolio">
+                <Globe size={16} />
+                Portfolio/Website
+              </label>
+              <input
+                type="url"
+                id="freelancerPortfolio"
+                name="freelancerPortfolio"
+                value={formData.freelancerPortfolio}
+                onChange={handleInputChange}
+                placeholder="https://tu-portfolio.com"
+              />
+            </div>
+            <div className="field-group">
+              <label htmlFor="freelancerX">X (Twitter)</label>
+              <input
+                type="url"
+                id="freelancerX"
+                name="freelancerX"
+                value={formData.freelancerX}
+                onChange={handleInputChange}
+                placeholder="https://x.com/tu-usuario"
+              />
+            </div>
+            <div className="field-group">
+              <label htmlFor="freelancerInstagram">
+                <Camera size={16} />
+                Instagram
+              </label>
+              <input
+                type="url"
+                id="freelancerInstagram"
+                name="freelancerInstagram"
+                value={formData.freelancerInstagram}
+                onChange={handleInputChange}
+                placeholder="https://instagram.com/tu-usuario"
+              />
+            </div>
+            <div className="field-group">
+              <label htmlFor="freelancerTikTok">
+                <Music size={16} />
+                TikTok
+              </label>
+              <input
+                type="url"
+                id="freelancerTikTok"
+                name="freelancerTikTok"
+                value={formData.freelancerTikTok}
+                onChange={handleInputChange}
+                placeholder="https://tiktok.com/@tu-usuario"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Wallet */}
+        <div className="profile-group">
+          <h4>Wallet de Pago</h4>
+          <div className="field-group">
+            <label htmlFor="freelancerWallet">
+              <Wallet size={16} />
+              Dirección de Wallet
+              {walletValidation.freelancer.loading && <span className="loading-indicator">Validando...</span>}
+              {walletValidation.freelancer.valid && <span className="valid-indicator">✓ Válida</span>}
+              {walletValidation.freelancer.error && <span className="error-indicator">✗ {walletValidation.freelancer.error}</span>}
+            </label>
+            <input
+              type="text"
+              id="freelancerWallet"
+              name="freelancerWallet"
+              value={formData.freelancerWallet}
+              onChange={handleInputChange}
+              placeholder="0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6"
+              className={walletValidation.freelancer.valid ? 'valid' : walletValidation.freelancer.error ? 'invalid' : ''}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Client Profile Component
+function ClientProfile({ formData, handleInputChange, walletValidation }) {
+  return (
+    <div className="profile-section client-profile">
+      <div className="profile-header">
+        <User size={24} />
+        <h3>Perfil del Cliente</h3>
+        <p>Información sobre tu empresa o proyecto</p>
+      </div>
+
+      <div className="profile-grid">
+        <div className="profile-group">
+          <h4>Información de la Empresa</h4>
+          <div className="form-row">
+            <div className="field-group">
+              <label htmlFor="clientName">Nombre del Contacto *</label>
+              <input
+                type="text"
+                id="clientName"
+                name="clientName"
+                value={formData.clientName}
+                onChange={handleInputChange}
+                placeholder="María García"
+                required
+              />
+            </div>
+            <div className="field-group">
+              <label htmlFor="clientCompany">Empresa/Proyecto *</label>
+              <input
+                type="text"
+                id="clientCompany"
+                name="clientCompany"
+                value={formData.clientCompany}
+                onChange={handleInputChange}
+                placeholder="TechStartup Inc."
+                required
+              />
+            </div>
+          </div>
+
+          <div className="field-group">
+            <label htmlFor="clientLocation">
+              <MapPin size={16} />
+              Ubicación
+            </label>
+            <input
+              type="text"
+              id="clientLocation"
+              name="clientLocation"
+              value={formData.clientLocation}
+              onChange={handleInputChange}
+              placeholder="Barcelona, España"
+            />
+          </div>
+
+          <div className="field-group">
+            <label htmlFor="clientBio">Descripción del Proyecto/Empresa *</label>
+            <textarea
+              id="clientBio"
+              name="clientBio"
+              value={formData.clientBio}
+              onChange={handleInputChange}
+              placeholder="Startup tecnológica enfocada en soluciones blockchain para el sector financiero. Buscamos desarrolladores para nuestro próximo proyecto de DeFi."
+              rows={3}
+              required
+            />
+          </div>
+        </div>
+
+        <div className="profile-group">
+          <h4>Wallet de Pago</h4>
+          <div className="field-group">
+            <label htmlFor="clientWallet">
+              <Wallet size={16} />
+              Dirección de Wallet
+              {walletValidation.client.loading && <span className="loading-indicator">Validando...</span>}
+              {walletValidation.client.valid && <span className="valid-indicator">✓ Válida</span>}
+              {walletValidation.client.error && <span className="error-indicator">✗ {walletValidation.client.error}</span>}
+            </label>
+            <input
+              type="text"
+              id="clientWallet"
+              name="clientWallet"
+              value={formData.clientWallet}
+              onChange={handleInputChange}
+              placeholder="0x8ba1f109551bD432803012645Hac136c22C131e"
+              className={walletValidation.client.valid ? 'valid' : walletValidation.client.error ? 'invalid' : ''}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ContractForm({ onContractCreated, selectedTemplate }) {
+  const [currentStep, setCurrentStep] = useState(1);
+  const [formData, setFormData] = useState({
+    description: '',
+    offeredAmount: '',
+    requestedAmount: '',
+    days: '',
+    role: 'freelancer', // 'freelancer' or 'client'
+    freelancerWallet: '',
+    clientWallet: '',
+    // Freelancer Profile
+    freelancerName: '',
+    freelancerTitle: '',
+    freelancerBio: '',
+    freelancerSkills: '',
+    freelancerExperience: '',
+    freelancerLocation: '',
+    freelancerRate: '',
+    // Social Links
+    freelancerX: '',
+    freelancerFacebook: '',
+    freelancerInstagram: '',
+    freelancerTikTok: '',
+    freelancerLinkedIn: '',
+    freelancerGithub: '',
+    freelancerPortfolio: '',
+    // Client Profile
+    clientName: '',
+    clientCompany: '',
+    clientBio: '',
+    clientLocation: ''
+  });
+
+  // Apply template data when selected
+  React.useEffect(() => {
+    if (selectedTemplate) {
+      setFormData(prev => ({
+        ...prev,
+        description: selectedTemplate.description || prev.description,
+        offeredAmount: selectedTemplate.pricing?.amount?.toString() || prev.offeredAmount,
+        requestedAmount: selectedTemplate.pricing?.amount?.toString() || prev.requestedAmount,
+        days: selectedTemplate.timeline?.duration?.toString() || prev.days,
+        freelancerSkills: selectedTemplate.skills?.join(', ') || prev.freelancerSkills
+      }));
+    }
+  }, [selectedTemplate]);
+  const [contract, setContract] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [walletValidation, setWalletValidation] = useState({
+    freelancer: { valid: false, loading: false, error: null, address: null },
+    client: { valid: false, loading: false, error: null, address: null }
+  });
+
+  // Handle input changes
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    // Auto-validate wallet addresses
+    if (name === 'freelancerWallet' || name === 'clientWallet') {
+      validateWallet(name, value);
+    }
+  };
+
+  // Validate wallet address
+  const validateWallet = async (walletType, address) => {
+    if (!address.trim()) {
+      setWalletValidation(prev => ({
+        ...prev,
+        [walletType]: { valid: false, loading: false, error: null, address: null }
+      }));
+      return;
+    }
+
+    // Basic format validation
+    if (!isValidEthereumAddress(address)) {
+      setWalletValidation(prev => ({
+        ...prev,
+        [walletType]: { 
+          valid: false, 
+          loading: false, 
+          error: 'Formato de dirección inválido', 
+          address: null 
+        }
+      }));
+      return;
+    }
+
+    // Set loading state
+    setWalletValidation(prev => ({
+      ...prev,
+      [walletType]: { valid: false, loading: true, error: null, address: address }
+    }));
+
+    try {
+      // Call backend validation
+      const response = await axios.post(`${API_BASE_URL}/api/validate_wallet`, {
+        address: address,
+        network: 'polygon'
+      });
+
+      setWalletValidation(prev => ({
+        ...prev,
+        [walletType]: { 
+          valid: response.data.valid, 
+          loading: false, 
+          error: response.data.error, 
+          address: address 
+        }
+      }));
+    } catch (err) {
+      setWalletValidation(prev => ({
+        ...prev,
+        [walletType]: { 
+          valid: false, 
+          loading: false, 
+          error: 'Error validando wallet', 
+          address: address 
+        }
+      }));
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Validate required fields
+    if (!formData.description.trim()) {
+      setError('La descripción del proyecto es requerida');
+      return;
+    }
+
+    // Validate wallets
+    if (!walletValidation.freelancer.valid && formData.freelancerWallet) {
+      setError('La wallet del freelancer no es válida');
+      return;
+    }
+
+    if (!walletValidation.client.valid && formData.clientWallet) {
+      setError('La wallet del cliente no es válida');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Use the new structured endpoint
+      const response = await axios.post(`${API_BASE_URL}/api/structured_contract`, {
+        description: formData.description,
+        offeredAmount: formData.offeredAmount ? parseFloat(formData.offeredAmount) : null,
+        requestedAmount: formData.requestedAmount ? parseFloat(formData.requestedAmount) : null,
+        days: formData.days ? parseInt(formData.days) : null,
+        role: formData.role,
+        freelancerWallet: formData.freelancerWallet || null,
+        clientWallet: formData.clientWallet || null
+      });
+      
+      setContract(response.data);
+      
+      // Add contract to tracking system
+      if (onContractCreated) {
+        onContractCreated({
+          title: formData.description,
+          amount: parseFloat(formData.offeredAmount || formData.requestedAmount || 0),
+          status: 'active',
+          contractId: response.data.contract_id,
+          role: formData.role
+        });
+      }
+    } catch (err) {
+      console.error('API error:', err);
+      setError(err.response?.data?.detail || 'Error generating contract');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+  const steps = [
+    { id: 1, title: 'Rol', description: 'Selecciona tu rol' },
+    { id: 2, title: 'Perfil', description: 'Completa tu perfil' },
+    { id: 3, title: 'Proyecto', description: 'Detalles del proyecto' },
+    { id: 4, title: 'Revisar', description: 'Revisa y genera' }
+  ];
+
+  const nextStep = () => {
+    if (currentStep < 4) setCurrentStep(currentStep + 1);
+  };
+
+  const prevStep = () => {
+    if (currentStep > 1) setCurrentStep(currentStep - 1);
+  };
+
+  const canProceed = () => {
+    switch (currentStep) {
+      case 1: return formData.role;
+      case 2: return formData.role === 'freelancer' ? 
+        formData.freelancerName && formData.freelancerTitle && formData.freelancerBio :
+        formData.clientName && formData.clientCompany && formData.clientBio;
+      case 3: return formData.description;
+      case 4: return true;
+      default: return false;
+    }
+  };
+
+  return (
+    <div className="contract-form">
+      {/* Step Progress */}
+      <div className="step-progress">
+        {steps.map((step, index) => (
+          <div key={step.id} className={`step ${currentStep >= step.id ? 'active' : ''} ${currentStep > step.id ? 'completed' : ''}`}>
+            <div className="step-circle">
+              {currentStep > step.id ? <Zap size={16} /> : step.id}
+            </div>
+            <div className="step-content">
+              <div className="step-title">{step.title}</div>
+              <div className="step-description">{step.description}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <form onSubmit={handleSubmit}>
+        <div className="form-header">
+          <h3>
+            <FileText size={20} />
+            Crea tu contrato de gig
+          </h3>
+          <p>Paso {currentStep} de 4: {steps[currentStep - 1].title}</p>
+        </div>
+
+        <div className="form-fields">
+          {/* Step 1: Role Selection */}
+          {currentStep === 1 && (
+            <div className="step-content">
+          <div className="field-group">
+            <label>¿Cuál es tu rol?</label>
+            <div className="role-selector">
+              <label className="role-option">
+                <input
+                  type="radio"
+                  name="role"
+                  value="freelancer"
+                  checked={formData.role === 'freelancer'}
+                  onChange={handleInputChange}
+                />
+                <span>Freelancer (ofrezco servicios)</span>
+              </label>
+              <label className="role-option">
+                <input
+                  type="radio"
+                  name="role"
+                  value="client"
+                  checked={formData.role === 'client'}
+                  onChange={handleInputChange}
+                />
+                <span>Cliente (busco servicios)</span>
+              </label>
+            </div>
+          </div>
+            </div>
+          )}
+
+          {/* Step 2: Profile Section */}
+          {currentStep === 2 && (
+            <div className="step-content">
+          {formData.role === 'freelancer' ? (
+            <FreelancerProfile 
+              formData={formData} 
+              handleInputChange={handleInputChange} 
+              walletValidation={walletValidation} 
+            />
+          ) : (
+            <ClientProfile 
+              formData={formData} 
+              handleInputChange={handleInputChange} 
+              walletValidation={walletValidation} 
+            />
+              )}
+            </div>
+          )}
+
+          {/* Step 3: Project Details */}
+          {currentStep === 3 && (
+            <div className="step-content">
+          <div className="project-section">
+            <div className="profile-header">
+              <FileText size={24} />
+              <h3>Detalles del Proyecto</h3>
+              <p>Información específica sobre el trabajo a realizar</p>
+            </div>
+
+            <div className="field-group">
+              <label htmlFor="description">
+                Descripción del proyecto *
+              </label>
+              <textarea
+                id="description"
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+                placeholder="Describe el proyecto, tareas específicas, tecnologías requeridas, etc."
+                rows={4}
+                disabled={loading}
+                required
+              />
+            </div>
+
+            {/* Amount Fields */}
+            <div className="amount-fields">
+              <div className="field-group">
+                <label htmlFor="offeredAmount">
+                  {formData.role === 'freelancer' ? 'Monto que ofrezco (USD)' : 'Monto que ofrece el freelancer (USD)'}
+                </label>
+                <input
+                  type="number"
+                  id="offeredAmount"
+                  name="offeredAmount"
+                  value={formData.offeredAmount}
+                  onChange={handleInputChange}
+                  placeholder="2000"
+                  disabled={loading}
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+
+              <div className="field-group">
+                <label htmlFor="requestedAmount">
+                  {formData.role === 'client' ? 'Monto que solicito (USD)' : 'Monto que solicita el cliente (USD)'}
+                </label>
+                <input
+                  type="number"
+                  id="requestedAmount"
+                  name="requestedAmount"
+                  value={formData.requestedAmount}
+                  onChange={handleInputChange}
+                  placeholder="5000"
+                  disabled={loading}
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+            </div>
+
+            {/* Days */}
+            <div className="field-group">
+              <label htmlFor="days">Duración del proyecto (días)</label>
+              <input
+                type="number"
+                id="days"
+                name="days"
+                value={formData.days}
+                onChange={handleInputChange}
+                placeholder="20"
+                disabled={loading}
+                min="1"
+              />
+            </div>
+          </div>
+        </div>
+          )}
+
+          {/* Step 4: Review */}
+          {currentStep === 4 && (
+            <div className="step-content">
+              <div className="review-section">
+                <h3>Revisa tu contrato</h3>
+                <div className="review-grid">
+                  <div className="review-item">
+                    <h4>Rol</h4>
+                    <p>{formData.role === 'freelancer' ? 'Freelancer' : 'Cliente'}</p>
+                  </div>
+                  <div className="review-item">
+                    <h4>Nombre</h4>
+                    <p>{formData.role === 'freelancer' ? formData.freelancerName : formData.clientName}</p>
+                  </div>
+                  <div className="review-item">
+                    <h4>Proyecto</h4>
+                    <p>{formData.description}</p>
+                  </div>
+                  <div className="review-item">
+                    <h4>Monto ofrecido</h4>
+                    <p>${formData.offeredAmount || 'No especificado'}</p>
+                  </div>
+                  <div className="review-item">
+                    <h4>Monto solicitado</h4>
+                    <p>${formData.requestedAmount || 'No especificado'}</p>
+                  </div>
+                  <div className="review-item">
+                    <h4>Duración</h4>
+                    <p>{formData.days ? `${formData.days} días` : 'No especificado'}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        <div className="form-actions">
+          {currentStep > 1 && (
+            <button type="button" onClick={prevStep} className="btn-secondary">
+              Anterior
+            </button>
+          )}
+          
+          {currentStep < 4 ? (
+            <button 
+              type="button" 
+              onClick={nextStep} 
+              disabled={!canProceed()}
+              className="btn-primary"
+            >
+              Siguiente
+            </button>
+          ) : (
+            <button 
+              type="submit" 
+              disabled={loading || !canProceed()}
+              className="btn-primary"
+            >
+          {loading ? (
+            <>
+              <Zap className="spinning" size={16} />
+              Generando Contrato IA...
+            </>
+          ) : (
+            <>
+              <Zap size={16} />
+              Generar Contrato Inteligente
+            </>
+          )}
+        </button>
+          )}
+        </div>
+      </form>
+
+      {error && (
+        <div className="error-message">
+          <Shield size={16} />
+          {error}
+        </div>
+      )}
+
+      {contract && (
+        <ContractDisplay contract={contract} />
+      )}
+    </div>
+  );
+}
+
+function ContractDisplay({ contract }) {
+  // Manual contract address input
+  const [manualContractAddress, setManualContractAddress] = useState('');
+  const [useManualAddress, setUseManualAddress] = useState(false);
+  
+  // Determine which contract address to use
+  const contractAddress = useManualAddress ? manualContractAddress : contract.json?.escrow_params?.contract_address;
+  const { contract: thirdwebContract } = useContract(contractAddress);
+  
+  // Only initialize useContractWrite if we have a valid contract
+  const contractWriteResult = useContractWrite(thirdwebContract, "deploy");
+  const { mutate: deployContract, isLoading: isDeploying } = contractWriteResult || {};
+  
+  // Testing utilities
+  const [testMode, setTestMode] = useState(false);
+  
+  // Validation states
+  const isAddressValid = isValidContractAddress(contractAddress);
+  const [walletInfo, setWalletInfo] = useState(null);
+  const [checkingWallet, setCheckingWallet] = useState(false);
+
+  const handleCheckWallet = async () => {
+    if (!contractAddress) return;
+    
+    setCheckingWallet(true);
+    try {
+      const info = await getWalletInfo(contractAddress);
+      setWalletInfo(info);
+    } catch (error) {
+      console.error('Error checking wallet:', error);
+      setWalletInfo({ valid: false, error: 'Failed to check wallet' });
+    } finally {
+      setCheckingWallet(false);
+    }
+  };
+
+  const handleDeployEscrow = () => {
+    if (contract.json?.escrow_params && thirdwebContract && deployContract) {
+      try {
+        // Deploy escrow contract with milestones
+        deployContract({
+          args: [
+            contract.json.escrow_params.token,
+            contract.json.escrow_params.milestones
+          ]
+        });
+      } catch (error) {
+        console.error('Error deploying contract:', error);
+        alert('Error deploying contract: ' + error.message);
+      }
+    } else {
+      console.error('Missing contract data or thirdweb contract instance');
+      alert('Cannot deploy: Contract address or data is missing');
+    }
+  };
+
+  return (
+    <div className="contract-display">
+      <div className="contract-header">
+        <h3>
+          <FileText size={20} />
+          Generated Contract
+        </h3>
+        <span className="contract-id">
+          ID: {contract.contract_id}
+        </span>
+      </div>
+
+      <div className="contract-content">
+        {contract.json ? (
+          <div className="ai-contract">
+            <div className="contract-section">
+              <h4>🤖 AI-Generated Terms</h4>
+              <div className="terms">
+                {contract.json.full_terms}
+              </div>
+            </div>
+
+            <div className="contract-section">
+              <h4>💰 Escrow Parameters</h4>
+              <div className="escrow-params">
+                <p><strong>Token:</strong> {contract.json.escrow_params?.token}</p>
+                <div className="milestones">
+                  <h5>Milestones:</h5>
+                  {contract.json.escrow_params?.milestones?.map((milestone, index) => (
+                    <div key={index} className="milestone">
+                      <span className="amount">{milestone.amount} USDC</span>
+                      <span className="description">{milestone.description}</span>
+                      <span className="deadline">{milestone.deadline}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="contract-section">
+              <h4>📋 Legal Clauses</h4>
+              <ul className="clauses">
+                {contract.json.clauses?.map((clause, index) => (
+                  <li key={index}>{clause}</li>
+                ))}
+              </ul>
+            </div>
+
+            {contract.escrow_ready && (
+              <div className="deploy-section">
+                {/* Contract Address Input */}
+                <div className="contract-address-section">
+                  <h4>🔗 Contract Address</h4>
+                  <div className="address-input-group">
+                    <label>
+                      <input 
+                        type="checkbox" 
+                        checked={useManualAddress}
+                        onChange={(e) => setUseManualAddress(e.target.checked)}
+                      />
+                      Use custom contract address
+                    </label>
+                    
+                    {useManualAddress && (
+                      <div className="manual-address-input">
+                        <input
+                          type="text"
+                          placeholder="0x..."
+                          value={manualContractAddress}
+                          onChange={(e) => setManualContractAddress(e.target.value)}
+                          className={isAddressValid || !manualContractAddress ? 'valid' : 'invalid'}
+                        />
+                        {manualContractAddress && (
+                          <div className={`address-validation ${isAddressValid ? 'valid' : 'invalid'}`}>
+                            {isAddressValid ? '✅ Valid address' : '❌ Invalid address format'}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {!useManualAddress && contract.json?.escrow_params?.contract_address && (
+                      <div className="auto-address">
+                        <span className="address-display">
+                          📋 Auto-generated: {contract.json.escrow_params.contract_address}
+                        </span>
+                      </div>
+                    )}
+                    
+                    {!useManualAddress && !contract.json?.escrow_params?.contract_address && (
+                      <div className="no-address-warning">
+                        ⚠️ No contract address provided in contract data
+                      </div>
+                    )}
+                    
+                    {contractAddress && (
+                      <div className="wallet-check-section">
+                        <button 
+                          onClick={handleCheckWallet}
+                          disabled={checkingWallet || !isAddressValid}
+                          className="check-wallet-btn"
+                        >
+                          {checkingWallet ? (
+                            <>
+                              <Zap className="spinning" size={16} />
+                              Checking...
+                            </>
+                          ) : (
+                            <>
+                              <Wallet size={16} />
+                              Verify Wallet Address
+                            </>
+                          )}
+                        </button>
+                        
+                        {walletInfo && (
+                          <div className={`wallet-info ${walletInfo.valid ? 'valid' : 'invalid'}`}>
+                            {walletInfo.valid ? (
+                              <>
+                                <p>✅ <strong>Valid Wallet</strong></p>
+                                <p>Type: {walletInfo.type}</p>
+                                <p>Network: {walletInfo.network}</p>
+                                <p>Address: {truncateWalletAddress(walletInfo.address)}</p>
+                              </>
+                            ) : (
+                              <>
+                                <p>❌ <strong>Invalid Wallet</strong></p>
+                                <p>Error: {walletInfo.error}</p>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="test-mode-toggle">
+                  <label>
+                    <input 
+                      type="checkbox" 
+                      checked={testMode}
+                      onChange={(e) => setTestMode(e.target.checked)}
+                    />
+                    🧪 Test Mode (Mumbai Testnet)
+                  </label>
+                </div>
+                
+                <button 
+                  onClick={handleDeployEscrow}
+                  disabled={isDeploying || !deployContract || !isAddressValid || !contractAddress}
+                  className="deploy-button"
+                >
+                  {isDeploying ? (
+                    <>
+                      <Zap className="spinning" size={16} />
+                      Deploying to {testMode ? 'Mumbai Testnet' : 'Polygon'}...
+                    </>
+                  ) : (
+                    <>
+                      <Shield size={16} />
+                      Deploy Escrow Contract
+                    </>
+                  )}
+                </button>
+                
+                {!isAddressValid && contractAddress && (
+                  <div className="error-message">
+                    <Shield size={16} />
+                    Invalid contract address format. Please check the address.
+                  </div>
+                )}
+                
+                {!contractAddress && (
+                  <div className="error-message">
+                    <Shield size={16} />
+                    Please provide a contract address to deploy.
+                  </div>
+                )}
+                
+                {testMode && (
+                  <div className="test-info">
+                    <p>🧪 <strong>Test Mode Active</strong></p>
+                    <p>• Using Mumbai testnet (free test tokens)</p>
+                    <p>• No real money involved</p>
+                    <p>• Get testnet MATIC: <a href="https://faucet.polygon.technology/" target="_blank" rel="noopener noreferrer">Polygon Faucet</a></p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="simple-contract">
+            <div className="contract-section">
+              <h4>📄 Contract Terms</h4>
+              <div className="terms">
+                {contract.explicacion}
+              </div>
+            </div>
+
+            <div className="contract-section">
+              <h4>📊 Contract Details</h4>
+              <div className="contract-details">
+                <p><strong>Total:</strong> {contract.contrato?.total}</p>
+                <div className="milestones">
+                  <h5>Milestones:</h5>
+                  {contract.contrato?.milestones?.map((milestone, index) => (
+                    <div key={index} className="milestone">
+                      <span className="amount">{milestone.pago_parcial}</span>
+                      <span className="description">{milestone.descripcion}</span>
+                      <span className="deadline">{milestone.deadline}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="disclaimer">
+          <Shield size={16} />
+          <small>
+            {contract.json?.disclaimer || 
+             "Este es un borrador generado por GigChain.io. No constituye consejo legal. Cumple con MiCA/GDPR – consulta a un experto."}
+          </small>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WalletConnectionComponent() {
+  const { address, isConnected } = useWallet();
+  const [walletState, setWalletState] = useState({ connected: false, address: null });
+
+  const handleWalletChange = (newState) => {
+    setWalletState(newState);
+  };
+
+  return (
+    <WalletConnection 
+      onWalletChange={handleWalletChange}
+      className="main-wallet-connection"
+    />
+  );
+}
+
+// Sidebar Component
+function Sidebar({ isOpen, toggleSidebar, currentView, setCurrentView }) {
+  const address = useAddress();
+  const disconnect = useDisconnect();
+
+  const navSections = [
+    {
+      title: 'Datos',
+      items: [
+        { id: 'dashboard', label: 'Resumen del Flujo', icon: BarChart3, active: true },
+        { id: 'contracts', label: 'Contratos', icon: FileText },
+        { id: 'templates', label: 'Plantillas', icon: Code },
+        { id: 'transactions', label: 'Transacciones', icon: FileText }
+      ]
+    },
+    {
+      title: 'Flujos',
+      items: [
+        { id: 'ai', label: 'AI Agents', icon: Zap },
+        { id: 'chat', label: 'Chat AI', icon: MessageSquare }
+      ]
+    },
+    {
+      title: 'Herramientas',
+      items: [
+        { id: 'wallets', label: 'Wallets', icon: Wallet },
+        { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+        { id: 'payments', label: 'Pagos', icon: Zap }
+      ]
+    }
+  ];
+
+  const bottomItems = [
+    { id: 'settings', label: 'Configuración', icon: Settings },
+    { id: 'help', label: 'Soporte', icon: MessageSquare }
+  ];
+
+  return (
+    <div className={`sidebar ${isOpen ? 'open' : 'closed'}`}>
+      <div className="sidebar-header">
+        <div className="logo">
+          <div className="logo-icon">
+            <Zap size={20} />
+          </div>
+          <span className="logo-text">GigChain</span>
+        </div>
+        <button className="sidebar-toggle" onClick={toggleSidebar}>
+          <Menu size={20} />
+        </button>
+      </div>
+
+      <nav className="sidebar-nav">
+        {navSections.map((section, sectionIndex) => (
+          <div key={section.title} className="nav-section">
+            <div className="section-title">{section.title}</div>
+            <div className="section-items">
+              {section.items.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    className={`nav-item ${currentView === item.id ? 'active' : ''}`}
+                    onClick={() => setCurrentView(item.id)}
+                  >
+                    <Icon size={20} />
+                    <span className="nav-label">{item.label}</span>
+                    {item.badge && <span className="nav-badge">{item.badge}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+
+        {/* Bottom Items */}
+        <div className="nav-section bottom-section">
+          <div className="section-items">
+            {bottomItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  className={`nav-item ${currentView === item.id ? 'active' : ''}`}
+                  onClick={() => setCurrentView(item.id)}
+                >
+                  <Icon size={20} />
+                  <span className="nav-label">{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </nav>
+
+      <div className="sidebar-footer">
+        {address && (
+          <div className="user-info">
+            <div className="user-avatar">
+              {address.slice(0, 2).toUpperCase()}
+            </div>
+            <div className="user-details">
+              <div className="user-name">
+                {truncateWalletAddress(address)}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Marketplace Templates Component
+function TemplatesView({ onTemplateSelected }) {
+  const [templates, setTemplates] = useState([]);
+  const [showUpload, setShowUpload] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [activeTab, setActiveTab] = useState('marketplace'); // 'marketplace' or 'my-templates'
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  // Sample marketplace templates
+  const marketplaceTemplates = [
+    {
+      id: 'web-dev-basic',
+      name: 'Desarrollo Web Básico',
+      description: 'Plantilla para sitios web corporativos simples',
+      category: 'Desarrollo Web',
+      price: 'Gratis',
+      rating: 4.8,
+      downloads: 1250,
+      author: 'GigChain Team',
+      thumbnail: '🌐',
+      pricing: { type: 'fixed', amount: 2000, currency: 'USD' },
+      timeline: { duration: 14, unit: 'days' },
+      skills: ['HTML', 'CSS', 'JavaScript', 'Responsive Design'],
+      deliverables: ['Sitio web responsive', 'SEO básico', 'Formulario de contacto'],
+      terms: ['Pago 50% inicial, 50% final', '2 revisiones incluidas', 'Soporte 30 días']
+    },
+    {
+      id: 'ecommerce-pro',
+      name: 'E-commerce Profesional',
+      description: 'Tienda online completa con carrito y pagos',
+      category: 'E-commerce',
+      price: 'Gratis',
+      rating: 4.9,
+      downloads: 890,
+      author: 'GigChain Team',
+      thumbnail: '🛒',
+      pricing: { type: 'fixed', amount: 5000, currency: 'USD' },
+      timeline: { duration: 30, unit: 'days' },
+      skills: ['React', 'Node.js', 'Stripe', 'MongoDB'],
+      deliverables: ['Tienda completa', 'Panel admin', 'Integración pagos', 'Analytics'],
+      terms: ['Pago por milestones', '3 revisiones por milestone', 'Soporte 90 días']
+    },
+    {
+      id: 'mobile-app',
+      name: 'App Móvil Nativa',
+      description: 'Aplicación móvil para iOS y Android',
+      category: 'Mobile',
+      price: 'Gratis',
+      rating: 4.7,
+      downloads: 650,
+      author: 'GigChain Team',
+      thumbnail: '📱',
+      pricing: { type: 'hourly', amount: 75, currency: 'USD' },
+      timeline: { duration: 45, unit: 'days' },
+      skills: ['React Native', 'iOS', 'Android', 'Firebase'],
+      deliverables: ['App iOS y Android', 'Backend API', 'Push notifications', 'App Store deployment'],
+      terms: ['Pago semanal', 'Testing en dispositivos reales', 'Soporte 60 días']
+    },
+    {
+      id: 'blockchain-dapp',
+      name: 'DApp Blockchain',
+      description: 'Aplicación descentralizada con contratos inteligentes',
+      category: 'Blockchain',
+      price: 'Gratis',
+      rating: 4.9,
+      downloads: 320,
+      author: 'GigChain Team',
+      thumbnail: '⛓️',
+      pricing: { type: 'fixed', amount: 8000, currency: 'USD' },
+      timeline: { duration: 60, unit: 'days' },
+      skills: ['Solidity', 'Web3.js', 'React', 'Ethereum'],
+      deliverables: ['Smart contracts', 'Frontend DApp', 'Testing suite', 'Documentación'],
+      terms: ['Pago por fases', 'Auditoría de seguridad', 'Soporte 120 días']
+    },
+    {
+      id: 'ui-ux-design',
+      name: 'Diseño UI/UX Completo',
+      description: 'Diseño de interfaz y experiencia de usuario',
+      category: 'Diseño',
+      price: 'Gratis',
+      rating: 4.6,
+      downloads: 980,
+      author: 'GigChain Team',
+      thumbnail: '🎨',
+      pricing: { type: 'fixed', amount: 3000, currency: 'USD' },
+      timeline: { duration: 21, unit: 'days' },
+      skills: ['Figma', 'Adobe XD', 'Prototyping', 'User Research'],
+      deliverables: ['Wireframes', 'Mockups', 'Prototipo interactivo', 'Design system'],
+      terms: ['Pago 40% inicial, 60% final', 'Revisiones ilimitadas', 'Archivos fuente incluidos']
+    },
+    {
+      id: 'data-analytics',
+      name: 'Dashboard de Analytics',
+      description: 'Sistema de análisis de datos con visualizaciones',
+      category: 'Data Science',
+      price: 'Gratis',
+      rating: 4.8,
+      downloads: 450,
+      author: 'GigChain Team',
+      thumbnail: '📊',
+      pricing: { type: 'fixed', amount: 6000, currency: 'USD' },
+      timeline: { duration: 35, unit: 'days' },
+      skills: ['Python', 'React', 'D3.js', 'PostgreSQL'],
+      deliverables: ['Dashboard interactivo', 'API de datos', 'Reportes automáticos', 'Documentación técnica'],
+      terms: ['Pago por milestones', 'Integración con sistemas existentes', 'Soporte 90 días']
+    },
+    {
+      id: 'ai-chatbot',
+      name: 'Chatbot con IA',
+      description: 'Asistente virtual inteligente con procesamiento de lenguaje natural',
+      category: 'Inteligencia Artificial',
+      price: 'Gratis',
+      rating: 4.9,
+      downloads: 720,
+      author: 'GigChain Team',
+      thumbnail: '🤖',
+      pricing: { type: 'fixed', amount: 4500, currency: 'USD' },
+      timeline: { duration: 25, unit: 'days' },
+      skills: ['Python', 'OpenAI API', 'FastAPI', 'WebSocket'],
+      deliverables: ['Chatbot funcional', 'Panel de administración', 'Integración con APIs', 'Análisis de conversaciones'],
+      terms: ['Pago 40% inicial, 60% final', 'Entrenamiento personalizado', 'Soporte 60 días']
+    },
+    {
+      id: 'crypto-wallet',
+      name: 'Wallet Criptomonedas',
+      description: 'Billetera digital para múltiples criptomonedas con seguridad avanzada',
+      category: 'Blockchain',
+      price: 'Gratis',
+      rating: 4.7,
+      downloads: 380,
+      author: 'GigChain Team',
+      thumbnail: '💰',
+      pricing: { type: 'fixed', amount: 12000, currency: 'USD' },
+      timeline: { duration: 50, unit: 'days' },
+      skills: ['React Native', 'Web3.js', 'Solidity', 'Hardware Security'],
+      deliverables: ['App móvil segura', 'Soporte múltiples tokens', 'Backup y recuperación', 'Auditoría de seguridad'],
+      terms: ['Pago por fases', 'Testing exhaustivo', 'Soporte 180 días']
+    },
+    {
+      id: 'video-streaming',
+      name: 'Plataforma de Streaming',
+      description: 'Sistema completo de transmisión de video en tiempo real',
+      category: 'Media',
+      price: 'Gratis',
+      rating: 4.6,
+      downloads: 290,
+      author: 'GigChain Team',
+      thumbnail: '🎥',
+      pricing: { type: 'fixed', amount: 15000, currency: 'USD' },
+      timeline: { duration: 60, unit: 'days' },
+      skills: ['Node.js', 'WebRTC', 'FFmpeg', 'AWS'],
+      deliverables: ['Plataforma streaming', 'CDN integrado', 'Sistema de pagos', 'Analytics de audiencia'],
+      terms: ['Pago por milestones', 'Infraestructura incluida', 'Soporte 120 días']
+    },
+    {
+      id: 'e-learning',
+      name: 'Plataforma E-Learning',
+      description: 'Sistema completo de educación online con cursos y certificaciones',
+      category: 'Educación',
+      price: 'Gratis',
+      rating: 4.8,
+      downloads: 650,
+      author: 'GigChain Team',
+      thumbnail: '🎓',
+      pricing: { type: 'fixed', amount: 8000, currency: 'USD' },
+      timeline: { duration: 45, unit: 'days' },
+      skills: ['React', 'Node.js', 'MongoDB', 'Stripe'],
+      deliverables: ['Plataforma completa', 'Sistema de pagos', 'Certificaciones', 'Panel de instructor'],
+      terms: ['Pago 50% inicial, 50% final', 'Hosting incluido', 'Soporte 90 días']
+    },
+    {
+      id: 'real-estate',
+      name: 'Portal Inmobiliario',
+      description: 'Plataforma completa para gestión y venta de propiedades',
+      category: 'Real Estate',
+      price: 'Gratis',
+      rating: 4.5,
+      downloads: 420,
+      author: 'GigChain Team',
+      thumbnail: '🏠',
+      pricing: { type: 'fixed', amount: 7000, currency: 'USD' },
+      timeline: { duration: 40, unit: 'days' },
+      skills: ['Vue.js', 'Laravel', 'MySQL', 'Google Maps API'],
+      deliverables: ['Portal web completo', 'App móvil', 'Sistema de búsqueda', 'Gestión de agentes'],
+      terms: ['Pago por fases', 'Integración con MLS', 'Soporte 90 días']
+    },
+    {
+      id: 'healthcare-app',
+      name: 'App de Salud',
+      description: 'Aplicación médica con citas, historiales y telemedicina',
+      category: 'Salud',
+      price: 'Gratis',
+      rating: 4.9,
+      downloads: 180,
+      author: 'GigChain Team',
+      thumbnail: '🏥',
+      pricing: { type: 'fixed', amount: 18000, currency: 'USD' },
+      timeline: { duration: 70, unit: 'days' },
+      skills: ['Flutter', 'Firebase', 'HIPAA Compliance', 'WebRTC'],
+      deliverables: ['App móvil completa', 'Panel web', 'Sistema de citas', 'Video consultas'],
+      terms: ['Pago por milestones', 'Cumplimiento HIPAA', 'Soporte 120 días']
+    },
+    {
+      id: 'food-delivery',
+      name: 'App de Delivery',
+      description: 'Plataforma completa de entrega de comida con múltiples restaurantes',
+      category: 'Food & Beverage',
+      price: 'Gratis',
+      rating: 4.7,
+      downloads: 890,
+      author: 'GigChain Team',
+      thumbnail: '🍕',
+      pricing: { type: 'fixed', amount: 10000, currency: 'USD' },
+      timeline: { duration: 50, unit: 'days' },
+      skills: ['React Native', 'Node.js', 'MongoDB', 'Google Maps'],
+      deliverables: ['App cliente y repartidor', 'Panel restaurante', 'Sistema de pagos', 'Tracking en tiempo real'],
+      terms: ['Pago 40% inicial, 60% final', 'Comisión incluida', 'Soporte 90 días']
+    },
+    {
+      id: 'fitness-tracker',
+      name: 'Tracker de Fitness',
+      description: 'Aplicación de seguimiento de ejercicios y salud personal',
+      category: 'Fitness',
+      price: 'Gratis',
+      rating: 4.6,
+      downloads: 560,
+      author: 'GigChain Team',
+      thumbnail: '💪',
+      pricing: { type: 'fixed', amount: 5500, currency: 'USD' },
+      timeline: { duration: 30, unit: 'days' },
+      skills: ['React Native', 'HealthKit', 'Google Fit', 'Charts.js'],
+      deliverables: ['App móvil', 'Sincronización wearables', 'Estadísticas detalladas', 'Planes de entrenamiento'],
+      terms: ['Pago 50% inicial, 50% final', 'Integración wearables', 'Soporte 60 días']
+    },
+    {
+      id: 'social-network',
+      name: 'Red Social',
+      description: 'Plataforma social con perfiles, posts y mensajería',
+      category: 'Social Media',
+      price: 'Gratis',
+      rating: 4.4,
+      downloads: 320,
+      author: 'GigChain Team',
+      thumbnail: '👥',
+      pricing: { type: 'fixed', amount: 12000, currency: 'USD' },
+      timeline: { duration: 55, unit: 'days' },
+      skills: ['React', 'Node.js', 'Socket.io', 'AWS S3'],
+      deliverables: ['Plataforma web', 'App móvil', 'Sistema de mensajería', 'Moderación de contenido'],
+      terms: ['Pago por fases', 'Escalabilidad incluida', 'Soporte 90 días']
+    },
+    {
+      id: 'booking-system',
+      name: 'Sistema de Reservas',
+      description: 'Plataforma de reservas para hoteles, restaurantes y servicios',
+      category: 'Hospitalidad',
+      price: 'Gratis',
+      rating: 4.8,
+      downloads: 480,
+      author: 'GigChain Team',
+      thumbnail: '📅',
+      pricing: { type: 'fixed', amount: 6500, currency: 'USD' },
+      timeline: { duration: 35, unit: 'days' },
+      skills: ['Vue.js', 'Laravel', 'MySQL', 'Stripe'],
+      deliverables: ['Sistema web completo', 'App móvil', 'Panel de administración', 'Sistema de pagos'],
+      terms: ['Pago 40% inicial, 60% final', 'Integración calendarios', 'Soporte 90 días']
+    },
+    {
+      id: 'crm-system',
+      name: 'Sistema CRM',
+      description: 'Gestión de relaciones con clientes y ventas',
+      category: 'Business',
+      price: 'Gratis',
+      rating: 4.7,
+      downloads: 750,
+      author: 'GigChain Team',
+      thumbnail: '📈',
+      pricing: { type: 'fixed', amount: 9000, currency: 'USD' },
+      timeline: { duration: 45, unit: 'days' },
+      skills: ['Angular', 'Spring Boot', 'PostgreSQL', 'Redis'],
+      deliverables: ['Dashboard completo', 'Gestión de leads', 'Automatización', 'Reportes avanzados'],
+      terms: ['Pago por milestones', 'Integración APIs', 'Soporte 120 días']
+    }
+  ];
+
+  // Load user templates from localStorage
+  React.useEffect(() => {
+    const loadTemplates = () => {
+      try {
+        const savedTemplates = localStorage.getItem('gigchain-templates');
+        const templatesData = savedTemplates ? JSON.parse(savedTemplates) : [];
+        setTemplates(templatesData);
+      } catch (error) {
+        console.error('Error loading templates:', error);
+      }
+    };
+
+    loadTemplates();
+  }, []);
+
+  // Download template example
+  const downloadTemplateExample = () => {
+    const exampleTemplate = {
+      name: "Mi Plantilla Personalizada",
+      description: "Descripción del proyecto o servicio",
+      category: "Desarrollo",
+      projectType: "Web Development",
+      skills: ["React", "Node.js", "MongoDB"],
+      pricing: {
+        type: "fixed", // "fixed", "hourly", "milestone"
+        amount: 5000,
+        currency: "USD"
+      },
+      timeline: {
+        duration: 30,
+        unit: "days"
+      },
+      deliverables: [
+        "Código fuente completo",
+        "Documentación técnica",
+        "Testing y QA"
+      ],
+      terms: [
+        "Pago 50% al inicio, 50% al finalizar",
+        "Revisiones ilimitadas durante desarrollo",
+        "Soporte 30 días post-entrega"
+      ],
+      createdAt: new Date().toISOString()
+    };
+
+    const dataStr = JSON.stringify(exampleTemplate, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    
+    const exportFileDefaultName = 'template-ejemplo-gigchain.json';
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+  };
+
+  // Upload template with backend validation
+  const handleTemplateUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Validate file size (1MB max)
+    if (file.size > 1024 * 1024) {
+      alert('El archivo es demasiado grande. Máximo 1MB permitido.');
+      return;
+    }
+
+    // Validate file type
+    if (!file.name.toLowerCase().endsWith('.json')) {
+      alert('Solo se permiten archivos JSON.');
+      return;
+    }
+
+    setUploading(true);
+    const reader = new FileReader();
+    
+    reader.onload = async (e) => {
+      try {
+        const templateJson = e.target.result;
+        
+        // Validate with backend first
+        const validationResponse = await fetch('/api/templates/validate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            template_json: templateJson,
+            user_id: 'frontend-user' // In production, use actual user ID
+          })
+        });
+
+        const validationResult = await validationResponse.json();
+
+        if (!validationResult.valid) {
+          throw new Error(`Plantilla no válida: ${validationResult.errors.join(', ')}`);
+        }
+
+        if (validationResult.security_score < 70) {
+          throw new Error(`Puntuación de seguridad insuficiente: ${validationResult.security_score}/100`);
+        }
+
+        // Use sanitized template from backend
+        const sanitizedTemplate = validationResult.sanitized_template;
+        
+        // Add unique ID and timestamp
+        const newTemplate = {
+          ...sanitizedTemplate,
+          id: Date.now().toString(),
+          uploadedAt: new Date().toISOString(),
+          securityValidated: true,
+          securityScore: validationResult.security_score
+        };
+
+        const updatedTemplates = [...templates, newTemplate];
+        setTemplates(updatedTemplates);
+        localStorage.setItem('gigchain-templates', JSON.stringify(updatedTemplates));
+        
+        setShowUpload(false);
+        setUploading(false);
+        
+        // Show success message with security info
+        alert(`Plantilla subida exitosamente!\nPuntuación de seguridad: ${validationResult.security_score}/100`);
+        
+        // Reset file input
+        event.target.value = '';
+        
+      } catch (error) {
+        console.error('Error processing template:', error);
+        alert('Error al procesar la plantilla: ' + error.message);
+        setUploading(false);
+      }
+    };
+
+    reader.readAsText(file);
+  };
+
+  // Use template
+  const useTemplate = (template) => {
+    if (onTemplateSelected) {
+      onTemplateSelected(template);
+    }
+  };
+
+  // Delete template
+  const deleteTemplate = (templateId) => {
+    if (confirm('¿Estás seguro de que quieres eliminar esta plantilla?')) {
+      const updatedTemplates = templates.filter(t => t.id !== templateId);
+      setTemplates(updatedTemplates);
+      localStorage.setItem('gigchain-templates', JSON.stringify(updatedTemplates));
+    }
+  };
+
+  // Handle template preview
+  const previewTemplate = (template) => {
+    setSelectedTemplate(template);
+    setShowModal(true);
+  };
+
+  // Handle carousel navigation
+  const nextSlide = () => {
+    const maxSlides = Math.ceil(marketplaceTemplates.length / 3) - 1;
+    setCurrentSlide(prev => prev < maxSlides ? prev + 1 : 0);
+  };
+
+  const prevSlide = () => {
+    const maxSlides = Math.ceil(marketplaceTemplates.length / 3) - 1;
+    setCurrentSlide(prev => prev > 0 ? prev - 1 : maxSlides);
+  };
+
+  // Get current slide templates
+  const getCurrentSlideTemplates = () => {
+    const start = currentSlide * 3;
+    const end = start + 3;
+    return marketplaceTemplates.slice(start, end);
+  };
+
+  return (
+    <div className="templates-view">
+      <div className="templates-header">
+        <div className="header-content">
+          <div className="header-text">
+            <h2>Marketplace de Plantillas</h2>
+            <p>Explora plantillas profesionales y crea las tuyas propias</p>
+          </div>
+          <div className="header-actions">
+            <button 
+              className="download-template-btn"
+              onClick={downloadTemplateExample}
+            >
+              <FileText size={18} />
+              <span>Descargar Ejemplo</span>
+            </button>
+            <button 
+              className="upload-template-btn"
+              onClick={() => document.getElementById('template-upload').click()}
+              disabled={uploading}
+            >
+              <Zap size={18} />
+              <span>{uploading ? 'Subiendo...' : 'Subir Plantilla'}</span>
+            </button>
+            <input
+              id="template-upload"
+              type="file"
+              accept=".json"
+              onChange={handleTemplateUpload}
+              style={{ display: 'none' }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Tab Navigation */}
+      <div className="templates-tabs">
+        <button 
+          className={`tab-btn ${activeTab === 'marketplace' ? 'active' : ''}`}
+          onClick={() => setActiveTab('marketplace')}
+        >
+          <Zap size={18} />
+          Marketplace
+        </button>
+        <button 
+          className={`tab-btn ${activeTab === 'my-templates' ? 'active' : ''}`}
+          onClick={() => setActiveTab('my-templates')}
+        >
+          <FileText size={18} />
+          Mis Plantillas
+        </button>
+      </div>
+
+      {/* Marketplace Tab */}
+      {activeTab === 'marketplace' && (
+        <div className="marketplace-section">
+          <div className="carousel-container">
+            <button className="carousel-btn prev" onClick={prevSlide}>
+              <Zap size={20} />
+            </button>
+            
+            <div className="carousel-track">
+              <div 
+                className="carousel-slide"
+                style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+              >
+                {marketplaceTemplates.map(template => (
+                  <div key={template.id} className="marketplace-template-card">
+                    <div className="template-thumbnail">
+                      <div className="thumbnail-icon">{template.thumbnail}</div>
+                      <div className="template-price">{template.price}</div>
+                    </div>
+                    
+                    <div className="template-info">
+                      <div className="template-category">{template.category}</div>
+                      <h3>{template.name}</h3>
+                      <p>{template.description}</p>
+                      
+                      <div className="template-stats">
+                        <div className="stat">
+                          <Star size={14} />
+                          <span>{template.rating}</span>
+                        </div>
+                        <div className="stat">
+                          <FileText size={14} />
+                          <span>{template.downloads} descargas</span>
+                        </div>
+                      </div>
+                      
+                      <div className="template-skills">
+                        {template.skills.slice(0, 3).map((skill, index) => (
+                          <span key={index} className="skill-tag">{skill}</span>
+                        ))}
+                        {template.skills.length > 3 && (
+                          <span className="skill-tag">+{template.skills.length - 3}</span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="template-actions">
+                      <button 
+                        className="preview-btn"
+                        onClick={() => previewTemplate(template)}
+                      >
+                        <Eye size={16} />
+                        Ver Detalles
+                      </button>
+                      <button 
+                        className="use-btn"
+                        onClick={() => useTemplate(template)}
+                      >
+                        <Zap size={16} />
+                        Usar
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <button className="carousel-btn next" onClick={nextSlide}>
+              <Zap size={20} />
+            </button>
+          </div>
+          
+          <div className="carousel-dots">
+            {Array.from({ length: Math.ceil(marketplaceTemplates.length / 3) }).map((_, index) => (
+              <button
+                key={index}
+                className={`dot ${currentSlide === index ? 'active' : ''}`}
+                onClick={() => setCurrentSlide(index)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* My Templates Tab */}
+      {activeTab === 'my-templates' && (
+        <div className="my-templates-section">
+          {templates.length === 0 ? (
+            <div className="empty-templates">
+              <div className="empty-content">
+                <FileText size={64} className="empty-icon" />
+                <h3>No tienes plantillas personalizadas</h3>
+                <p>Descarga el ejemplo, personalízalo y súbelo para comenzar a crear tus propias plantillas</p>
+                <div className="empty-actions">
+                  <button 
+                    className="btn-primary"
+                    onClick={downloadTemplateExample}
+                  >
+                    <FileText size={16} />
+                    Descargar Ejemplo
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="templates-grid">
+              {templates.map(template => (
+                <div key={template.id} className="template-card">
+                  <div className="template-header">
+                    <div className="template-category">{template.category || 'Personalizada'}</div>
+                    <h3>{template.name}</h3>
+                    <p>{template.description}</p>
+                  </div>
+                  
+                  <div className="template-details">
+                    {template.pricing && (
+                      <div className="detail-item">
+                        <span className="label">Precio:</span>
+                        <span className="value">
+                          {template.pricing.type === 'fixed' ? '$' + template.pricing.amount :
+                           template.pricing.type === 'hourly' ? '$' + template.pricing.amount + '/hora' :
+                           'Por milestones'}
+                        </span>
+                      </div>
+                    )}
+                    {template.timeline && (
+                      <div className="detail-item">
+                        <span className="label">Duración:</span>
+                        <span className="value">{template.timeline.duration} {template.timeline.unit}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {template.skills && template.skills.length > 0 && (
+                    <div className="template-skills">
+                      {template.skills.map((skill, index) => (
+                        <span key={index} className="skill-tag">{skill}</span>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="template-actions">
+                    <button 
+                      className="use-template-btn"
+                      onClick={() => useTemplate(template)}
+                    >
+                      <FileText size={16} />
+                      Usar Plantilla
+                    </button>
+                    <button 
+                      className="delete-template-btn"
+                      onClick={() => deleteTemplate(template.id)}
+                    >
+                      <Shield size={16} />
+                      Eliminar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Template Modal */}
+      {showModal && selectedTemplate && (
+        <div className="template-modal-overlay" onClick={() => setShowModal(false)}>
+          <div className="template-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-thumbnail">
+                <div className="thumbnail-icon">{selectedTemplate.thumbnail}</div>
+              </div>
+              <div className="modal-info">
+                <div className="modal-category">{selectedTemplate.category}</div>
+                <h2>{selectedTemplate.name}</h2>
+                <p>{selectedTemplate.description}</p>
+                <div className="modal-stats">
+                  <div className="stat">
+                    <Star size={16} />
+                    <span>{selectedTemplate.rating}</span>
+                  </div>
+                  <div className="stat">
+                    <FileText size={16} />
+                    <span>{selectedTemplate.downloads} descargas</span>
+                  </div>
+                  <div className="stat">
+                    <User size={16} />
+                    <span>por {selectedTemplate.author}</span>
+                  </div>
+                </div>
+              </div>
+              <button className="modal-close" onClick={() => setShowModal(false)}>
+                <Shield size={20} />
+              </button>
+            </div>
+            
+            <div className="modal-content">
+              <div className="modal-section">
+                <h3>Detalles del Proyecto</h3>
+                <div className="detail-grid">
+                  <div className="detail-item">
+                    <span className="label">Precio:</span>
+                    <span className="value">
+                      {selectedTemplate.pricing.type === 'fixed' ? '$' + selectedTemplate.pricing.amount :
+                       selectedTemplate.pricing.type === 'hourly' ? '$' + selectedTemplate.pricing.amount + '/hora' :
+                       'Por milestones'}
+                    </span>
+                  </div>
+                  <div className="detail-item">
+                    <span className="label">Duración:</span>
+                    <span className="value">{selectedTemplate.timeline.duration} {selectedTemplate.timeline.unit}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="modal-section">
+                <h3>Habilidades Requeridas</h3>
+                <div className="skills-grid">
+                  {selectedTemplate.skills.map((skill, index) => (
+                    <span key={index} className="skill-tag">{skill}</span>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="modal-section">
+                <h3>Entregables</h3>
+                <ul className="deliverables-list">
+                  {selectedTemplate.deliverables.map((deliverable, index) => (
+                    <li key={index}>{deliverable}</li>
+                  ))}
+                </ul>
+              </div>
+              
+              <div className="modal-section">
+                <h3>Términos y Condiciones</h3>
+                <ul className="terms-list">
+                  {selectedTemplate.terms.map((term, index) => (
+                    <li key={index}>{term}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+            
+            <div className="modal-actions">
+              <button className="modal-use-btn" onClick={() => {
+                useTemplate(selectedTemplate);
+                setShowModal(false);
+              }}>
+                <Zap size={18} />
+                Usar Esta Plantilla
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// History Component
+function HistoryView({ filters, onFilterChange, contracts = [] }) {
+
+  return (
+    <div className="history-view">
+      <div className="history-header">
+        <h2>Historial de Contratos</h2>
+        <p>Gestiona y revisa todos tus contratos pasados y actuales</p>
+      </div>
+
+      <div className="history-filters">
+        <div className="filter-buttons">
+          <button 
+            className={`filter-btn ${filters.status === 'all' ? 'active' : ''}`}
+            onClick={() => onFilterChange('status', 'all')}
+          >
+            Todos
+          </button>
+          <button 
+            className={`filter-btn ${filters.status === 'en-progreso' ? 'active' : ''}`}
+            onClick={() => onFilterChange('status', 'en-progreso')}
+          >
+            Activos
+          </button>
+          <button 
+            className={`filter-btn ${filters.status === 'completado' ? 'active' : ''}`}
+            onClick={() => onFilterChange('status', 'completado')}
+          >
+            Completados
+          </button>
+          <button 
+            className={`filter-btn ${filters.status === 'pendiente' ? 'active' : ''}`}
+            onClick={() => onFilterChange('status', 'pendiente')}
+          >
+            Pendientes
+          </button>
+        </div>
+      </div>
+
+      <div className="contracts-list">
+        {contracts.length > 0 ? (
+          contracts
+            .filter(contract => {
+              if (filters.status === 'all') return true;
+              const statusMap = {
+                'en-progreso': ['active', 'in-progress'],
+                'completado': ['completed'],
+                'pendiente': ['pending']
+              };
+              return statusMap[filters.status]?.includes(contract.status) || false;
+            })
+            .map(contract => (
+            <div key={contract.id} className="contract-item">
+              <div className="contract-info">
+                <div className="contract-main">
+                  <h3>{contract.title}</h3>
+                  <p className="contract-client">{contract.role === 'freelancer' ? 'Como Freelancer' : 'Como Cliente'}</p>
+                </div>
+                <div className="contract-meta">
+                  <div className="contract-amount">${contract.amount?.toLocaleString() || '0'}</div>
+                  <div className={`contract-status ${contract.status.toLowerCase().replace(' ', '-')}`}>
+                    {contract.status === 'active' ? 'Activo' :
+                     contract.status === 'completed' ? 'Completado' :
+                     contract.status === 'pending' ? 'Pendiente' : contract.status}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="contract-details">
+                <div className="contract-type">
+                  <span className="type-badge">{contract.role === 'freelancer' ? 'Freelancer' : 'Cliente'}</span>
+                </div>
+                <div className="contract-date">
+                  {new Date(contract.createdAt).toLocaleDateString('es-ES')}
+                </div>
+              </div>
+
+              <div className="contract-actions">
+                <button className="action-btn secondary">
+                  <FileText size={16} />
+                  Ver
+                </button>
+                <button className="action-btn primary">
+                  <Zap size={16} />
+                  Editar
+                </button>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="no-contracts">
+            <p>No tienes contratos aún. ¡Crea tu primer contrato para comenzar!</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Jobs Modal Component
+function JobsModal({ isOpen, onClose, selectedPeriod, userType }) {
+  const [selectedJob, setSelectedJob] = useState(null);
+  const [showContractForm, setShowContractForm] = useState(false);
+
+  // Datos simulados de trabajos disponibles por período
+  const jobsData = {
+    '00:00': [
+      { id: 1, title: 'Desarrollo Web Full Stack', company: 'TechCorp', budget: '$2,500', duration: '2 semanas', skills: ['React', 'Node.js', 'MongoDB'], description: 'Desarrollo de aplicación web completa con autenticación y base de datos.' },
+      { id: 2, title: 'Diseño UI/UX Mobile', company: 'DesignStudio', budget: '$1,800', duration: '1 semana', skills: ['Figma', 'Adobe XD', 'Prototyping'], description: 'Diseño de interfaz móvil para app de e-commerce.' },
+      { id: 3, title: 'Marketing Digital', company: 'GrowthAgency', budget: '$1,200', duration: '3 semanas', skills: ['SEO', 'Google Ads', 'Analytics'], description: 'Campaña de marketing digital para startup tecnológica.' }
+    ],
+    '04:00': [
+      { id: 4, title: 'Desarrollo Blockchain', company: 'CryptoDev', budget: '$5,000', duration: '4 semanas', skills: ['Solidity', 'Web3', 'Smart Contracts'], description: 'Desarrollo de contrato inteligente para DeFi.' },
+      { id: 5, title: 'Análisis de Datos', company: 'DataInsights', budget: '$2,200', duration: '2 semanas', skills: ['Python', 'Pandas', 'Machine Learning'], description: 'Análisis predictivo de datos de ventas.' }
+    ],
+    '08:00': [
+      { id: 6, title: 'Desarrollo Frontend', company: 'WebAgency', budget: '$1,500', duration: '1 semana', skills: ['Vue.js', 'TypeScript', 'CSS'], description: 'Interfaz de usuario para dashboard administrativo.' },
+      { id: 7, title: 'Copywriting', company: 'ContentPro', budget: '$800', duration: '1 semana', skills: ['Copywriting', 'SEO', 'Content Strategy'], description: 'Contenido para blog corporativo y redes sociales.' }
+    ],
+    '12:00': [
+      { id: 8, title: 'Desarrollo Backend API', company: 'APIDev', budget: '$3,000', duration: '3 semanas', skills: ['Python', 'Django', 'PostgreSQL'], description: 'API REST para aplicación móvil.' },
+      { id: 9, title: 'DevOps & Cloud', company: 'CloudTech', budget: '$2,800', duration: '2 semanas', skills: ['AWS', 'Docker', 'Kubernetes'], description: 'Configuración de infraestructura en la nube.' },
+      { id: 10, title: 'Traducción Técnica', company: 'LinguaTech', budget: '$600', duration: '1 semana', skills: ['Inglés', 'Español', 'Técnico'], description: 'Traducción de documentación técnica.' }
+    ],
+    '16:00': [
+      { id: 11, title: 'Desarrollo Mobile iOS', company: 'MobileFirst', budget: '$4,500', duration: '4 semanas', skills: ['Swift', 'iOS', 'Xcode'], description: 'Aplicación nativa iOS para gestión de inventario.' },
+      { id: 12, title: 'Consultoría IT', company: 'TechConsult', budget: '$3,500', duration: '2 semanas', skills: ['Arquitectura', 'Cloud', 'Security'], description: 'Auditoría de seguridad y optimización de sistemas.' },
+      { id: 13, title: 'Video Marketing', company: 'VideoPro', budget: '$2,000', duration: '2 semanas', skills: ['After Effects', 'Premiere', 'Motion Graphics'], description: 'Videos promocionales para redes sociales.' }
+    ],
+    '20:00': [
+      { id: 14, title: 'Desarrollo Android', company: 'AndroidDev', budget: '$3,200', duration: '3 semanas', skills: ['Kotlin', 'Android Studio', 'Firebase'], description: 'App Android para delivery de comida.' },
+      { id: 15, title: 'Testing QA', company: 'QualityAssurance', budget: '$1,500', duration: '2 semanas', skills: ['Selenium', 'Jest', 'Cypress'], description: 'Testing automatizado de aplicación web.' }
+    ],
+    '22:00': [
+      { id: 16, title: 'Desarrollo Full Stack', company: 'FullStackCo', budget: '$4,000', duration: '4 semanas', skills: ['React', 'Node.js', 'PostgreSQL'], description: 'Plataforma de e-learning completa.' },
+      { id: 17, title: 'Diseño Gráfico', company: 'CreativeStudio', budget: '$1,200', duration: '1 semana', skills: ['Photoshop', 'Illustrator', 'Branding'], description: 'Identidad visual para startup.' }
+    ],
+    '23:00': [
+      { id: 18, title: 'Desarrollo Blockchain DeFi', company: 'DeFiLabs', budget: '$6,000', duration: '6 semanas', skills: ['Solidity', 'Web3', 'DeFi'], description: 'Protocolo DeFi para yield farming.' },
+      { id: 19, title: 'AI/ML Development', company: 'AITech', budget: '$5,500', duration: '5 semanas', skills: ['Python', 'TensorFlow', 'NLP'], description: 'Modelo de IA para análisis de sentimientos.' },
+      { id: 20, title: 'Cybersecurity Audit', company: 'SecureTech', budget: '$4,200', duration: '3 semanas', skills: ['Penetration Testing', 'Security', 'Compliance'], description: 'Auditoría de seguridad completa.' }
+    ],
+    '23:30': [
+      { id: 21, title: 'Desarrollo Game', company: 'GameStudio', budget: '$8,000', duration: '8 semanas', skills: ['Unity', 'C#', 'Game Design'], description: 'Juego móvil 2D con monetización.' }
+    ],
+    '23:45': [
+      { id: 22, title: 'Desarrollo IoT', company: 'IoT Solutions', budget: '$7,500', duration: '6 semanas', skills: ['Arduino', 'Raspberry Pi', 'MQTT'], description: 'Sistema IoT para monitoreo ambiental.' },
+      { id: 23, title: 'AR/VR Development', company: 'ImmersiveTech', budget: '$9,000', duration: '8 semanas', skills: ['Unity', 'ARCore', 'VR'], description: 'Experiencia AR para retail.' }
+    ],
+    '24:00': [
+      { id: 24, title: 'Desarrollo Microservices', company: 'MicroTech', budget: '$5,500', duration: '5 semanas', skills: ['Docker', 'Kubernetes', 'Go'], description: 'Arquitectura de microservicios escalable.' },
+      { id: 25, title: 'Data Engineering', company: 'DataFlow', budget: '$4,800', duration: '4 semanas', skills: ['Apache Kafka', 'Spark', 'Airflow'], description: 'Pipeline de datos en tiempo real.' }
+    ]
+  };
+
+  const jobs = jobsData[selectedPeriod?.period] || [];
+
+  const handleJobSelect = (job) => {
+    setSelectedJob(job);
+    setShowContractForm(true);
+  };
+
+  const handleCreateContract = (contractData) => {
+    // Crear el contrato con datos del trabajo
+    const newContract = {
+      id: Date.now().toString(),
+      title: contractData.title,
+      description: contractData.description,
+      budget: contractData.budget,
+      duration: contractData.duration,
+      terms: contractData.terms,
+      paymentMethod: contractData.paymentMethod,
+      status: userType === 'client' ? 'pending' : 'applied',
+      type: userType === 'client' ? 'created' : 'applied',
+      jobId: selectedJob?.id,
+      company: selectedJob?.company,
+      period: selectedPeriod?.period,
+      createdAt: new Date().toISOString(),
+      freelancerWallet: userType === 'freelancer' ? '0x2bB6...9eb6' : '',
+      clientWallet: userType === 'client' ? '0x2bB6...9eb6' : '',
+      milestones: contractData.milestones || []
+    };
+
+    // Guardar en localStorage
+    const existingContracts = JSON.parse(localStorage.getItem('gigchain-contracts') || '[]');
+    existingContracts.unshift(newContract);
+    localStorage.setItem('gigchain-contracts', JSON.stringify(existingContracts));
+
+    // Notificar al componente padre si es necesario
+    if (window.dispatchEvent) {
+      window.dispatchEvent(new CustomEvent('contractCreated', { detail: newContract }));
+    }
+
+    console.log('Contrato creado:', newContract);
+    setShowContractForm(false);
+    setSelectedJob(null);
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="jobs-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>Trabajos Disponibles - {selectedPeriod?.period}</h2>
+          <button className="close-btn" onClick={onClose}>×</button>
+        </div>
+        
+        <div className="modal-content">
+          <div className="period-info">
+            <div className="period-stats">
+              <div className="stat">
+                <span className="stat-label">Contratos Activos</span>
+                <span className="stat-value">{selectedPeriod?.value || 0}</span>
+              </div>
+              <div className="stat">
+                <span className="stat-label">Nuevos Contratos</span>
+                <span className="stat-value">+{selectedPeriod?.contracts || 0}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="jobs-grid">
+            {jobs.map((job) => (
+              <div key={job.id} className="job-card" onClick={() => handleJobSelect(job)}>
+                <div className="job-header">
+                  <h3 className="job-title">{job.title}</h3>
+                  <span className="job-budget">{job.budget}</span>
+                </div>
+                <div className="job-company">{job.company}</div>
+                <div className="job-details">
+                  <span className="job-duration">⏱️ {job.duration}</span>
+                </div>
+                <div className="job-skills">
+                  {job.skills.map((skill, index) => (
+                    <span key={index} className="skill-tag">{skill}</span>
+                  ))}
+                </div>
+                <p className="job-description">{job.description}</p>
+                <div className="job-actions">
+                  <button className="apply-btn">
+                    {userType === 'client' ? 'Crear Contrato' : 'Aplicar'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {jobs.length === 0 && (
+            <div className="no-jobs">
+              <div className="no-jobs-icon">📊</div>
+              <h3>No hay trabajos disponibles</h3>
+              <p>No se encontraron trabajos para este período de tiempo.</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {showContractForm && selectedJob && (
+        <ContractFormModal
+          job={selectedJob}
+          userType={userType}
+          onClose={() => setShowContractForm(false)}
+          onSubmit={handleCreateContract}
+        />
+      )}
+    </div>
+  );
+}
+
+// Contract Form Modal Component
+function ContractFormModal({ job, userType, onClose, onSubmit }) {
+  const [formData, setFormData] = useState({
+    title: job.title,
+    description: job.description,
+    budget: job.budget,
+    duration: job.duration,
+    terms: '',
+    paymentMethod: 'crypto',
+    milestones: []
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSubmit(formData);
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="contract-form-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>{userType === 'client' ? 'Crear Contrato' : 'Aplicar al Trabajo'}</h2>
+          <button className="close-btn" onClick={onClose}>×</button>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="contract-form">
+          <div className="form-group">
+            <label>Título del Trabajo</label>
+            <input 
+              type="text" 
+              value={formData.title}
+              onChange={(e) => setFormData({...formData, title: e.target.value})}
+              required
+            />
+          </div>
+          
+          <div className="form-group">
+            <label>Descripción</label>
+            <textarea 
+              value={formData.description}
+              onChange={(e) => setFormData({...formData, description: e.target.value})}
+              rows="4"
+              required
+            />
+          </div>
+          
+          <div className="form-row">
+            <div className="form-group">
+              <label>Presupuesto</label>
+              <input 
+                type="text" 
+                value={formData.budget}
+                onChange={(e) => setFormData({...formData, budget: e.target.value})}
+                required
+              />
+            </div>
+            
+            <div className="form-group">
+              <label>Duración</label>
+              <input 
+                type="text" 
+                value={formData.duration}
+                onChange={(e) => setFormData({...formData, duration: e.target.value})}
+                required
+              />
+            </div>
+          </div>
+          
+          <div className="form-group">
+            <label>Términos y Condiciones</label>
+            <textarea 
+              value={formData.terms}
+              onChange={(e) => setFormData({...formData, terms: e.target.value})}
+              rows="3"
+              placeholder="Especifica los términos del contrato..."
+            />
+          </div>
+          
+          <div className="form-group">
+            <label>Método de Pago</label>
+            <select 
+              value={formData.paymentMethod}
+              onChange={(e) => setFormData({...formData, paymentMethod: e.target.value})}
+            >
+              <option value="crypto">Criptomonedas</option>
+              <option value="fiat">Fiat (USD)</option>
+              <option value="mixed">Mixto</option>
+            </select>
+          </div>
+          
+          <div className="form-actions">
+            <button type="button" onClick={onClose} className="cancel-btn">
+              Cancelar
+            </button>
+            <button type="submit" className="submit-btn">
+              {userType === 'client' ? 'Crear Contrato' : 'Aplicar'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// Interactive Chart Component
+function InteractiveChart({ onDataPointClick }) {
+  const [isHovered, setIsHovered] = useState(false);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [tooltipData, setTooltipData] = useState({ value: 0, time: '', contracts: 0 });
+
+  // Datos reales simulados para el gráfico (24 horas) - CORREGIDOS para alinearse con la curva
+  const chartData = [
+    { x: 0, y: 250, value: 12, time: '00:00', contracts: 5 },
+    { x: 100, y: 150, value: 28, time: '04:00', contracts: 12 },
+    { x: 200, y: 280, value: 8, time: '08:00', contracts: 3 },
+    { x: 300, y: 180, value: 22, time: '12:00', contracts: 9 },
+    { x: 400, y: 80, value: 45, time: '16:00', contracts: 18 },
+    { x: 500, y: 250, value: 15, time: '20:00', contracts: 6 },
+    { x: 600, y: 150, value: 32, time: '22:00', contracts: 13 },
+    { x: 700, y: 50, value: 58, time: '23:00', contracts: 23 },
+    { x: 800, y: 200, value: 18, time: '23:30', contracts: 7 },
+    { x: 900, y: 100, value: 38, time: '23:45', contracts: 15 },
+    { x: 1000, y: 150, value: 25, time: '24:00', contracts: 10 }
+  ];
+
+  // Función mejorada para calcular la posición Y en la curva de Bézier
+  const calculateYOnCurve = (x) => {
+    // Usar la misma curva que se define en el SVG para consistencia perfecta
+    // Curva: M 0 250 C 100 150, 200 280, 300 180 C 400 80, 500 250, 600 150 C 700 50, 800 200, 900 100 L 1000 150
+    
+    // Normalizar x a un rango de 0-1 para cada segmento
+    if (x <= 300) {
+      // Primera curva de Bézier: 0-300 (P0: 250, P1: 150, P2: 280, P3: 180)
+      const t = Math.max(0, Math.min(1, x / 300));
+      const y = Math.pow(1-t, 3) * 250 + 3 * Math.pow(1-t, 2) * t * 150 + 3 * (1-t) * Math.pow(t, 2) * 280 + Math.pow(t, 3) * 180;
+      return Math.round(y);
+    } else if (x <= 600) {
+      // Segunda curva de Bézier: 300-600 (P0: 180, P1: 80, P2: 250, P3: 150)
+      const t = Math.max(0, Math.min(1, (x - 300) / 300));
+      const y = Math.pow(1-t, 3) * 180 + 3 * Math.pow(1-t, 2) * t * 80 + 3 * (1-t) * Math.pow(t, 2) * 250 + Math.pow(t, 3) * 150;
+      return Math.round(y);
+    } else if (x <= 900) {
+      // Tercera curva de Bézier: 600-900 (P0: 150, P1: 50, P2: 200, P3: 100)
+      const t = Math.max(0, Math.min(1, (x - 600) / 300));
+      const y = Math.pow(1-t, 3) * 150 + 3 * Math.pow(1-t, 2) * t * 50 + 3 * (1-t) * Math.pow(t, 2) * 200 + Math.pow(t, 3) * 100;
+      return Math.round(y);
+    } else {
+      // Línea recta: 900-1000 (de 100 a 150)
+      const t = Math.max(0, Math.min(1, (x - 900) / 100));
+      const y = 100 + t * (150 - 100);
+      return Math.round(y);
+    }
+  };
+
+  // Función mejorada para encontrar el punto más cercano
+  const findNearestDataPoint = (x) => {
+    let nearestPoint = chartData[0];
+    let minDistance = Math.abs(x - nearestPoint.x);
+    
+    for (const point of chartData) {
+      const distance = Math.abs(x - point.x);
+      if (distance < minDistance) {
+        minDistance = distance;
+        nearestPoint = point;
+      }
+    }
+    
+    return nearestPoint;
+  };
+
+  // Función mejorada para interpolar datos entre puntos
+  const interpolateData = (x) => {
+    // Manejar casos fuera del rango normal
+    if (x < 0) {
+      const firstPoint = chartData[0];
+      return {
+        x: 0,
+        y: firstPoint.y,
+        value: firstPoint.value,
+        time: firstPoint.time,
+        contracts: firstPoint.contracts
+      };
+    }
+    
+    if (x > 1000) {
+      const lastPoint = chartData[chartData.length - 1];
+      return {
+        x: 1000,
+        y: lastPoint.y,
+        value: lastPoint.value,
+        time: lastPoint.time,
+        contracts: lastPoint.contracts
+      };
+    }
+    
+    // Si estamos muy cerca de un punto de datos, usar ese punto exacto
+    const nearestPoint = findNearestDataPoint(x);
+    if (Math.abs(x - nearestPoint.x) < 30) {
+      return nearestPoint;
+    }
+    
+    // Encontrar los dos puntos más cercanos para interpolación
+    let beforePoint = null;
+    let afterPoint = null;
+    
+    for (let i = 0; i < chartData.length; i++) {
+      if (chartData[i].x <= x) {
+        beforePoint = chartData[i];
+      }
+      if (chartData[i].x >= x && !afterPoint) {
+        afterPoint = chartData[i];
+        break;
+      }
+    }
+    
+    if (!beforePoint) return chartData[0];
+    if (!afterPoint) return chartData[chartData.length - 1];
+    
+    // Interpolar entre los dos puntos
+    const t = (x - beforePoint.x) / (afterPoint.x - beforePoint.x);
+    return {
+      x: x,
+      y: calculateYOnCurve(x),
+      value: Math.round(beforePoint.value + t * (afterPoint.value - beforePoint.value)),
+      time: t < 0.5 ? beforePoint.time : afterPoint.time,
+      contracts: Math.round(beforePoint.contracts + t * (afterPoint.contracts - beforePoint.contracts))
+    };
+  };
+
+  const handleMouseMove = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    // Expandir el área de seguimiento para mejor respuesta
+    const x = Math.max(-50, Math.min(1050, ((e.clientX - rect.left) / rect.width) * 1000));
+    const y = calculateYOnCurve(x);
+    const data = interpolateData(x);
+    
+    setMousePosition({ x, y });
+    setTooltipData(data);
+  };
+
+  const handleMouseEnter = () => {
+    setIsHovered(true);
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovered(false);
+  };
+
+  const handleChartClick = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 1000;
+    const data = interpolateData(x);
+    
+    // Encontrar el período de tiempo más cercano
+    const timeIndex = Math.floor(x / 100);
+    const selectedPeriod = chartData[Math.min(timeIndex, chartData.length - 1)];
+    
+    if (onDataPointClick) {
+      onDataPointClick({
+        period: selectedPeriod.time,
+        contracts: selectedPeriod.contracts,
+        value: selectedPeriod.value,
+        x: x,
+        y: calculateYOnCurve(x)
+      });
+    }
+  };
+
+  // Generar la línea de gradiente que sigue la curva
+  const generateGradientPath = () => {
+    return "M 0 250 C 100 150, 200 280, 300 180 C 400 80, 500 250, 600 150 C 700 50, 800 200, 900 100 L 1000 150";
+  };
+
+  return (
+    <div className="chart-visualization">
+      <svg 
+        viewBox="0 0 1000 300" 
+        className="chart-svg"
+        onMouseMove={handleMouseMove}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        onClick={handleChartClick}
+        style={{ cursor: 'pointer' }}
+      >
+        {/* Definir gradiente */}
+        <defs>
+          <linearGradient id="chartGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="var(--accent-color)" stopOpacity="0.3" />
+            <stop offset="50%" stopColor="var(--accent-color)" stopOpacity="0.6" />
+            <stop offset="100%" stopColor="var(--accent-color)" stopOpacity="0.3" />
+          </linearGradient>
+        </defs>
+
+        {/* Eje X */}
+        <line x1="0" y1="280" x2="1000" y2="280" stroke="var(--border-color)" strokeWidth="2" />
+        
+        {/* Línea secundaria */}
+        <path 
+          className="chart-line-secondary"
+          d="M 0 280 C 100 220, 250 200, 450 250 C 650 280, 800 230, 1000 260"
+          fill="none" 
+          stroke="var(--text-secondary)" 
+          strokeWidth="2" 
+          strokeDasharray="5,5"
+          opacity="0.5"
+        />
+        
+        {/* Área de gradiente bajo la curva */}
+        <path 
+          d={`${generateGradientPath()} L 1000 280 L 0 280 Z`}
+          fill="url(#chartGradient)"
+          opacity={isHovered ? 0.8 : 0.4}
+          className="chart-area"
+        />
+        
+        {/* Línea principal de datos */}
+        <path 
+          className={`chart-line-main ${isHovered ? 'hovered' : ''}`}
+          d={generateGradientPath()}
+          fill="none" 
+          stroke="var(--accent-color)" 
+          strokeWidth="4" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"
+        />
+        
+        {/* Puntos de datos removidos para una visualización más limpia */}
+        
+        {/* Línea vertical de seguimiento */}
+        {isHovered && (
+          <line 
+            x1={mousePosition.x} 
+            y1="0" 
+            x2={mousePosition.x} 
+            y2="300" 
+            stroke="var(--accent-color)" 
+            strokeWidth="2" 
+            strokeDasharray="5,5"
+            opacity="0.8"
+            className="mouse-tracking-line"
+          />
+        )}
+        
+        {/* Círculo de seguimiento en la curva */}
+        {isHovered && (
+          <circle 
+            cx={mousePosition.x} 
+            cy={mousePosition.y} 
+            r="8" 
+            fill="var(--accent-color)" 
+            stroke="var(--bg-primary)"
+            strokeWidth="3"
+            className="hover-circle"
+          />
+        )}
+      </svg>
+      
+      {/* Tooltip con datos reales - POSICIONAMIENTO MEJORADO */}
+      {isHovered && (
+        <div 
+          className="chart-tooltip"
+          style={{
+            left: `${Math.max(0, Math.min(100, (mousePosition.x / 1000) * 100))}%`,
+            top: '10px', // Posición fija arriba del gráfico
+            transform: 'translate(-50%, 0)',
+            position: 'absolute'
+          }}
+        >
+          <div className="tooltip-content">
+            <div className="tooltip-time">{tooltipData.time}</div>
+            <div className="tooltip-value">{tooltipData.value} contratos</div>
+            <div className="tooltip-contracts">+{tooltipData.contracts} nuevos</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Dashboard Component
+function DashboardView({ metrics }) {
+  const { notifications, addNotification } = useNotifications();
+  const [showJobsModal, setShowJobsModal] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState(null);
+  const [userType, setUserType] = useState('freelancer'); // 'client' o 'freelancer'
+  
+  // Real data from metrics prop
+  const realMetrics = metrics || {
+    totalContracts: 0,
+    activeContracts: 0,
+    totalRevenue: 0,
+    pendingPayments: 0
+  };
+
+  const handleDataPointClick = (data) => {
+    setSelectedPeriod(data);
+    setShowJobsModal(true);
+  };
+
+  const handleCloseJobsModal = () => {
+    setShowJobsModal(false);
+    setSelectedPeriod(null);
+  };
+
+  return (
+    <div className="dashboard">
+      {/* Métricas de Rendimiento */}
+      <h2 className="metrics-title">Métricas de Rendimiento</h2>
+      
+      <div className="metrics-grid">
+        {/* Tarjeta de Métrica 1: Contratos Activos */}
+        <div className="metric-card">
+          <p className="metric-label">Contratos Activos</p>
+          <p className="metric-value">{realMetrics.activeContracts || 0}</p>
+          <div className="progress-bar-container">
+            <div className="progress-bar" style={{ width: '80%' }}></div>
+          </div>
+          <p className="metric-change positive">+15.2% vs ayer</p>
+        </div>
+        
+        {/* Tarjeta de Métrica 2: Proyectos Completados */}
+        <div className="metric-card">
+          <p className="metric-label">Proyectos Completados</p>
+          <p className="metric-value">{realMetrics.completedProjects || 0}</p>
+          <div className="progress-bar-container">
+            <div className="progress-bar" style={{ width: '50%' }}></div>
+          </div>
+          <p className="metric-change negative">-2.1% vs ayer</p>
+        </div>
+
+        {/* Tarjeta de Métrica 3: Ingresos Totales */}
+        <div className="metric-card">
+          <p className="metric-label">Ingresos Totales</p>
+          <p className="metric-value">${realMetrics.totalEarnings || 0}</p>
+          <div className="progress-bar-container">
+            <div className="progress-bar" style={{ width: '95%' }}></div>
+          </div>
+          <p className="metric-change positive">Óptimo</p>
+        </div>
+
+        {/* Tarjeta de Métrica 4: Tasa de Éxito */}
+        <div className="metric-card">
+          <p className="metric-label">Tasa de Éxito</p>
+          <p className="metric-value">98.5%</p>
+          <div className="progress-bar-container">
+            <div className="progress-bar" style={{ width: '98%' }}></div>
+          </div>
+          <p className="metric-change positive">Estable</p>
+        </div>
+      </div>
+
+      {/* Gráfico Principal */}
+      <div className="chart-section">
+        <div className="chart-container">
+          <div className="chart-header">
+            <h3 className="chart-title">Actividad de Contratos (Últimas 24h)</h3>
+            <div className="user-type-selector">
+              <button 
+                className={`user-type-btn ${userType === 'freelancer' ? 'active' : ''}`}
+                onClick={() => setUserType('freelancer')}
+              >
+                👨‍💻 Freelancer
+              </button>
+              <button 
+                className={`user-type-btn ${userType === 'client' ? 'active' : ''}`}
+                onClick={() => setUserType('client')}
+              >
+                🏢 Cliente
+              </button>
+            </div>
+          </div>
+          <InteractiveChart onDataPointClick={handleDataPointClick} />
+          <p className="chart-instruction">
+            💡 Haz click en cualquier punto del gráfico para ver trabajos disponibles en ese período
+          </p>
+        </div>
+      </div>
+
+      {/* Tarjetas de Acción */}
+      <div className="action-cards">
+        <div className="action-card">
+          <div className="action-icon">
+            <FileText size={32} />
+          </div>
+          <div className="action-content">
+            <h4>Contratos Desconectados</h4>
+            <p>Aún no has configurado tu primer contrato inteligente.</p>
+            <button className="action-button">Crear Primer Contrato</button>
+            <a href="#" className="action-link">Guía de Inicio</a>
+          </div>
+        </div>
+        
+        <div className="action-card">
+          <div className="action-icon">
+            <Zap size={32} />
+          </div>
+          <div className="action-content">
+            <h4>Comienza tu Primer Workflow</h4>
+            <p>Crea un flujo de trabajo automatizado para tus contratos.</p>
+            <button className="action-button">Crear Workflow</button>
+            <a href="#" className="action-link">Ver Tutorial</a>
+          </div>
+        </div>
+      </div>
+
+      {/* Modal de Trabajos */}
+      <JobsModal
+        isOpen={showJobsModal}
+        onClose={handleCloseJobsModal}
+        selectedPeriod={selectedPeriod}
+        userType={userType}
+      />
+    </div>
+  );
+}
+
+// Main Content Component
+function MainContent({ currentView, isSidebarOpen }) {
+  const [contractsView, setContractsView] = useState('form'); // 'form', 'history'
+  const [contractFilters, setContractFilters] = useState({
+    status: 'all',
+    type: 'all'
+  });
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  
+  // Use dashboard metrics hook
+  const { metrics, contracts, addContract, updateContractStatus } = useDashboardMetrics();
+
+  // Handle template selection
+  const handleTemplateSelected = (template) => {
+    setSelectedTemplate(template);
+    setContractsView('form'); // Switch to form view
+  };
+
+  const handleFilterChange = (filterType, value) => {
+    setContractFilters(prev => ({
+      ...prev,
+      [filterType]: value
+    }));
+  };
+
+  const renderContent = () => {
+    switch (currentView) {
+      case 'dashboard':
+        return <DashboardView metrics={metrics} />;
+
+      case 'contracts':
+        return (
+          <div className="contracts-page">
+            {/* Header with Stats */}
+            <div className="contracts-header">
+              <div className="header-content">
+                <div className="header-text">
+                  <h2>Gestión de Contratos</h2>
+                  <p>Crea, gestiona y hace seguimiento de todos tus contratos inteligentes con IA</p>
+                </div>
+                <div className="header-actions">
+                  <button 
+                    className="create-contract-btn"
+                    onClick={() => setContractsView('form')}
+                  >
+                    <FileText size={20} />
+                    <span>Nuevo Contrato</span>
+                  </button>
+                </div>
+                <div className="header-stats">
+                  <div className="stat-item">
+                    <div className="stat-number">{metrics.activeContracts}</div>
+                    <div className="stat-label">Activos</div>
+                  </div>
+                  <div className="stat-item">
+                    <div className="stat-number">{metrics.completedProjects}</div>
+                    <div className="stat-label">Completados</div>
+                  </div>
+                  <div className="stat-item">
+                    <div className="stat-number">${metrics.totalEarnings.toLocaleString()}</div>
+                    <div className="stat-label">Total</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Navigation Tabs */}
+            <div className="contracts-navigation">
+              <div className="nav-tabs">
+                <button 
+                  className={`nav-tab ${contractsView === 'form' ? 'active' : ''}`}
+                  onClick={() => setContractsView('form')}
+                >
+                  <FileText size={18} />
+                  <span>Nuevo Contrato</span>
+                </button>
+                <button 
+                  className={`nav-tab ${contractsView === 'history' ? 'active' : ''}`}
+                  onClick={() => setContractsView('history')}
+                >
+                  <Shield size={18} />
+                  <span>Historial</span>
+                </button>
+              </div>
+            </div>
+            
+            {/* Main Content Area */}
+            <div className="contracts-main-content">
+              {contractsView === 'form' && (
+                <ContractForm 
+                  onContractCreated={addContract} 
+                  selectedTemplate={selectedTemplate}
+                />
+              )}
+              {contractsView === 'history' && (
+                <HistoryView 
+                  filters={contractFilters}
+                  onFilterChange={handleFilterChange}
+                  contracts={contracts}
+                />
+              )}
+            </div>
+          </div>
+        );
+
+      case 'chat':
+        return (
+          <div className="view-container">
+            <ChatView />
+          </div>
+        );
+
+      case 'analytics':
+        return (
+          <div className="view-container">
+            <h2>Analytics y Reportes</h2>
+            <p>Visualiza estadísticas detalladas sobre tu actividad y rendimiento.</p>
+            <div style={{ 
+              background: '#f8fafc', 
+              border: '1px solid #e2e8f0', 
+              borderRadius: '12px', 
+              padding: '2rem', 
+              textAlign: 'center',
+              color: '#64748b'
+            }}>
+              <BarChart3 size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
+              <p>Los analytics estarán disponibles próximamente</p>
+            </div>
+          </div>
+        );
+
+      case 'settings':
+        return (
+          <div className="view-container">
+            <h2>Configuración</h2>
+            <p>Personaliza tu experiencia y gestiona tus preferencias.</p>
+            <div style={{ 
+              background: '#f8fafc', 
+              border: '1px solid #e2e8f0', 
+              borderRadius: '12px', 
+              padding: '2rem', 
+              textAlign: 'center',
+              color: '#64748b'
+            }}>
+              <Settings size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
+              <p>Las configuraciones estarán disponibles próximamente</p>
+            </div>
+          </div>
+        );
+
+      case 'templates':
+        return <TemplatesView />;
+
+      default:
+        return (
+          <div className="view-container">
+            <h2>Bienvenido a GigChain.io</h2>
+            <p>Selecciona una opción del menú para comenzar.</p>
+          </div>
+        );
+    }
+  };
+
+  return (
+    <div className={`main-content ${!isSidebarOpen ? 'sidebar-closed' : ''}`}>
+      <header className="content-header">
+        <div className="header-left">
+          <h1 className="page-title">
+            {currentView === 'dashboard' && 'Resumen del Flujo de Datos'}
+            {currentView === 'contracts' && 'Contratos'}
+            {currentView === 'wallets' && 'Wallets'}
+            {currentView === 'transactions' && 'Transacciones'}
+            {currentView === 'ai' && 'AI Agents'}
+            {currentView === 'chat' && 'Chat AI'}
+            {currentView === 'templates' && 'Plantillas de Contratos'}
+            {currentView === 'analytics' && 'Analytics'}
+            {currentView === 'payments' && 'Pagos'}
+            {currentView === 'settings' && 'Configuración'}
+            {currentView === 'help' && 'Soporte'}
+          </h1>
+          <p className="page-subtitle">
+            {currentView === 'dashboard' && 'Métricas clave y estado de tus procesos en tiempo real.'}
+            {currentView === 'contracts' && 'Gestiona tus contratos inteligentes y acuerdos'}
+            {currentView === 'wallets' && 'Conecta y gestiona tus wallets de criptomonedas'}
+            {currentView === 'transactions' && 'Visualiza y rastrea todas tus transacciones'}
+            {currentView === 'ai' && 'Agentes de IA para generación y asistencia de contratos'}
+            {currentView === 'chat' && 'Chat con IA para soporte y consultas'}
+            {currentView === 'templates' && 'Plantillas predefinidas para crear contratos inteligentes rápidamente'}
+            {currentView === 'analytics' && 'Analytics e insights para tu proyecto'}
+            {currentView === 'payments' && 'Procesa y gestiona pagos'}
+            {currentView === 'settings' && 'Configuración del proyecto y preferencias'}
+            {currentView === 'help' && 'Soporte técnico y documentación'}
+          </p>
+        </div>
+        <div className="header-right">
+          <div className="date-filter">
+            <div className="date-range-picker">
+              <span>Hoy: Oct 02, 2025</span>
+            </div>
+            <div className="frequency-selector">
+              <select>
+                <option>Últimas 24h</option>
+                <option>Últimos 7 días</option>
+                <option>Últimos 30 días</option>
+              </select>
+            </div>
+            <button className="refresh-btn">
+              <Zap size={16} />
+              Actualizar
+            </button>
+          </div>
+          <div className="search-bar">
+            <Search size={20} />
+            <input type="text" placeholder="Buscar..." />
+          </div>
+          <NotificationCenter 
+            notifications={[]}
+            onMarkAsRead={(id) => console.log('Mark as read:', id)}
+            onClearAll={() => console.log('Clear all')}
+          />
+          <div className="wallet-connection">
+            <WalletConnectionComponent />
+          </div>
+        </div>
+      </header>
+
+      <div className="content-body">
+        {renderContent()}
+      </div>
+    </div>
+  );
+}
+
+// Función para truncar direcciones de wallet
+const truncateWalletAddress = (address, startChars = 6, endChars = 4) => {
+  if (!address || address.length <= startChars + endChars) {
+    return address;
+  }
+  return `${address.slice(0, startChars)}...${address.slice(-endChars)}`;
+};
+
+// Componente de Búsqueda Global - Temporalmente deshabilitado
+
+function App() {
+  const [currentView, setCurrentView] = useState('dashboard');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
+  return (
+    <ThirdwebProvider 
+      activeChain={Mumbai}
+      clientId={import.meta.env.VITE_THIRDWEB_CLIENT_ID || "your-thirdweb-client-id"}
+      supportedChains={[Mumbai, Polygon]}
+    >
+      <NotificationProvider>
+        <div className="app-layout">
+          <Sidebar 
+            isOpen={isSidebarOpen} 
+            toggleSidebar={toggleSidebar}
+            currentView={currentView}
+            setCurrentView={setCurrentView}
+          />
+          {isSidebarOpen && isMobile && (
+            <div className="sidebar-overlay" onClick={toggleSidebar}></div>
+          )}
+          <MainContent 
+            currentView={currentView} 
+            isSidebarOpen={isSidebarOpen}
+          />
+        </div>
+      </NotificationProvider>
+    </ThirdwebProvider>
+  );
+}
+
+// Chat View Component
+function ChatView() {
+  const [messages, setMessages] = useState([]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [sessionId, setSessionId] = useState(null);
+  const [selectedAgent, setSelectedAgent] = useState('contract');
+  const [availableAgents, setAvailableAgents] = useState([]);
+  const [isConnected, setIsConnected] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Initialize chat session
+  useEffect(() => {
+    initializeChat();
+  }, []);
+
+  const initializeChat = async () => {
+    try {
+      setError(null);
+      
+      // Get available agents
+      const agentsResponse = await fetch(`${API_BASE_URL}/api/chat/agents`);
+      if (!agentsResponse.ok) {
+        throw new Error(`HTTP error! status: ${agentsResponse.status}`);
+      }
+      const agentsData = await agentsResponse.json();
+      setAvailableAgents(agentsData.agents || []);
+
+      // Create new session
+      const sessionResponse = await fetch(`${API_BASE_URL}/api/chat/session`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: 'frontend-user',
+          agent_type: selectedAgent
+        })
+      });
+      
+      if (!sessionResponse.ok) {
+        throw new Error(`HTTP error! status: ${sessionResponse.status}`);
+      }
+      
+      const sessionData = await sessionResponse.json();
+      setSessionId(sessionData.session_id);
+      setIsConnected(true);
+
+      // Add welcome message
+      const welcomeMessage = {
+        id: Date.now(),
+        role: 'assistant',
+        content: '¡Hola! Soy tu asistente de IA para GigChain.io. ¿En qué puedo ayudarte hoy? Puedo ayudarte con contratos, negociaciones, soporte técnico o consejos de negocio.',
+        timestamp: new Date().toISOString(),
+        agent_type: 'contract'
+      };
+      setMessages([welcomeMessage]);
+
+    } catch (error) {
+      console.error('Error initializing chat:', error);
+      setError('Error conectando con el servidor de chat. Verifica que el backend esté ejecutándose.');
+      setIsConnected(false);
+      
+      // Add error message to chat
+      const errorMessage = {
+        id: Date.now(),
+        role: 'assistant',
+        content: 'Lo siento, no puedo conectarme al servidor de chat en este momento. Por favor, verifica que el backend esté ejecutándose (python main.py) e inténtalo de nuevo.',
+        timestamp: new Date().toISOString(),
+        agent_type: 'error'
+      };
+      setMessages([errorMessage]);
+    }
+  };
+
+  const sendMessage = async () => {
+    if (!inputMessage.trim() || !sessionId || isLoading) return;
+
+    const userMessage = {
+      id: Date.now(),
+      role: 'user',
+      content: inputMessage,
+      timestamp: new Date().toISOString()
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInputMessage('');
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/chat/message`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: inputMessage,
+          session_id: sessionId,
+          user_id: 'frontend-user',
+          context: {
+            current_view: 'chat',
+            platform: 'gigchain'
+          }
+        })
+      });
+
+      const data = await response.json();
+      
+      const aiMessage = {
+        id: Date.now() + 1,
+        role: 'assistant',
+        content: data.response,
+        timestamp: data.timestamp,
+        agent_type: data.agent_type,
+        suggestions: data.suggestions || []
+      };
+
+      setMessages(prev => [...prev, aiMessage]);
+
+    } catch (error) {
+      console.error('Error sending message:', error);
+      const errorMessage = {
+        id: Date.now() + 1,
+        role: 'assistant',
+        content: 'Lo siento, hubo un error procesando tu mensaje. Por favor, inténtalo de nuevo.',
+        timestamp: new Date().toISOString(),
+        agent_type: 'error'
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  const switchAgent = async (agentType) => {
+    if (!sessionId) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/chat/session/${sessionId}/agent`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ agent_type: agentType })
+      });
+
+      if (response.ok) {
+        setSelectedAgent(agentType);
+        
+        // Add system message about agent switch
+        const switchMessage = {
+          id: Date.now(),
+          role: 'assistant',
+          content: `He cambiado a ${availableAgents.find(a => a.id === agentType)?.name || agentType}. ¿En qué puedo ayudarte?`,
+          timestamp: new Date().toISOString(),
+          agent_type: agentType
+        };
+        setMessages(prev => [...prev, switchMessage]);
+      }
+    } catch (error) {
+      console.error('Error switching agent:', error);
+    }
+  };
+
+  const handleSuggestionClick = (suggestion) => {
+    setInputMessage(suggestion);
+  };
+
+  return (
+    <div className="chat-view">
+      <div className="chat-header">
+        <div className="chat-title">
+          <MessageSquare size={24} />
+          <h2>Chat con IA</h2>
+        </div>
+        
+        <div className="chat-controls">
+          <div className="agent-selector">
+            <label>Agente:</label>
+            <select 
+              value={selectedAgent} 
+              onChange={(e) => switchAgent(e.target.value)}
+              disabled={!isConnected}
+            >
+              {availableAgents.map(agent => (
+                <option key={agent.id} value={agent.id}>
+                  {agent.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div className={`connection-status ${isConnected ? 'connected' : 'disconnected'}`}>
+            <div className="status-dot"></div>
+            <span>{isConnected ? 'Conectado' : 'Desconectado'}</span>
+            {!isConnected && (
+              <button 
+                onClick={initializeChat}
+                className="reconnect-btn"
+                style={{
+                  marginLeft: '10px',
+                  padding: '4px 8px',
+                  fontSize: '12px',
+                  background: '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                Reconectar
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {error && (
+        <div className="chat-error" style={{
+          background: '#fef2f2',
+          border: '1px solid #fecaca',
+          color: '#dc2626',
+          padding: '12px',
+          margin: '10px',
+          borderRadius: '8px',
+          fontSize: '14px'
+        }}>
+          <strong>Error:</strong> {error}
+        </div>
+      )}
+
+      <div className="chat-container">
+        <div className="chat-messages">
+          {messages.map((message) => (
+            <div key={message.id} className={`message ${message.role}`}>
+              <div className="message-content">
+                <div className="message-header">
+                  <span className="message-role">
+                    {message.role === 'user' ? 'Tú' : 'IA'}
+                  </span>
+                  <span className="message-time">
+                    {new Date(message.timestamp).toLocaleTimeString()}
+                  </span>
+                </div>
+                <div className="message-text">
+                  {message.content}
+                </div>
+                {message.suggestions && message.suggestions.length > 0 && (
+                  <div className="message-suggestions">
+                    {message.suggestions.map((suggestion, index) => (
+                      <button
+                        key={index}
+                        className="suggestion-btn"
+                        onClick={() => handleSuggestionClick(suggestion)}
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+          
+          {isLoading && (
+            <div className="message assistant">
+              <div className="message-content">
+                <div className="typing-indicator">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="chat-input-container">
+          <div className="chat-input">
+            <textarea
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Escribe tu mensaje aquí..."
+              disabled={!isConnected || isLoading}
+              rows={1}
+            />
+            <button
+              onClick={sendMessage}
+              disabled={!inputMessage.trim() || !isConnected || isLoading}
+              className="send-button"
+            >
+              <Send size={20} />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default App;
+

@@ -1,0 +1,105 @@
+/* GigChain.io - Main Styles Entry Point */
+
+/* Import Component Styles - MUST BE FIRST */
+@import './layout/sidebar.css';
+@import './layout/header.css';
+@import './dashboard/dashboard.css';
+@import './dashboard/chart.css';
+@import './dashboard/modal.css';
+@import './components/wallet.css';
+@import './components/notifications.css';
+@import './components/buttons.css';
+@import './components/forms.css';
+@import './components/network-alert.css';
+@import './components/contract-setup.css';
+@import './components/loading.css';
+@import './utils/animations.css';
+@import './utils/responsive.css';
+
+/* Import view styles */
+/* @import './views/templates.css'; */
+/* @import './views/transactions.css'; */
+/* @import './views/ai-agents.css'; */
+/* @import './views/wallets.css'; */
+/* @import './views/payments.css'; */
+/* @import './views/settings.css'; */
+/* @import './views/help.css'; */
+
+/* CSS Variables and Global Styles */
+:root {
+  /* Colors */
+  --primary-color: #667eea;
+  --primary-hover: #5a67d8;
+  --secondary-color: #764ba2;
+  --accent-color: #10b981;
+  --warning-color: #f59e0b;
+  --error-color: #ef4444;
+  --success-color: #10b981;
+
+  /* Backgrounds */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --bg-tertiary: #f1f5f9;
+  --bg-dark: #1e293b;
+  --bg-darker: #0f172a;
+
+  /* Text Colors */
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+  --text-inverse: #ffffff;
+
+  /* Borders */
+  --border-color: #e2e8f0;
+  --border-light: #f1f5f9;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+
+  /* Spacing */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+
+  /* Border Radius */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.3s ease;
+  --transition-slow: 0.5s ease;
+}
+
+/* Reset and Base Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  line-height: 1.6;
+}
+
+/* App Container */
+.app {
+  display: flex;
+  min-height: 100vh;
+  background: var(--bg-secondary);
+}

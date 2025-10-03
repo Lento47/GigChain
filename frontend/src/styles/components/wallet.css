@@ -1,0 +1,203 @@
+/* Wallet Connection Styles */
+
+.wallet-connected {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.wallet-connected:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+}
+
+.wallet-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.wallet-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.wallet-info p {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin: 0;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  word-break: break-all;
+}
+
+.wallet-status {
+  font-size: 0.75rem;
+  color: var(--success-color);
+  font-weight: 500;
+}
+
+.wallet-details {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.5rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1rem;
+  box-shadow: var(--shadow-lg);
+  min-width: 280px;
+  z-index: 1000;
+}
+
+.wallet-details-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.wallet-details-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 1.25rem;
+}
+
+.wallet-details-info h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 0.25rem 0;
+}
+
+.wallet-details-info p {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin: 0;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+.wallet-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.wallet-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.wallet-action-btn:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+.wallet-action-btn.danger:hover {
+  background: rgba(239, 68, 68, 0.05);
+  border-color: var(--error-color);
+  color: var(--error-color);
+}
+
+/* Wallet Connection Button */
+.connect-wallet-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: var(--radius-lg);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.connect-wallet-btn:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.connect-wallet-btn:active {
+  transform: translateY(0);
+}
+
+/* Responsive Wallet */
+@media (max-width: 768px) {
+  .wallet-details {
+    right: auto;
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 260px;
+  }
+
+  .wallet-info p {
+    font-size: 0.8rem;
+  }
+
+  .wallet-avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .wallet-connected {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .wallet-info p {
+    font-size: 0.75rem;
+  }
+
+  .wallet-details {
+    min-width: 240px;
+  }
+
+  .wallet-details-avatar {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
+}
