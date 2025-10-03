@@ -97,6 +97,34 @@ Responde solo YAML válido.
 
 **Actualizaciones**: Review semanal. No gen código sin test en Bubble staging.
 
+## 🚫 **Restricciones de Deployment (Temporales)**
+
+### **NO DOCKER - Solo Desarrollo Local**
+- **Prohibido**: Crear imágenes Docker, docker-compose builds, o deployment containers
+- **Permitido**: Solo desarrollo local con `python main.py` en puerto 5000
+- **Razón**: Optimización de tiempo de desarrollo hasta finalizar funcionalidades
+- **Cuando**: Docker solo al final del proyecto cuando todo esté terminado
+
+### **Comandos Permitidos:**
+```bash
+# ✅ PERMITIDO
+python main.py                    # Servidor local
+python test_*.py                  # Tests individuales
+pip install -r requirements.txt   # Instalar dependencias
+
+# ❌ PROHIBIDO (por ahora)
+docker build
+docker-compose up
+./deploy.sh
+./deploy.ps1
+```
+
+### **Stack de Desarrollo Actual:**
+- **Backend**: FastAPI en `http://localhost:5000`
+- **Frontend**: React en desarrollo (si está configurado)
+- **Testing**: Scripts Python individuales
+- **Database**: En memoria o archivos locales
+
 ---
 
-*Última Update: 01/10/2025. Versión 1.0.*
+*Última Update: 01/10/2025. Versión 1.1 - Sin Docker*

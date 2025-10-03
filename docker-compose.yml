@@ -2,7 +2,9 @@ version: '3.8'
 
 services:
   gigchain-api:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.optimized
     ports:
       - "5000:5000"
     environment:

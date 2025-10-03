@@ -1,0 +1,87 @@
+# Cursor Rules para GigChain.io
+
+## 🚫 **RESTRICCIONES DE DEPLOYMENT**
+
+### **NO DOCKER - Solo Desarrollo Local**
+- **PROHIBIDO**: Crear imágenes Docker, docker-compose builds, o deployment containers
+- **PERMITIDO**: Solo desarrollo local con `python main.py` en puerto 5000
+- **RAZÓN**: Optimización de tiempo de desarrollo hasta finalizar funcionalidades
+- **CUANDO**: Docker solo al final del proyecto cuando todo esté terminado
+
+### **Comandos Permitidos:**
+```bash
+# ✅ PERMITIDO
+python main.py                    # Servidor local
+python test_*.py                  # Tests individuales
+pip install -r requirements.txt   # Instalar dependencias
+
+# ❌ PROHIBIDO (por ahora)
+docker build
+docker-compose up
+./deploy.sh
+./deploy.ps1
+```
+
+### **Stack de Desarrollo Actual:**
+- **Backend**: FastAPI en `http://localhost:5000`
+- **Frontend**: React en desarrollo (si está configurado)
+- **Testing**: Scripts Python individuales
+- **Database**: En memoria o archivos locales
+
+## 🎯 **OBJETIVOS DEL PROYECTO**
+
+### **Fase Actual: Desarrollo Local**
+1. ✅ Backend FastAPI funcionando
+2. 🔄 Chat AI implementado
+3. 🔄 AI Agents (Negotiation, Generator, Resolver)
+4. 🔄 Frontend React
+5. 🔄 Testing completo
+6. ❌ Docker (al final)
+
+### **Prioridades:**
+1. **Funcionalidades Core**: AI agents, chat, contratos
+2. **Frontend UX**: Interfaz moderna y responsive
+3. **Testing**: Cobertura completa de tests
+4. **Optimización**: Performance y seguridad
+5. **Deployment**: Docker solo al final
+
+## 🤖 **AGENTS AI**
+
+### **Reglas Estrictas:**
+- Solo pseudocódigo Bubble (no código real ejecutable)
+- Output siempre en formato YAML + explicación
+- Máximo 200 líneas por snippet
+- Validación de sintaxis antes de output
+- Temperatura 0.0 para exactitud
+
+### **Agents Disponibles:**
+1. **WorkflowGeneratorAgent**: Workflows Bubble
+2. **UIElementAgent**: Elementos UI
+3. **ChainValidatorAgent**: Validación de chains AI
+
+## 📝 **INSTRUCCIONES PARA AGENTS**
+
+Cuando el usuario pida:
+- **Docker/Deployment**: Redirigir a desarrollo local
+- **Testing**: Usar scripts Python individuales
+- **Frontend**: Trabajar con React local
+- **Backend**: Usar FastAPI en localhost:5000
+- **AI Code**: Seguir reglas de AGENTS.md
+
+## 🔧 **COMANDOS ÚTILES**
+
+```bash
+# Iniciar servidor
+python main.py
+
+# Tests específicos
+python test_chat.py
+python test_contract_ai.py
+python test_api.py
+
+# Verificar estado
+curl http://localhost:5000/health
+```
+
+---
+*Configuración para desarrollo local - Sin Docker hasta finalizar proyecto*

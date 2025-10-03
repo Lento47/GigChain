@@ -7,13 +7,27 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
-        changeOrigin: true
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '/api')
       }
     }
   },
   build: {
     outDir: 'dist',
     sourcemap: true
+  },
+  optimizeDeps: {
+    include: [
+      '@thirdweb-dev/react',
+      '@thirdweb-dev/sdk',
+      '@thirdweb-dev/chains'
+    ],
+    exclude: [
+      'thirdweb-dev-wallets-evm-connectors-phantom'
+    ]
+  },
+  define: {
+    global: 'globalThis',
   }
 })
