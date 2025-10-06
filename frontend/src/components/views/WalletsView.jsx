@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Wallet, Plus, Copy, ExternalLink, TrendingUp, TrendingDown, Eye, EyeOff, Search } from 'lucide-react';
+import { logger } from '../../utils/logger';
 
 // Inline styles
 const styles = {
@@ -174,7 +175,7 @@ const WalletsView = () => {
 
   const handleCopyAddress = (address) => {
     navigator.clipboard.writeText(address);
-    console.log('Address copied to clipboard');
+    logger.action('wallet_address_copied', { address: address.substring(0, 10) + '...' });
   };
 
   const handleViewOnExplorer = (address, network) => {

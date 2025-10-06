@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Cookie, Shield, Settings, X, Check } from 'lucide-react';
+import { logger } from '../utils/logger';
 import '../styles/components/cookie-consent.css';
 
 const CookieConsent = ({ onAccept }) => {
@@ -71,15 +72,16 @@ const CookieConsent = ({ onAccept }) => {
     if (!prefs.analytics) {
       // Disable analytics tracking
       window.ga && window.ga('remove');
-      console.log('Analytics disabled');
+      logger.info('Analytics tracking disabled by user preference');
     } else {
       // Enable analytics
-      console.log('Analytics enabled');
+      logger.info('Analytics tracking enabled by user preference');
+      logger.analytics('analytics_enabled', { timestamp: new Date().toISOString() });
     }
     
     // Marketing cookies (we don't use them, but included for completeness)
     if (!prefs.marketing) {
-      console.log('Marketing cookies disabled');
+      logger.debug('Marketing cookies disabled (not used)');
     }
   };
 

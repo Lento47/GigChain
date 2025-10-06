@@ -5,6 +5,7 @@ import InteractiveChart from './InteractiveChart';
 import JobsModal from './JobsModal';
 import ContractSetup from '../ContractSetup';
 import { MetricSkeleton } from '../LoadingSpinner';
+import { logger } from '../../utils/logger';
 
 const DashboardView = ({ metrics, isLoading = false }) => {
   const { notifications, addNotification } = useNotifications();
@@ -41,7 +42,7 @@ const DashboardView = ({ metrics, isLoading = false }) => {
       timestamp: new Date()
     });
     // Aquí se implementaría la navegación al asistente de contratos
-    console.log('Crear primer contrato');
+    logger.action('create_first_contract_clicked');
   };
 
   const handleShowGuide = () => {
@@ -53,7 +54,7 @@ const DashboardView = ({ metrics, isLoading = false }) => {
       timestamp: new Date()
     });
     // Aquí se implementaría la navegación a la guía
-    console.log('Mostrar guía de inicio');
+    logger.action('show_getting_started_guide');
   };
 
   return (

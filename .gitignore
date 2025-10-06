@@ -1,8 +1,23 @@
-# Python
+# ============================================
+# GigChain.io - Comprehensive .gitignore
+# ============================================
+# Updated: 2025-10-06
+
+# ==================== Python ====================
+
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
+
+# C extensions
+*.c
+*.cpp
+*.o
+*.a
+
+# Distribution / packaging
 .Python
 build/
 develop-eggs/
@@ -21,16 +36,13 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+pip-wheel-metadata/
 
-# Virtual environments
-venv/
-env/
-ENV/
-env.bak/
-venv.bak/
-.venv/
+# PyInstaller
+*.manifest
+*.spec
 
-# Testing
+# Unit test / coverage reports
 .pytest_cache/
 .coverage
 .coverage.*
@@ -40,19 +52,151 @@ coverage.xml
 *.log
 .tox/
 .nox/
+.hypothesis/
+.pytest_cache/
+nosetests.xml
+coverage/
+*.pytest_cache
 
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
-*.swn
-.DS_Store
+# Translations
+*.mo
+*.pot
 
-# Environment variables
+# Sphinx documentation
+docs/_build/
+docs/_static/
+docs/_templates/
+
+# PyBuilder
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# Poetry
+poetry.lock
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath
+*.sage.py
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# ==================== Virtual Environments ====================
+
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+virtualenv/
+.virtualenv/
+
+# ==================== Environment Variables ====================
+
+# Sensitive environment files
 .env
 .env.local
 .env.*.local
+.env.production
+.env.development
+.env.test
+*.env
+
+# Keep example files
+!.env.example
+!env.example
+
+# ==================== IDEs & Editors ====================
+
+# VSCode
+.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# PyCharm / IntelliJ
+.idea/
+*.iml
+*.ipr
+*.iws
+.idea_modules/
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*.swn
+*~
+.netrwhist
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# TextMate
+*.tmproj
+*.tmproject
+tmtags
+
+# ==================== Operating Systems ====================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+.directory
+.Trash-*
+.nfs*
+
+# ==================== Logs & Databases ====================
 
 # Logs
 logs/
@@ -60,47 +204,196 @@ logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+lerna-debug.log*
+pnpm-debug.log*
+pip-log.txt
 
-# Database
+# Databases
 *.db
 *.sqlite
 *.sqlite3
+*.db-shm
+*.db-wal
+db.sqlite3
+database/
 
-# Deployment
-*.pid
-*.seed
-*.pid.lock
+# ==================== Node.js / Frontend ====================
 
-# Docker
+# Dependencies
+node_modules/
+jspm_packages/
+.npm
+.yarn/
+.pnp/
+.pnp.js
+
+# Build outputs
+frontend/dist/
+frontend/build/
+frontend/.next/
+frontend/out/
+frontend/.nuxt/
+frontend/.cache/
+frontend/.parcel-cache/
+frontend/.vuepress/dist/
+
+# Production
+build/
+dist/
+
+# Testing
+coverage/
+.nyc_output/
+
+# Misc
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# ==================== Docker ====================
+
+# Docker override files
 docker-compose.override.yml
+docker-compose.local.yml
+
+# Docker volumes
+.docker/
+
+# ==================== SSL & Security ====================
 
 # SSL Certificates
 ssl/
+certs/
 *.pem
 *.key
 *.crt
+*.cer
+*.p12
+*.pfx
 
-# Temporary files
-*.tmp
-*.temp
-.cache/
+# SSH keys
+id_rsa
+id_rsa.pub
+*.key
 
-# OS
-Thumbs.db
-.DS_Store
+# ==================== Smart Contracts (Hardhat/Truffle) ====================
 
-# Node (for frontend)
-node_modules/
-.npm
-
-# Frontend build
-frontend/dist/
-frontend/build/
-
-# Smart contracts
+# Hardhat
 contracts/node_modules/
 contracts/artifacts/
 contracts/cache/
 contracts/typechain-types/
+contracts/coverage/
+contracts/coverage.json
+
+# Deployment artifacts (keep structure, ignore data)
 contracts/deployments/*.json
 !contracts/deployments/.gitkeep
+
+# Truffle
+contracts/.trufflebuild/
+
+# ==================== Temporary Files ====================
+
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+.cache/
+tmp/
+temp/
+
+# ==================== CI/CD ====================
+
+# GitHub Actions
+.github/workflows/*.log
+
+# CircleCI
+.circleci/
+
+# Travis CI
+.travis.yml
+
+# ==================== Package Managers ====================
+
+# pip
+pip-log.txt
+pip-delete-this-directory.txt
+
+# npm/yarn
+package-lock.json
+yarn.lock
+.pnp.*
+
+# ==================== Monitoring & Analytics ====================
+
+# Sentry
+.sentryclirc
+
+# NewRelic
+newrelic.ini
+
+# ==================== Project Specific ====================
+
+# GigChain specific
+gigchain.db
+*.gigchain
+.gigchain/
+
+# Auth databases
+auth.db
+auth_*.db
+
+# Chat history
+chat_history/
+*.chat
+
+# Contract templates (user-generated)
+user_templates/
+
+# Test outputs
+test_outputs/
+test_results/
+
+# Performance profiling
+*.prof
+*.pyprof
+*.pstats
+
+# ==================== Keep Important Files ====================
+
+# Keep README and documentation
+!README.md
+!LICENSE
+!docs/**/*.md
+!*.example
+
+# Keep configuration templates
+!.vscode/settings.json.example
+!.github/workflows/*.yml
+
+# Keep necessary empty directories
+!.gitkeep
+!**/.gitkeep
+
+# ==================== AI/ML Models ====================
+
+# Large model files
+*.h5
+*.pkl
+*.pickle
+*.joblib
+*.model
+models/
+checkpoints/
+
+# ==================== Backup Files ====================
+
+*.backup
+*.bak
+*.orig
+*~
+
+# ==================== End of .gitignore ====================

@@ -22,6 +22,14 @@ from agents import chain_agents, AgentInput, get_agent_status
 from security.template_security import validate_template_security, SecurityValidationResult
 from chat_enhanced import chat_manager
 
+# Import custom exceptions
+from exceptions import (
+    GigChainBaseException,
+    ContractGenerationError,
+    ValidationError,
+    MissingRequiredFieldError
+)
+
 # Import W-CSAP authentication
 from auth import (
     WCSAPAuthenticator, 
@@ -45,18 +53,38 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Configure for production
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# CORS middleware - Production-ready configuration
+# Get allowed origins from environment or use defaults
+ALLOWED_ORIGINS = os.getenv(
+    'ALLOWED_ORIGINS',
+    'http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173'
+).split(',')
 
-# Add W-CSAP authentication middleware
-# app.add_middleware(RateLimitMiddleware)  # Uncomment to enable rate limiting
-# app.add_middleware(SessionCleanupMiddleware)  # Uncomment for auto cleanup
+# In production, restrict to specific origins
+if not os.getenv('DEBUG', 'False').lower() == 'true':
+    # Production mode - only allow configured origins
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=ALLOWED_ORIGINS,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+        max_age=3600,  # Cache preflight requests for 1 hour
+    )
+else:
+    # Development mode - allow all origins
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+# Add W-CSAP authentication middleware (enabled in production)
+if not os.getenv('DEBUG', 'False').lower() == 'true':
+    app.add_middleware(RateLimitMiddleware)  # Enable rate limiting in production
+    app.add_middleware(SessionCleanupMiddleware)  # Enable auto cleanup in production
 
 # Initialize W-CSAP Authenticator on startup
 @app.on_event("startup")
@@ -199,6 +227,23 @@ class HealthResponse(BaseModel):
     service: str
     version: str
     ai_agents_active: bool
+
+# Global exception handler for custom exceptions
+@app.exception_handler(GigChainBaseException)
+async def gigchain_exception_handler(request: Request, exc: GigChainBaseException):
+    """Handle all custom GigChain exceptions with proper error codes."""
+    logger.error(f"GigChain error: {exc.error_code} - {exc.message}")
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error": {
+                "code": exc.error_code,
+                "message": exc.message,
+                "details": exc.details,
+                "timestamp": datetime.now().isoformat()
+            }
+        }
+    )
 
 # Middleware for request logging
 @app.middleware("http")
@@ -1303,21 +1348,28 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
     finally:
         chat_manager.websocket_manager.disconnect(connection_id, session_id)
 
-# Error handlers
+# Error handlers with error codes
 @app.exception_handler(404)
 async def not_found_handler(request: Request, exc):
     return JSONResponse(
         status_code=404,
         content={
-            "error": "Endpoint not found",
-            "message": "The requested endpoint does not exist",
-            "available_endpoints": [
-                "/health",
-                "/api/full_flow",
-                "/api/contract",
-                "/api/agents/status",
-                "/docs"
-            ]
+            "error": {
+                "code": "ENDPOINT_NOT_FOUND",
+                "message": "The requested endpoint does not exist",
+                "details": {
+                    "path": request.url.path,
+                    "method": request.method
+                },
+                "timestamp": datetime.now().isoformat(),
+                "available_endpoints": [
+                    "/health",
+                    "/api/full_flow",
+                    "/api/contract",
+                    "/api/agents/status",
+                    "/docs"
+                ]
+            }
         }
     )
 
@@ -1326,8 +1378,30 @@ async def method_not_allowed_handler(request: Request, exc):
     return JSONResponse(
         status_code=405,
         content={
-            "error": "Method not allowed",
-            "message": "The HTTP method is not allowed for this endpoint"
+            "error": {
+                "code": "METHOD_NOT_ALLOWED",
+                "message": "The HTTP method is not allowed for this endpoint",
+                "details": {
+                    "path": request.url.path,
+                    "method": request.method
+                },
+                "timestamp": datetime.now().isoformat()
+            }
+        }
+    )
+
+@app.exception_handler(500)
+async def internal_server_error_handler(request: Request, exc):
+    logger.error(f"Internal server error: {str(exc)}")
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": {
+                "code": "INTERNAL_SERVER_ERROR",
+                "message": "An unexpected error occurred",
+                "details": {},
+                "timestamp": datetime.now().isoformat()
+            }
         }
     )
 

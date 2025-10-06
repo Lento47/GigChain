@@ -162,7 +162,19 @@ def _derive_risks(total_days: int, amounts: ParsedAmounts) -> List[str]:
     return risks
 
 
-def generate_contract(input_text: str) -> Dict[str, object]:
+def generate_contract(input_text: str) -> Dict[str, Any]:
+    """
+    Generate a Web3-friendly contract from user input text.
+    
+    Args:
+        input_text: Natural language description of the contract/project
+        
+    Returns:
+        Dictionary containing contract details including milestones, clauses, and risks
+        
+    Raises:
+        ValueError: If input text is empty
+    """
     text = input_text.strip()
     if not text:
         raise ValueError("El texto de entrada no puede estar vacío")

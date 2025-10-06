@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Zap, Play, Pause, Settings, MessageSquare, Code, Brain, Search, Filter, AlertCircle, CheckCircle } from 'lucide-react';
 import axios from 'axios';
 import { API_BASE_URL } from '../../constants/api';
+import { logger } from '../../utils/logger';
 
 // Inline styles
 const styles = {
@@ -177,9 +178,9 @@ const AIAgentsView = () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/api/agents/status`);
       // Update agents with backend data if available
-      console.log('Agents status:', response.data);
+      logger.debug('Agents status fetched successfully', response.data);
     } catch (error) {
-      console.error('Error fetching agents status:', error);
+      logger.error('Error fetching agents status:', error);
     }
   };
 
