@@ -97,8 +97,9 @@ test-contracts:
 
 test-coverage:
 	@echo "📊 Running tests with coverage..."
-	pytest tests/ -v --cov=. --cov-report=html --cov-report=term
-	@echo "Coverage report: htmlcov/index.html"
+	pytest tests/ -v --cov=. --cov-config=.coveragerc --cov-report=html --cov-report=term
+	@echo "📄 Coverage report: htmlcov/index.html"
+	@echo "📊 Current threshold: 15% (configurable in CI)"
 
 # Code Quality
 lint: lint-backend lint-frontend
