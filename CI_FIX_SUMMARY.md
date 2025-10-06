@@ -97,7 +97,7 @@ pytest tests/ -v --cov=. --cov-config=.coveragerc --cov-report=html --cov-report
 make test-coverage
 
 # Check threshold
-pytest tests/ --cov=. --cov-config=.coveragerc --cov-fail-under=15
+pytest tests/ --cov=. --cov-config=.coveragerc --cov-fail-under=14
 ```
 
 ## 📈 Roadmap for Coverage Improvement

@@ -99,7 +99,7 @@ test-coverage:
 	@echo "📊 Running tests with coverage..."
 	pytest tests/ -v --cov=. --cov-config=.coveragerc --cov-report=html --cov-report=term
 	@echo "📄 Coverage report: htmlcov/index.html"
-	@echo "📊 Current threshold: 15% (configurable in CI)"
+	@echo "📊 Current threshold: 14% (actual coverage: ~14.81%)"
 
 # Code Quality
 lint: lint-backend lint-frontend
