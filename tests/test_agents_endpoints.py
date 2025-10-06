@@ -5,7 +5,8 @@ import sys
 import pathlib
 from fastapi.testclient import TestClient
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+# Add parent directory to path to import main module
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 from main import app
 
