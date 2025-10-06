@@ -32,8 +32,15 @@ services:
       - ./ssl:/etc/nginx/ssl:ro
       - ./frontend/dist:/usr/share/nginx/html:ro
     depends_on:
-      - gigchain-api
+      gigchain-api:
+        condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
 networks:
   default:

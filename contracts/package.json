@@ -1,0 +1,41 @@
+{
+  "name": "@gigchain/contracts",
+  "version": "1.0.0",
+  "description": "Smart contracts for GigChain.io escrow system on Polygon",
+  "main": "index.js",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:amoy": "hardhat run scripts/deploy.ts --network polygonAmoy",
+    "deploy:polygon": "hardhat run scripts/deploy.ts --network polygon",
+    "verify:amoy": "hardhat verify --network polygonAmoy",
+    "verify:polygon": "hardhat verify --network polygon",
+    "node": "hardhat node",
+    "clean": "hardhat clean",
+    "coverage": "hardhat coverage"
+  },
+  "keywords": [
+    "ethereum",
+    "polygon",
+    "smart-contracts",
+    "escrow",
+    "hardhat",
+    "solidity"
+  ],
+  "author": "GigChain.io",
+  "license": "MIT",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@nomicfoundation/hardhat-verify": "^2.0.11",
+    "@typechain/hardhat": "^9.1.0",
+    "hardhat": "^2.22.16",
+    "hardhat-gas-reporter": "^2.2.1",
+    "solidity-coverage": "^0.8.13",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.3"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.1.0",
+    "dotenv": "^16.4.5"
+  }
+}

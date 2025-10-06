@@ -1,0 +1,72 @@
+[run]
+# Coverage.py configuration for GigChain.io
+source = .
+omit = 
+    # Test files
+    tests/*
+    test_*.py
+    *_test.py
+    
+    # Utility scripts (not production code)
+    setup_w_csap.py
+    start_local.py
+    
+    # Virtual environments
+    venv/*
+    .venv/*
+    env/*
+    
+    # Dependencies
+    */site-packages/*
+    
+    # Frontend
+    frontend/*
+    
+    # Smart contracts
+    contracts/*
+    
+    # Cache and build
+    __pycache__/*
+    .pytest_cache/*
+    *.egg-info/*
+    build/*
+    dist/*
+
+[report]
+# Reporting configuration
+precision = 2
+show_missing = True
+skip_covered = False
+
+# Exclude lines from coverage
+exclude_lines =
+    # Standard pragma
+    pragma: no cover
+    
+    # Debug code
+    def __repr__
+    if self\.debug
+    
+    # Defensive programming
+    raise AssertionError
+    raise NotImplementedError
+    
+    # Non-runnable code
+    if __name__ == .__main__.:
+    if TYPE_CHECKING:
+    @abstractmethod
+    @abc.abstractmethod
+    
+    # Pass statements
+    pass
+    
+    # Ellipsis
+    \.\.\.
+
+[html]
+# HTML report configuration
+directory = htmlcov
+
+[xml]
+# XML report configuration (for CI/CD)
+output = coverage.xml

@@ -1,6 +1,13 @@
 # 🚀 GigChain.io - AI-Powered Web3 Contract Generation
 
-**GigChain.io** es una plataforma completa que utiliza inteligencia artificial para generar contratos Web3 inteligentes para la economía gig, con soporte para escrow automático en Polygon usando USDC. Construido desde cero con FastAPI, React, y deployment en VPS.
+[![CI/CD Pipeline](https://github.com/yourusername/GigChain/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/GigChain/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/yourusername/GigChain/branch/main/graph/badge.svg)](https://codecov.io/gh/yourusername/GigChain)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
+**GigChain.io** es una plataforma completa que utiliza inteligencia artificial para generar contratos Web3 inteligentes para la economía gig, con soporte para escrow automático en Polygon usando USDC. Construido con FastAPI, React, y deployment containerizado con Docker.
 
 ## ✨ Características
 
@@ -18,8 +25,10 @@
 ### Core Components
 - **`contract_ai.py`**: Motor principal de parsing y generación de contratos
 - **`agents.py`**: Sistema de AI agents con chaining (Negotiation → Generator → Resolver)
-- **`app.py`**: API Flask con endpoints RESTful
-- **Docker**: Containerización completa con Nginx
+- **`main.py`**: FastAPI server (producción) con endpoints RESTful y documentación auto-generada
+- **`app.py`**: Flask server (legacy, compatibilidad) - se recomienda migrar a FastAPI
+- **`auth/`**: Sistema W-CSAP (Wallet Challenge-Signature Authentication Protocol) para autenticación Web3
+- **Docker**: Containerización completa con Nginx, rate limiting y security headers
 
 ### AI Agents
 1. **NegotiationAgent**: Genera contraofertas equilibradas basadas en complejidad
@@ -28,7 +37,7 @@
 
 ## 🚀 Quick Start
 
-### 1. Setup Local
+### 1. Setup Local (Recommended: FastAPI)
 ```bash
 # Clone repository
 git clone <your-repo-url>
@@ -38,13 +47,19 @@ cd GigChain
 pip install -r requirements.txt
 
 # Configure environment
-cp env.example .env
-# Edit .env with your OPENAI_API_KEY
+cp .env.example .env
+# Edit .env with your OPENAI_API_KEY and other variables
 
 # Run tests
 python -m pytest tests/ -v
 
-# Start development server
+# Start FastAPI development server (recommended)
+python main.py
+# Server runs at http://localhost:5000
+# API docs available at http://localhost:5000/docs
+# Alternative docs at http://localhost:5000/redoc
+
+# Or start Flask server (legacy)
 python app.py
 ```
 
@@ -177,12 +192,52 @@ GigChain/
 
 ## 🔒 Security Features
 
-- **Rate Limiting**: 10 requests/second por IP
-- **Input Validation**: Sanitización de inputs
-- **Error Handling**: Manejo seguro de errores sin exposición de datos
-- **CORS**: Configuración restrictiva para frontend
-- **Security Headers**: X-Frame-Options, X-Content-Type-Options, etc.
+### Production-Ready Security
+- **Rate Limiting**: 10 req/s para API, 1 req/s para login, burst control
+- **Connection Limiting**: Max 10 conexiones concurrentes por IP
+- **Comprehensive Security Headers**:
+  - `X-Frame-Options: DENY`
+  - `X-Content-Type-Options: nosniff`
+  - `Referrer-Policy: strict-origin-when-cross-origin`
+  - `Permissions-Policy: geolocation=(), microphone=(), camera=()`
+  - `Content-Security-Policy` with strict rules
+  - `Strict-Transport-Security` (HSTS) for HTTPS with preload
+- **W-CSAP Authentication**: Wallet-based authentication using challenge-signature protocol
+- **Input Validation**: Pydantic models with strict type checking
+- **Template Security**: Sanitización y validación de plantillas JSON
+- **Error Handling**: Manejo seguro sin exposición de stack traces
+- **CORS**: Configurable origins (production ready)
 - **Environment Isolation**: Variables de entorno para secrets
+- **File Upload Limits**: Max 10MB, allowed types whitelist
+- **Timeouts**: Configurados para prevenir DOS (60s)
+
+### Authentication Flow (W-CSAP)
+
+GigChain usa **W-CSAP** (Wallet Challenge-Signature Authentication Protocol), un sistema de autenticación Web3 sin contraseñas:
+
+1. **Challenge Request** (`POST /api/auth/challenge`)
+   - Cliente envía su wallet address
+   - Servidor genera un challenge único y nonce
+   - Challenge expira en 5 minutos
+
+2. **Signature Verification** (`POST /api/auth/verify`)
+   - Cliente firma el challenge con su wallet privada
+   - Servidor verifica la firma usando eth-account
+   - Si válido, genera session_token y refresh_token
+
+3. **Authenticated Requests**
+   - Cliente incluye `Authorization: Bearer {session_token}`
+   - Sesión válida por 24 horas
+   - Refresh token válido por 7 días
+
+4. **Session Refresh** (`POST /api/auth/refresh`)
+   - Cliente envía refresh_token antes de expiración
+   - Servidor genera nuevo session_token
+
+5. **Logout** (`POST /api/auth/logout`)
+   - Invalida sesión actual en base de datos
+
+**Endpoints protegidos**: Todos los endpoints críticos requieren autenticación W-CSAP.
 
 ## 🌐 Production Deployment
 
