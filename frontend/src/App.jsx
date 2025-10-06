@@ -27,6 +27,14 @@ import { SettingsView } from './components/views/SettingsView';
 import { HelpView } from './components/views/HelpView';
 import { useWallet } from './hooks/useWallet';
 
+// Import new home and legal pages
+import HomePage from './components/HomePage';
+import TermsOfService from './components/legal/TermsOfService';
+import PrivacyPolicy from './components/legal/PrivacyPolicy';
+import ProhibitedActivities from './components/legal/ProhibitedActivities';
+import License from './components/legal/License';
+import CookieConsent from './components/CookieConsent';
+
 // Import hooks and utilities
 import { useDashboardMetrics } from './hooks/useDashboardMetrics';
 import { truncateWalletAddress } from './utils/walletUtils';
@@ -236,9 +244,10 @@ const MainContent = ({ currentView, walletInfo, isConnected, onViewChange }) => 
 
 // Internal App Component (uses Thirdweb hooks)
 const InternalApp = () => {
-  const [currentView, setCurrentView] = useState('dashboard');
+  const [currentView, setCurrentView] = useState('home');
   const [walletInfo, setWalletInfo] = useState({ connected: false, address: null });
   const [isConnected, setIsConnected] = useState(false);
+  const [showCookieConsent, setShowCookieConsent] = useState(false);
 
   const { 
     address, 
@@ -253,14 +262,36 @@ const InternalApp = () => {
     if (address) {
       setWalletInfo({ connected: true, address });
       setIsConnected(true);
+      // When user connects, switch to dashboard
+      if (currentView === 'home') {
+        setCurrentView('dashboard');
+      }
     } else {
       setWalletInfo({ connected: false, address: null });
       setIsConnected(false);
     }
   }, [address]);
 
+  useEffect(() => {
+    // Check if cookie consent exists
+    const consent = localStorage.getItem('gigchain_cookie_consent');
+    if (!consent) {
+      setShowCookieConsent(true);
+    }
+  }, []);
+
   const handleViewChange = (view) => {
     setCurrentView(view);
+  };
+
+  const handleGetStarted = () => {
+    // Scroll to top and show wallet connection
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setCurrentView('dashboard');
+  };
+
+  const handleCookieAccept = (preferences) => {
+    setShowCookieConsent(false);
   };
 
   // Prepare wallet state for NotificationProvider
@@ -271,6 +302,31 @@ const InternalApp = () => {
     isSwitching
   };
 
+  // Render legal pages
+  if (currentView === 'terms') {
+    return <TermsOfService onClose={() => setCurrentView('home')} />;
+  }
+  if (currentView === 'privacy') {
+    return <PrivacyPolicy onClose={() => setCurrentView('home')} />;
+  }
+  if (currentView === 'prohibited') {
+    return <ProhibitedActivities onClose={() => setCurrentView('home')} />;
+  }
+  if (currentView === 'license') {
+    return <License onClose={() => setCurrentView('home')} />;
+  }
+
+  // Show home page if not connected
+  if (!isConnected && currentView === 'home') {
+    return (
+      <>
+        <HomePage onGetStarted={handleGetStarted} onNavigate={handleViewChange} />
+        {showCookieConsent && <CookieConsent onAccept={handleCookieAccept} />}
+      </>
+    );
+  }
+
+  // Show dashboard if connected
   return (
     <NotificationProvider walletState={walletState}>
       <div className="app">
@@ -288,6 +344,7 @@ const InternalApp = () => {
           onViewChange={handleViewChange}
         />
       </div>
+      {showCookieConsent && <CookieConsent onAccept={handleCookieAccept} />}
     </NotificationProvider>
   );
 };
