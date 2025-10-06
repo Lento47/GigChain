@@ -7,141 +7,296 @@ const License = ({ onClose }) => {
     <div className="legal-container">
       <div className="legal-header">
         <FileCode className="legal-icon" />
-        <h1>Licencia de Software y Código Abierto</h1>
-        <p className="legal-subtitle">MIT License con Atribución Requerida</p>
+        <h1>Licencia de Software y Código Source-Available</h1>
+        <p className="legal-subtitle">GigChain Business Source License (GBSL) v1.0</p>
       </div>
 
       <div className="legal-content">
         <section className="legal-section">
-          <h2>Filosofía Open Source de GigChain</h2>
+          <h2>Filosofía de Transparencia con Protección Comercial</h2>
           <p>
-            GigChain.io está comprometido con la transparencia y la descentralización. Nuestro 
-            código fuente está disponible públicamente para auditoría, contribuciones y uso bajo 
-            los términos de esta licencia.
+            GigChain.io está comprometido con la <strong>transparencia</strong> y la <strong>auditoría pública</strong> 
+            de nuestro código, pero protegiendo nuestro modelo de negocio. Nuestro código fuente está disponible 
+            bajo una licencia <strong>Source-Available</strong> que permite inspección y contribuciones, pero 
+            restringe el uso comercial no autorizado.
           </p>
+          <div className="legal-warning">
+            <AlertCircle size={20} />
+            <div>
+              <h4>IMPORTANTE: No es Open Source Tradicional</h4>
+              <p>
+                Esta NO es una licencia MIT, Apache o GPL. Es una <strong>licencia propietaria source-available</strong>. 
+                Puedes ver, auditar y contribuir al código, pero <strong>NO puedes usarlo comercialmente</strong> 
+                sin una licencia comercial de GigChain.io.
+              </p>
+            </div>
+          </div>
           <div className="legal-highlight">
             <Github size={20} />
             <p>
-              <strong>Repositorio GitHub:</strong> <a href="https://github.com/gigchain/platform" target="_blank" rel="noopener">github.com/gigchain/platform</a>
+              <strong>Repositorio GitHub:</strong> <a href="https://github.com/gigchain/platform" target="_blank" rel="noopener">github.com/gigchain/platform-public</a> (Código Core)
             </p>
           </div>
         </section>
 
         <section className="legal-section">
-          <h2>1. Componentes del Proyecto</h2>
+          <h2>1. Componentes del Proyecto y Visibilidad</h2>
           
-          <div className="component-grid">
-            <div className="component-card">
-              <h3>Frontend (React)</h3>
-              <p><strong>Licencia:</strong> MIT</p>
-              <p><strong>Incluye:</strong> UI components, hooks, utils</p>
-              <p><strong>Repositorio:</strong> /frontend</p>
+          <div className="legal-subsection">
+            <h3>1.1 Código Público (Source-Available)</h3>
+            <p>Disponible en GitHub para auditoría bajo GBSL:</p>
+            <div className="component-grid">
+              <div className="component-card public">
+                <h3>Frontend Core (React)</h3>
+                <p><strong>Licencia:</strong> GBSL v1.0</p>
+                <p><strong>Incluye:</strong> UI básico, componentes layout</p>
+                <p><strong>Repositorio:</strong> /frontend-public</p>
+              </div>
+              
+              <div className="component-card public">
+                <h3>Smart Contracts (Solidity)</h3>
+                <p><strong>Licencia:</strong> GBSL v1.0</p>
+                <p><strong>Incluye:</strong> Contratos auditados, interfaces</p>
+                <p><strong>Repositorio:</strong> /contracts-public</p>
+              </div>
+              
+              <div className="component-card public">
+                <h3>Documentación Pública</h3>
+                <p><strong>Licencia:</strong> CC BY-NC 4.0</p>
+                <p><strong>Incluye:</strong> Docs de usuario, API reference</p>
+                <p><strong>Repositorio:</strong> /docs-public</p>
+              </div>
             </div>
-            
-            <div className="component-card">
-              <h3>Backend (FastAPI)</h3>
-              <p><strong>Licencia:</strong> MIT</p>
-              <p><strong>Incluye:</strong> API, AI agents, chat</p>
-              <p><strong>Repositorio:</strong> /backend</p>
+          </div>
+
+          <div className="legal-subsection">
+            <h3>1.2 Código Privado (Propietario)</h3>
+            <p>NO disponible públicamente - Propiedad exclusiva de GigChain.io:</p>
+            <div className="component-grid">
+              <div className="component-card private">
+                <h3>🔒 AI Agents Avanzados</h3>
+                <p><strong>Licencia:</strong> Propietaria</p>
+                <p><strong>Incluye:</strong> Modelos entrenados, prompts optimizados</p>
+                <p><strong>Razón:</strong> Ventaja competitiva core</p>
+              </div>
+              
+              <div className="component-card private">
+                <h3>🔒 Backend Completo (FastAPI)</h3>
+                <p><strong>Licencia:</strong> Propietaria</p>
+                <p><strong>Incluye:</strong> Lógica de negocio, integraciones</p>
+                <p><strong>Razón:</strong> Secretos comerciales</p>
+              </div>
+              
+              <div className="component-card private">
+                <h3>🔒 Features en Desarrollo</h3>
+                <p><strong>Licencia:</strong> Propietaria</p>
+                <p><strong>Incluye:</strong> Innovaciones no lanzadas</p>
+                <p><strong>Razón:</strong> Roadmap estratégico</p>
+              </div>
+
+              <div className="component-card private">
+                <h3>🔒 Infraestructura</h3>
+                <p><strong>Licencia:</strong> Propietaria</p>
+                <p><strong>Incluye:</strong> DevOps, scripts deployment</p>
+                <p><strong>Razón:</strong> Seguridad operacional</p>
+              </div>
             </div>
-            
-            <div className="component-card">
-              <h3>Smart Contracts (Solidity)</h3>
-              <p><strong>Licencia:</strong> MIT</p>
-              <p><strong>Incluye:</strong> Escrow, arbitraje, reputación</p>
-              <p><strong>Repositorio:</strong> /contracts</p>
-            </div>
-            
-            <div className="component-card">
-              <h3>Documentación</h3>
-              <p><strong>Licencia:</strong> CC BY 4.0</p>
-              <p><strong>Incluye:</strong> Docs, tutoriales, guías</p>
-              <p><strong>Repositorio:</strong> /docs</p>
-            </div>
+          </div>
+
+          <div className="legal-note">
+            <Shield size={18} />
+            <p>
+              <strong>Estrategia:</strong> Publicamos código suficiente para demostrar transparencia 
+              y permitir auditorías, pero protegemos la propiedad intelectual que nos da ventaja competitiva.
+            </p>
           </div>
         </section>
 
         <section className="legal-section">
-          <h2>2. Licencia MIT (Texto Completo)</h2>
-          <div className="license-box">
+          <h2>2. GigChain Business Source License (GBSL) v1.0 - Texto Completo</h2>
+          <div className="license-box commercial">
             <Code size={20} />
             <pre className="license-text">
-{`MIT License
+{`GigChain Business Source License (GBSL) v1.0
+==============================================
 
-Copyright (c) 2025 GigChain.io
+Copyright (c) 2025 GigChain.io - Todos los derechos reservados.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+TÉRMINOS Y CONDICIONES DE USO
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. DEFINICIONES
+   "Software" se refiere al código fuente, binarios y documentación de GigChain.
+   "Uso Comercial" es cualquier uso con fines de lucro o en producción.
+   "Uso No Comercial" es educación, investigación y auditoría.
+   "Licencia Comercial" es un acuerdo de pago con GigChain.io.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.`}
+2. CONCESIÓN DE DERECHOS LIMITADOS
+   Se concede permiso para:
+   ✓ Ver y auditar el código fuente
+   ✓ Ejecutar el Software localmente para desarrollo/testing
+   ✓ Contribuir mejoras mediante Pull Requests
+   ✓ Reportar bugs y vulnerabilidades
+   ✓ Investigación académica sin fines comerciales
+
+3. RESTRICCIONES (ESTRICTAMENTE PROHIBIDO SIN LICENCIA COMERCIAL)
+   ✗ Usar el Software en producción con fines comerciales
+   ✗ Crear servicios SaaS basados en el Software
+   ✗ Redistribuir el Software (modificado o no)
+   ✗ Crear productos derivados para venta
+   ✗ Usar el Software para competir con GigChain.io
+   ✗ Sublicenciar o vender acceso al Software
+   ✗ Remover o modificar avisos de copyright
+
+4. USO COMERCIAL
+   Para uso comercial, debe obtener una Licencia Comercial de:
+   Email: licensing@gigchain.io
+   Web: https://gigchain.io/commercial-license
+   
+   Precios:
+   - Startup (<10 empleados): $5,000/año
+   - Empresa (10-100 empleados): $25,000/año
+   - Enterprise (>100 empleados): Contactar ventas
+
+5. CONTRIBUCIONES
+   Al contribuir código (Pull Requests), usted:
+   a) Cede todos los derechos de propiedad intelectual a GigChain.io
+   b) Acepta que GigChain.io puede licenciar comercialmente su contribución
+   c) Garantiza que tiene derechos para contribuir el código
+   d) Acepta que no recibirá compensación monetaria automática
+
+6. PATENTES
+   GigChain.io se reserva todos los derechos de patentes sobre el Software.
+   Esta licencia NO concede derechos de patente.
+
+7. TRANSICIÓN A OPEN SOURCE
+   Después de 4 años desde cada release, el código puede convertirse a MIT.
+   Ej: Código de 2025 → MIT en 2029 (si GigChain.io lo decide).
+   
+   Razón: Dar valor a early adopters, pero eventualmente liberar código obsoleto.
+
+8. GARANTÍAS
+   EL SOFTWARE SE PROPORCIONA "TAL CUAL", SIN GARANTÍAS.
+   GIGCHAIN.IO NO ES RESPONSABLE DE DAÑOS DERIVADOS DEL USO.
+
+9. TERMINACIÓN
+   Esta licencia termina automáticamente si viola cualquier término.
+   Debe destruir todas las copias del Software inmediatamente.
+
+10. LEY APLICABLE
+    Esta licencia se rige por las leyes de [JURISDICCIÓN].
+    Disputas se resolverán mediante arbitraje vinculante.
+
+Para preguntas: legal@gigchain.io
+Última actualización: 6 Octubre 2025`}
             </pre>
+          </div>
+          
+          <div className="legal-warning">
+            <AlertCircle size={20} />
+            <div>
+              <h4>Resumen en Lenguaje Simple</h4>
+              <ul>
+                <li><strong>Puedes:</strong> Ver código, testearlo localmente, reportar bugs, contribuir mejoras</li>
+                <li><strong>NO puedes:</strong> Usarlo para tu negocio, crear SaaS, venderlo, competir con nosotros</li>
+                <li><strong>Si quieres usarlo comercialmente:</strong> Compra una licencia (desde $5k/año)</li>
+                <li><strong>Eventualmente:</strong> El código viejo (4+ años) puede volverse MIT License</li>
+              </ul>
+            </div>
           </div>
         </section>
 
         <section className="legal-section">
-          <h2>3. Cláusulas Adicionales de GigChain</h2>
+          <h2>3. Modelo de Licenciamiento Dual</h2>
           
           <div className="legal-subsection">
-            <h3>3.1 Atribución Requerida</h3>
-            <p>
-              Si utiliza código de GigChain en su proyecto, debe:
-            </p>
+            <h3>3.1 Licencia GBSL (Por Defecto - Gratis con Restricciones)</h3>
+            <p><strong>Para qué sirve:</strong></p>
             <ul className="legal-list">
-              <li>
-                Incluir aviso de copyright "Powered by GigChain.io" en UI visible
-              </li>
-              <li>
-                Enlazar a <code>https://gigchain.io</code> en créditos o footer
-              </li>
-              <li>
-                Mantener comentarios de atribución en código fuente
-              </li>
-              <li>
-                No remover marcas registradas de GigChain sin autorización escrita
-              </li>
+              <li>✅ Developers pueden auditar el código (transparencia)</li>
+              <li>✅ Investigadores pueden estudiar la arquitectura</li>
+              <li>✅ Usuarios pueden verificar que no hay backdoors</li>
+              <li>✅ Contribuidores pueden mejorar el código</li>
+              <li>❌ NO pueden crear competidores comerciales</li>
+              <li>❌ NO pueden vender servicios basados en nuestro código</li>
             </ul>
-            <div className="code-example">
-              <p><strong>Ejemplo de atribución correcta:</strong></p>
-              <code>
-                {`<!-- Footer -->\n<p>Powered by <a href="https://gigchain.io">GigChain.io</a></p>`}
-              </code>
+          </div>
+
+          <div className="legal-subsection">
+            <h3>3.2 Licencia Comercial (De Pago - Sin Restricciones)</h3>
+            <p><strong>Incluye:</strong></p>
+            <ul className="legal-list">
+              <li>✅ Uso ilimitado en producción</li>
+              <li>✅ Crear SaaS o productos derivados</li>
+              <li>✅ Soporte técnico prioritario</li>
+              <li>✅ Acceso a features empresariales</li>
+              <li>✅ Licencia perpetua (pago anual para updates)</li>
+              <li>✅ Protección legal contra demandas</li>
+            </ul>
+            
+            <div className="pricing-table">
+              <h4>Planes de Licenciamiento Comercial</h4>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Plan</th>
+                    <th>Tamaño Empresa</th>
+                    <th>Precio/Año</th>
+                    <th>Soporte</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>Startup</strong></td>
+                    <td>&lt;10 empleados</td>
+                    <td>$5,000 USD</td>
+                    <td>Email (48h)</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Growth</strong></td>
+                    <td>10-100 empleados</td>
+                    <td>$25,000 USD</td>
+                    <td>Chat prioritario (24h)</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Enterprise</strong></td>
+                    <td>&gt;100 empleados</td>
+                    <td>Contactar ventas</td>
+                    <td>Dedicated account manager</td>
+                  </tr>
+                  <tr>
+                    <td><strong>White Label</strong></td>
+                    <td>Cualquier tamaño</td>
+                    <td>Desde $100,000 USD</td>
+                    <td>Personalización completa</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
-          </div>
-
-          <div className="legal-subsection">
-            <h3>3.2 Uso Comercial</h3>
-            <p>
-              <strong>Permitido:</strong> Usar GigChain en proyectos comerciales, incluir en productos 
-              de pago, forks con fines de lucro.
-            </p>
-            <p>
-              <strong>Requiere licencia separada:</strong> Usar "GigChain" en nombre de su producto 
-              (ej: "GigChain Pro"), revender como SaaS sin cambios significativos.
+            
+            <p className="contact-sales">
+              <strong>Contactar Ventas:</strong> sales@gigchain.io | +1 (555) 123-4567
             </p>
           </div>
 
           <div className="legal-subsection">
-            <h3>3.3 Modificación y Redistribución</h3>
-            <p>Puede modificar y redistribuir GigChain siempre que:</p>
-            <ul className="legal-list">
-              <li>Mantenga la licencia MIT en archivos modificados</li>
-              <li>Indique claramente los cambios realizados</li>
-              <li>No implique endorsement oficial de GigChain.io</li>
-              <li>Publique smart contracts modificados para auditoría pública</li>
-            </ul>
+            <h3>3.3 Excepciones y Casos Especiales</h3>
+            <div className="exception-box">
+              <h4>✅ Permitido SIN licencia comercial:</h4>
+              <ul>
+                <li><strong>ONGs y organizaciones sin fines de lucro:</strong> Uso gratuito previo registro</li>
+                <li><strong>Proyectos educativos:</strong> Universidades y bootcamps (mencionar GigChain)</li>
+                <li><strong>Investigación académica:</strong> Papers y estudios (citar en publicaciones)</li>
+                <li><strong>Hackathons:</strong> Proyectos de 48-72h (no lanzar a producción después)</li>
+              </ul>
+              
+              <h4>❌ Requiere licencia comercial SÍ o SÍ:</h4>
+              <ul>
+                <li>Cualquier uso en producción con usuarios pagando</li>
+                <li>SaaS, marketplace o plataforma basada en GigChain</li>
+                <li>Integración en producto comercial existente</li>
+                <li>Reventa de acceso al software (hosting, consulting)</li>
+              </ul>
+            </div>
           </div>
         </section>
 
@@ -224,32 +379,56 @@ SOFTWARE.`}
         </section>
 
         <section className="legal-section">
-          <h2>6. Contribuciones al Proyecto</h2>
+          <h2>6. Contribuciones al Proyecto y Derechos</h2>
           
           <div className="legal-subsection">
-            <h3>6.1 Contributor License Agreement (CLA)</h3>
-            <p>
-              Al enviar pull requests a GigChain, usted acepta que:
+            <h3>6.1 Contributor License Agreement (CLA) - IMPORTANTE</h3>
+            <div className="legal-warning">
+              <AlertCircle size={20} />
+              <div>
+                <p><strong>Al contribuir código a GigChain, usted ACEPTA que:</strong></p>
+                <ul>
+                  <li><strong>Cede TODOS los derechos</strong> de propiedad intelectual a GigChain.io</li>
+                  <li>GigChain.io puede <strong>licenciar comercialmente</strong> su contribución sin compensarle</li>
+                  <li>Su código puede incluirse en <strong>versiones pagas</strong> del software</li>
+                  <li><strong>No recibirá regalías</strong> por uso comercial de su código</li>
+                  <li>Garantiza que <strong>tiene derechos</strong> para contribuir el código</li>
+                  <li>Su contribución <strong>no viola patentes</strong> ni copyrights de terceros</li>
+                </ul>
+              </div>
+            </div>
+            
+            <p className="legal-note">
+              <strong>Razón:</strong> Necesitamos propiedad completa del código para poder vender licencias 
+              comerciales sin conflictos legales. Esto es estándar en software source-available.
             </p>
+          </div>
+
+          <div className="legal-subsection">
+            <h3>6.2 Programa de Reconocimiento para Contribuidores</h3>
+            <p>Aunque no pagamos regalías, SÍ reconocemos contribuciones valiosas:</p>
             <ul className="legal-list">
-              <li>Su contribución se licencia bajo MIT</li>
-              <li>Tiene derechos para licenciar el código que envía</li>
-              <li>No envía código con patentes restrictivas</li>
-              <li>Acepta que su código pueda ser usado comercialmente</li>
+              <li>🏆 <strong>Hall of Fame</strong> en website para top contributors</li>
+              <li>💰 <strong>Bug Bounties:</strong> $500-$5,000 por vulnerabilidades críticas</li>
+              <li>🎁 <strong>Licencias gratuitas:</strong> Para contribuidores frecuentes</li>
+              <li>📧 <strong>Invitaciones early access:</strong> Features beta exclusivos</li>
+              <li>💼 <strong>Ofertas de empleo:</strong> Prioridad en contratación</li>
             </ul>
           </div>
 
           <div className="legal-subsection">
-            <h3>6.2 Guías de Contribución</h3>
-            <p>
-              Consulte <code>CONTRIBUTING.md</code> en GitHub para:
-            </p>
-            <ul className="legal-list">
-              <li>Código de conducta de la comunidad</li>
-              <li>Estándares de código (linting, tests)</li>
-              <li>Proceso de revisión de PRs</li>
-              <li>Programa de recompensas por bugs</li>
-            </ul>
+            <h3>6.3 Proceso de Contribución</h3>
+            <ol className="legal-list">
+              <li>Fork el repositorio público en GitHub</li>
+              <li>Crear branch con nombre descriptivo (<code>fix/bug-name</code>)</li>
+              <li>Hacer cambios y commits siguiendo estilo del proyecto</li>
+              <li>Firmar CLA digitalmente (automático en primer PR)</li>
+              <li>Enviar Pull Request con descripción detallada</li>
+              <li>Equipo de GigChain revisa (2-7 días)</li>
+              <li>Si se aprueba: Merge + crédito en changelog</li>
+            </ol>
+            
+            <p>Ver guía completa: <code>CONTRIBUTING.md</code> en GitHub</p>
           </div>
         </section>
 
@@ -296,22 +475,115 @@ SOFTWARE.`}
         </section>
 
         <section className="legal-section">
-          <h2>9. Contacto para Licencias Comerciales</h2>
-          <p>
-            Para licencias personalizadas, uso de marca o partnerships:
-          </p>
-          <div className="legal-contact">
-            <p><strong>Email:</strong> licensing@gigchain.io</p>
-            <p><strong>Business Development:</strong> partnerships@gigchain.io</p>
-            <p><strong>Legal:</strong> legal@gigchain.io</p>
+          <h2>9. Contacto y Adquisición de Licencias</h2>
+          
+          <div className="legal-subsection">
+            <h3>9.1 Licencias Comerciales</h3>
+            <div className="legal-contact">
+              <p><strong>Ventas:</strong> sales@gigchain.io | Teléfono: +1 (555) GIGCHAIN</p>
+              <p><strong>Formulario:</strong> <a href="https://gigchain.io/request-license" target="_blank" rel="noopener">gigchain.io/request-license</a></p>
+              <p><strong>Presupuesto Enterprise:</strong> partnerships@gigchain.io</p>
+            </div>
+          </div>
+
+          <div className="legal-subsection">
+            <h3>9.2 Consultas Legales</h3>
+            <div className="legal-contact">
+              <p><strong>Licenciamiento:</strong> licensing@gigchain.io</p>
+              <p><strong>Compliance:</strong> legal@gigchain.io</p>
+              <p><strong>Violaciones de licencia:</strong> abuse@gigchain.io</p>
+            </div>
+          </div>
+
+          <div className="legal-subsection">
+            <h3>9.3 Reportar Uso No Autorizado</h3>
+            <p>
+              Si encuentra alguien usando GigChain comercialmente sin licencia, repórtelo:
+            </p>
+            <div className="legal-contact">
+              <p><strong>Email:</strong> violations@gigchain.io</p>
+              <p><strong>Recompensa:</strong> Hasta 10% del valor de licencia recuperada</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="legal-section">
+          <h2>10. Estrategia de Monetización y Roadmap</h2>
+          
+          <div className="legal-subsection">
+            <h3>10.1 Modelo de Negocio</h3>
+            <p>GigChain.io opera con un modelo <strong>dual-licensing</strong>:</p>
+            <div className="business-model">
+              <div className="revenue-stream">
+                <h4>💰 Fuentes de Ingreso</h4>
+                <ul>
+                  <li><strong>70%:</strong> Licencias comerciales (SaaS, enterprise)</li>
+                  <li><strong>15%:</strong> Servicios profesionales (implementación, training)</li>
+                  <li><strong>10%:</strong> White-label customizations</li>
+                  <li><strong>5%:</strong> Soporte premium y SLAs</li>
+                </ul>
+              </div>
+              
+              <div className="revenue-stream">
+                <h4>📈 Proyección de Crecimiento</h4>
+                <ul>
+                  <li><strong>Año 1:</strong> 50 licencias Startup = $250k ARR</li>
+                  <li><strong>Año 2:</strong> 200 licencias + 20 Growth = $750k ARR</li>
+                  <li><strong>Año 3:</strong> 500 licencias + 100 Growth + 5 Enterprise = $3M ARR</li>
+                  <li><strong>Año 5:</strong> 10,000+ usuarios, $20M+ ARR</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div className="legal-subsection">
+            <h3>10.2 Transición a Open Source (Delayed Open Source)</h3>
+            <p>
+              Cada versión del software se convierte en <strong>MIT License después de 4 años</strong>:
+            </p>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Versión</th>
+                  <th>Release Date</th>
+                  <th>Licencia Actual</th>
+                  <th>Fecha MIT</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>v1.0</td>
+                  <td>Octubre 2025</td>
+                  <td>GBSL v1.0</td>
+                  <td>Octubre 2029</td>
+                </tr>
+                <tr>
+                  <td>v2.0</td>
+                  <td>Enero 2026</td>
+                  <td>GBSL v1.0</td>
+                  <td>Enero 2030</td>
+                </tr>
+                <tr>
+                  <td>v3.0</td>
+                  <td>Junio 2026</td>
+                  <td>GBSL v1.0</td>
+                  <td>Junio 2030</td>
+                </tr>
+              </tbody>
+            </table>
+            
+            <p className="legal-note">
+              <strong>Ventaja:</strong> Código viejo (4+ años) es obsoleto pero útil para la comunidad. 
+              Mantiene incentivo para comprar licencias de versiones actuales.
+            </p>
           </div>
         </section>
 
         <div className="legal-acceptance">
           <Github size={24} />
           <p>
-            Al usar o contribuir a GigChain, usted acepta los términos de esta licencia MIT 
-            con las cláusulas adicionales especificadas.
+            Al usar o contribuir a GigChain, usted acepta los términos de la GigChain Business 
+            Source License (GBSL) v1.0. Para uso comercial, contacte a sales@gigchain.io.
           </p>
         </div>
       </div>

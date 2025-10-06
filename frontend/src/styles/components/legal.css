@@ -373,6 +373,16 @@
   border: 1px solid #E5E7EB;
 }
 
+.component-card.public {
+  background: linear-gradient(135deg, #DBEAFE 0%, #E0E7FF 100%);
+  border-color: #3B82F6;
+}
+
+.component-card.private {
+  background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%);
+  border-color: #EF4444;
+}
+
 .component-card h3 {
   color: #1a1a1a;
   margin-top: 0;
@@ -391,6 +401,12 @@
   border-radius: 12px;
   margin: 2rem 0;
   border: 2px solid #334155;
+}
+
+.license-box.commercial {
+  background: linear-gradient(135deg, #1E293B 0%, #312E81 100%);
+  border-color: #4F46E5;
+  box-shadow: 0 10px 30px rgba(79, 70, 229, 0.3);
 }
 
 .license-box svg {
@@ -501,6 +517,87 @@
   background: rgba(79, 70, 229, 0.1);
 }
 
+/* License Page Additional Styles */
+.pricing-table {
+  margin: 2rem 0;
+}
+
+.pricing-table h4 {
+  color: #1a1a1a;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.contact-sales {
+  background: #F3F4F6;
+  padding: 1rem;
+  border-radius: 8px;
+  border-left: 3px solid #4F46E5;
+  margin-top: 1rem;
+  font-size: 0.95rem;
+}
+
+.exception-box {
+  background: #F9FAFB;
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid #E5E7EB;
+  margin: 1rem 0;
+}
+
+.exception-box h4 {
+  color: #1a1a1a;
+  margin-bottom: 0.75rem;
+  font-size: 1rem;
+}
+
+.exception-box ul {
+  margin: 0.5rem 0 1rem 1.5rem;
+  color: #4b5563;
+}
+
+.business-model {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  margin: 1.5rem 0;
+}
+
+.revenue-stream {
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.05) 0%, rgba(124, 58, 237, 0.05) 100%);
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid rgba(79, 70, 229, 0.2);
+}
+
+.revenue-stream h4 {
+  color: #4F46E5;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.revenue-stream ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.revenue-stream li {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(79, 70, 229, 0.1);
+}
+
+.revenue-stream li:last-child {
+  border-bottom: none;
+}
+
+.revenue-stream strong {
+  color: #4F46E5;
+  font-weight: 700;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .legal-container {
@@ -527,6 +624,10 @@
   }
 
   .component-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .business-model {
     grid-template-columns: 1fr;
   }
 
