@@ -90,7 +90,19 @@ const PaymentsView = () => {
   });
 
   const handleExportPayments = () => {
-    console.log('Exporting payments');
+    try {
+      const dataStr = JSON.stringify(filteredPayments, null, 2);
+      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+      const exportFileDefaultName = `payments_${new Date().toISOString().split('T')[0]}.json`;
+      
+      const linkElement = document.createElement('a');
+      linkElement.setAttribute('href', dataUri);
+      linkElement.setAttribute('download', exportFileDefaultName);
+      linkElement.click();
+    } catch (error) {
+      console.error('Error exporting payments:', error);
+      alert('Error al exportar pagos. Por favor, intenta de nuevo.');
+    }
   };
 
   return (
