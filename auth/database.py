@@ -25,28 +25,45 @@ class WCSAPDatabase:
     
     def __init__(self, db_path: str = "data/w_csap.db"):
         self.db_path = db_path
+        self._shared_conn = None  # For in-memory databases
         self._ensure_directory()
         self._initialize_tables()
         logger.info(f"📦 W-CSAP Database initialized at {db_path}")
     
     def _ensure_directory(self):
-        """Ensure database directory exists."""
-        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
+        """Ensure database directory exists (skip for in-memory databases)."""
+        if self.db_path != ":memory:":
+            Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
     
     @contextmanager
     def get_connection(self):
         """Context manager for database connections."""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row  # Enable column access by name
-        try:
-            yield conn
-            conn.commit()
-        except Exception as e:
-            conn.rollback()
-            logger.error(f"Database error: {str(e)}")
-            raise
-        finally:
-            conn.close()
+        # For in-memory databases, reuse the same connection
+        if self.db_path == ":memory:":
+            if self._shared_conn is None:
+                self._shared_conn = sqlite3.connect(self.db_path, check_same_thread=False)
+                self._shared_conn.row_factory = sqlite3.Row
+            conn = self._shared_conn
+            try:
+                yield conn
+                conn.commit()
+            except Exception as e:
+                conn.rollback()
+                logger.error(f"Database error: {str(e)}")
+                raise
+        else:
+            # For file databases, create new connections each time
+            conn = sqlite3.connect(self.db_path)
+            conn.row_factory = sqlite3.Row
+            try:
+                yield conn
+                conn.commit()
+            except Exception as e:
+                conn.rollback()
+                logger.error(f"Database error: {str(e)}")
+                raise
+            finally:
+                conn.close()
     
     def _initialize_tables(self):
         """Create database tables if they don't exist."""
