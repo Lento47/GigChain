@@ -253,14 +253,28 @@ const TemplatesView = () => {
     return matchesSearch && matchesCategory;
   });
 
-  const handleUseTemplate = (template) => {
-    console.log('Using template:', template);
-    // Aquí se implementaría la lógica para usar la plantilla
+  const handleUseTemplate = async (template) => {
+    try {
+      // Navigate to contract creation with template pre-filled
+      alert(`Plantilla "${template.name}" seleccionada. Esta funcionalidad abrirá el creador de contratos con los datos pre-cargados.`);
+      // En producción, esto navegaría a la página de creación de contratos
+      // history.push('/contracts/new', { template });
+    } catch (error) {
+      console.error('Error using template:', error);
+      alert('Error al cargar la plantilla. Por favor, intenta de nuevo.');
+    }
   };
 
   const handleCreateTemplate = () => {
-    console.log('Creating new template');
-    // Aquí se implementaría la lógica para crear una nueva plantilla
+    try {
+      // Navigate to template creation form
+      alert('Creación de plantilla personalizada. Esta funcionalidad abrirá un formulario de creación.');
+      // En producción, esto navegaría a la página de creación
+      // history.push('/templates/new');
+    } catch (error) {
+      console.error('Error creating template:', error);
+      alert('Error al abrir el creador de plantillas. Por favor, intenta de nuevo.');
+    }
   };
 
   return (

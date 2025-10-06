@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { Zap, Play, Pause, Settings, MessageSquare, Code, Brain, Search, Filter } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Zap, Play, Pause, Settings, MessageSquare, Code, Brain, Search, Filter, AlertCircle, CheckCircle } from 'lucide-react';
+import axios from 'axios';
+import { API_BASE_URL } from '../../constants/api';
 
 // Inline styles
 const styles = {
@@ -109,8 +111,7 @@ const styles = {
 const AIAgentsView = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
-
-  const agents = [
+  const [agents, setAgents] = useState([
     {
       id: 1,
       name: 'Negotiation Agent',
@@ -159,7 +160,33 @@ const AIAgentsView = () => {
       lastUsed: 'Nunca',
       icon: Zap
     }
-  ];
+  ]);
+  const [loading, setLoading] = useState(false);
+  const [notification, setNotification] = useState(null);
+  const [testModalOpen, setTestModalOpen] = useState(false);
+  const [selectedAgent, setSelectedAgent] = useState(null);
+  const [testInput, setTestInput] = useState('');
+  const [testResult, setTestResult] = useState(null);
+
+  // Fetch agents from backend on mount
+  useEffect(() => {
+    fetchAgentsStatus();
+  }, []);
+
+  const fetchAgentsStatus = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/agents/status`);
+      // Update agents with backend data if available
+      console.log('Agents status:', response.data);
+    } catch (error) {
+      console.error('Error fetching agents status:', error);
+    }
+  };
+
+  const showNotification = (message, type = 'success') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 3000);
+  };
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -187,23 +214,132 @@ const AIAgentsView = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const handleToggleAgent = (agent) => {
-    console.log('Toggling agent:', agent);
-    // Implementar lógica para activar/desactivar agente
+  const handleToggleAgent = async (agent) => {
+    if (agent.status === 'training') {
+      showNotification('No se puede modificar un agente en entrenamiento', 'error');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const newStatus = agent.status === 'active' ? false : true;
+      const response = await axios.post(
+        `${API_BASE_URL}/api/agents/${agent.id}/toggle?enabled=${newStatus}`
+      );
+
+      if (response.data.success) {
+        // Update local state
+        setAgents(prevAgents => 
+          prevAgents.map(a => 
+            a.id === agent.id 
+              ? { ...a, status: newStatus ? 'active' : 'inactive' }
+              : a
+          )
+        );
+        showNotification(response.data.message, 'success');
+      }
+    } catch (error) {
+      console.error('Error toggling agent:', error);
+      showNotification(
+        error.response?.data?.detail || 'Error al cambiar estado del agente',
+        'error'
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleConfigureAgent = (agent) => {
-    console.log('Configuring agent:', agent);
-    // Implementar modal de configuración
+  const handleConfigureAgent = async (agent) => {
+    // Open configuration modal
+    const temperature = prompt('Ingrese la temperatura (0.0 - 1.0):', '0.1');
+    if (temperature === null) return;
+
+    setLoading(true);
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/api/agents/${agent.id}/configure`,
+        {
+          temperature: parseFloat(temperature),
+          model: 'gpt-4o-mini'
+        }
+      );
+
+      if (response.data.success) {
+        showNotification(response.data.message, 'success');
+      }
+    } catch (error) {
+      console.error('Error configuring agent:', error);
+      showNotification(
+        error.response?.data?.detail || 'Error al configurar agente',
+        'error'
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleTestAgent = (agent) => {
-    console.log('Testing agent:', agent);
-    // Implementar chat de prueba
+  const handleTestAgent = async (agent) => {
+    setSelectedAgent(agent);
+    setTestModalOpen(true);
+    setTestInput('Cliente ofrece $1000 por proyecto en 10 días');
+    setTestResult(null);
+  };
+
+  const runAgentTest = async () => {
+    if (!testInput.trim()) {
+      showNotification('Por favor ingrese un texto de prueba', 'error');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/api/agents/${selectedAgent.id}/test`,
+        {
+          text: testInput
+        }
+      );
+
+      if (response.data.success) {
+        setTestResult(response.data.test_result);
+        showNotification('Test completado exitosamente', 'success');
+      }
+    } catch (error) {
+      console.error('Error testing agent:', error);
+      const errorMsg = error.response?.data?.error || 
+                      error.response?.data?.fallback_response ||
+                      'Error al probar agente';
+      showNotification(errorMsg, 'error');
+      setTestResult({ error: errorMsg });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div style={styles.view}>
+      {notification && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          padding: '1rem 1.5rem',
+          background: notification.type === 'success' 
+            ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+            : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+          color: 'white',
+          borderRadius: '12px',
+          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem'
+        }}>
+          {notification.type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
+          {notification.message}
+        </div>
+      )}
+
       <h1 style={styles.title}>AI Agents</h1>
       <p style={styles.subtitle}>Gestiona tus agentes de inteligencia artificial especializados</p>
 
@@ -289,6 +425,121 @@ const AIAgentsView = () => {
           <Zap size={48} style={{ opacity: 0.5, marginBottom: '1rem' }} />
           <h3 style={{ fontSize: '1.5rem', margin: '0 0 0.5rem 0', color: '#94a3b8' }}>No se encontraron agentes</h3>
           <p style={{ margin: '0', fontSize: '1rem' }}>Intenta ajustar los filtros de búsqueda</p>
+        </div>
+      )}
+
+      {/* Test Modal */}
+      {testModalOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 999
+        }}>
+          <div style={{
+            background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
+            border: '1px solid #475569',
+            borderRadius: '16px',
+            padding: '2rem',
+            maxWidth: '600px',
+            width: '90%',
+            maxHeight: '80vh',
+            overflow: 'auto'
+          }}>
+            <h3 style={{ color: '#e2e8f0', marginBottom: '1rem' }}>
+              Probar {selectedAgent?.name}
+            </h3>
+            
+            <textarea
+              value={testInput}
+              onChange={(e) => setTestInput(e.target.value)}
+              placeholder="Ingrese texto de prueba..."
+              style={{
+                width: '100%',
+                minHeight: '100px',
+                padding: '1rem',
+                background: 'rgba(30, 41, 59, 0.8)',
+                border: '2px solid #475569',
+                borderRadius: '8px',
+                color: '#e2e8f0',
+                fontSize: '1rem',
+                marginBottom: '1rem',
+                resize: 'vertical'
+              }}
+            />
+
+            {testResult && (
+              <div style={{
+                background: 'rgba(30, 41, 59, 0.5)',
+                border: '1px solid #475569',
+                borderRadius: '8px',
+                padding: '1rem',
+                marginBottom: '1rem',
+                maxHeight: '300px',
+                overflow: 'auto'
+              }}>
+                <h4 style={{ color: '#94a3b8', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
+                  Resultado:
+                </h4>
+                <pre style={{
+                  color: '#e2e8f0',
+                  fontSize: '0.85rem',
+                  margin: 0,
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word'
+                }}>
+                  {JSON.stringify(testResult, null, 2)}
+                </pre>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <button
+                onClick={runAgentTest}
+                disabled={loading}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  background: loading 
+                    ? '#475569'
+                    : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontWeight: '600',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  opacity: loading ? 0.6 : 1
+                }}
+              >
+                {loading ? 'Probando...' : 'Probar Agent'}
+              </button>
+              <button
+                onClick={() => {
+                  setTestModalOpen(false);
+                  setSelectedAgent(null);
+                  setTestResult(null);
+                }}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  background: 'rgba(30, 41, 59, 0.8)',
+                  color: '#94a3b8',
+                  border: '1px solid #475569',
+                  borderRadius: '8px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

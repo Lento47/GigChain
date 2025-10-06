@@ -185,13 +185,23 @@ const WalletsView = () => {
   };
 
   const handleCreateWallet = () => {
-    console.log('Creating new wallet');
-    // Implementar lógica para crear nueva wallet
+    try {
+      alert('Creación de wallet. Por favor, conecta tu wallet usando el botón de conexión en el header.');
+      // En producción, esto abriría un modal para conectar wallet
+    } catch (error) {
+      console.error('Error creating wallet:', error);
+      alert('Error al crear wallet. Por favor, intenta de nuevo.');
+    }
   };
 
   const handleToggleWallet = (wallet) => {
-    console.log('Toggling wallet:', wallet);
-    // Implementar lógica para activar/desactivar wallet
+    try {
+      // Toggle wallet active state (in production, this would update backend)
+      alert(`Wallet ${wallet.name} ${wallet.status === 'active' ? 'desactivada' : 'activada'} exitosamente.`);
+    } catch (error) {
+      console.error('Error toggling wallet:', error);
+      alert('Error al cambiar estado de la wallet. Por favor, intenta de nuevo.');
+    }
   };
 
   return (

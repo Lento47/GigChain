@@ -206,13 +206,28 @@ const TransactionsView = () => {
   });
 
   const handleExportTransactions = () => {
-    console.log('Exporting transactions');
-    // Implementar lógica de exportación
+    try {
+      const dataStr = JSON.stringify(filteredTransactions, null, 2);
+      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+      const exportFileDefaultName = `transactions_${new Date().toISOString().split('T')[0]}.json`;
+      
+      const linkElement = document.createElement('a');
+      linkElement.setAttribute('href', dataUri);
+      linkElement.setAttribute('download', exportFileDefaultName);
+      linkElement.click();
+    } catch (error) {
+      console.error('Error exporting transactions:', error);
+      alert('Error al exportar transacciones. Por favor, intenta de nuevo.');
+    }
   };
 
   const handleViewDetails = (transaction) => {
-    console.log('Viewing transaction details:', transaction);
-    // Implementar modal de detalles
+    try {
+      alert(`Detalles de transacción:\nID: ${transaction.id}\nMonto: ${transaction.amount}\nEstado: ${transaction.status}\n\nEsta funcionalidad mostrará un modal detallado en producción.`);
+    } catch (error) {
+      console.error('Error viewing transaction details:', error);
+      alert('Error al cargar detalles. Por favor, intenta de nuevo.');
+    }
   };
 
   return (
