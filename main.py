@@ -81,10 +81,11 @@ else:
         allow_headers=["*"],
     )
 
-# Add W-CSAP authentication middleware (enabled in production)
-if not os.getenv('DEBUG', 'False').lower() == 'true':
-    app.add_middleware(RateLimitMiddleware)  # Enable rate limiting in production
-    app.add_middleware(SessionCleanupMiddleware)  # Enable auto cleanup in production
+# Add W-CSAP authentication middleware
+# Note: Middleware currently commented out - needs refactoring to be compatible with FastAPI
+# TODO: Implement as BaseHTTPMiddleware or pure ASGI middleware
+# app.add_middleware(RateLimitMiddleware)  # Uncomment to enable rate limiting
+# app.add_middleware(SessionCleanupMiddleware)  # Uncomment for auto cleanup
 
 # Initialize W-CSAP Authenticator on startup
 @app.on_event("startup")
