@@ -1,6 +1,6 @@
 """GigChain.io FastAPI Backend - Production-ready API server."""
 
-from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
@@ -21,6 +21,16 @@ from contract_ai import full_flow, generate_contract
 from agents import chain_agents, AgentInput, get_agent_status
 from security.template_security import validate_template_security, SecurityValidationResult
 from chat_enhanced import chat_manager
+
+# Import W-CSAP authentication
+from auth import (
+    WCSAPAuthenticator, 
+    get_database, 
+    get_current_wallet, 
+    get_optional_wallet,
+    RateLimitMiddleware,
+    SessionCleanupMiddleware
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -43,6 +53,72 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add W-CSAP authentication middleware
+# app.add_middleware(RateLimitMiddleware)  # Uncomment to enable rate limiting
+# app.add_middleware(SessionCleanupMiddleware)  # Uncomment for auto cleanup
+
+# Initialize W-CSAP Authenticator on startup
+@app.on_event("startup")
+async def startup_event():
+    """Initialize authentication system on startup."""
+    # Get secret key from environment
+    secret_key = os.getenv('W_CSAP_SECRET_KEY', os.urandom(32).hex())
+    
+    # Initialize authenticator
+    app.state.authenticator = WCSAPAuthenticator(
+        secret_key=secret_key,
+        challenge_ttl=300,  # 5 minutes
+        session_ttl=86400,  # 24 hours
+        refresh_ttl=604800  # 7 days
+    )
+    
+    # Initialize database
+    app.state.auth_db = get_database()
+    
+    logger.info("🔐 W-CSAP Authentication system initialized")
+
+# Pydantic models for authentication
+class AuthChallengeRequest(BaseModel):
+    wallet_address: str = Field(..., min_length=42, max_length=42, description="Wallet address")
+
+class AuthChallengeResponse(BaseModel):
+    challenge_id: str
+    wallet_address: str
+    challenge_message: str
+    expires_at: int
+    
+class AuthVerifyRequest(BaseModel):
+    challenge_id: str = Field(..., description="Challenge ID from initiate step")
+    signature: str = Field(..., description="Hex-encoded signature from wallet")
+    wallet_address: str = Field(..., min_length=42, max_length=42, description="Wallet address")
+
+class AuthVerifyResponse(BaseModel):
+    success: bool
+    session_token: Optional[str] = None
+    refresh_token: Optional[str] = None
+    wallet_address: Optional[str] = None
+    expires_at: Optional[int] = None
+    expires_in: Optional[int] = None
+    error: Optional[str] = None
+
+class AuthRefreshRequest(BaseModel):
+    refresh_token: str = Field(..., description="Refresh token from original authentication")
+    session_token: str = Field(..., description="Expired session token")
+
+class AuthRefreshResponse(BaseModel):
+    success: bool
+    session_token: Optional[str] = None
+    refresh_token: Optional[str] = None
+    expires_at: Optional[int] = None
+    expires_in: Optional[int] = None
+    error: Optional[str] = None
+
+class AuthStatusResponse(BaseModel):
+    authenticated: bool
+    wallet_address: Optional[str] = None
+    expires_in: Optional[int] = None
+    session_info: Optional[Dict[str, Any]] = None
 
 # Pydantic models
 class ContractRequest(BaseModel):
@@ -145,6 +221,327 @@ async def health_check():
         version="1.0.0",
         ai_agents_active=bool(os.getenv('OPENAI_API_KEY'))
     )
+
+# ==================== W-CSAP AUTHENTICATION ENDPOINTS ====================
+
+@app.post("/api/auth/challenge", response_model=AuthChallengeResponse)
+async def auth_challenge(request: Request, body: AuthChallengeRequest):
+    """
+    Step 1: Initiate authentication by requesting a challenge.
+    The challenge must be signed by the user's wallet.
+    
+    Returns a unique challenge message to be signed.
+    """
+    try:
+        authenticator: WCSAPAuthenticator = request.app.state.authenticator
+        db = request.app.state.auth_db
+        
+        # Get client info
+        ip_address = request.client.host if request.client else None
+        user_agent = request.headers.get("user-agent")
+        
+        # Generate challenge
+        challenge = authenticator.initiate_authentication(
+            wallet_address=body.wallet_address,
+            ip_address=ip_address,
+            user_agent=user_agent
+        )
+        
+        # Save to database
+        db.save_challenge(
+            challenge_id=challenge.challenge_id,
+            wallet_address=challenge.wallet_address,
+            challenge_message=challenge.challenge_message,
+            nonce=challenge.nonce,
+            issued_at=challenge.issued_at,
+            expires_at=challenge.expires_at,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            metadata=challenge.metadata
+        )
+        
+        # Log event
+        db.log_auth_event(
+            wallet_address=body.wallet_address,
+            event_type="challenge_requested",
+            success=True,
+            challenge_id=challenge.challenge_id,
+            ip_address=ip_address,
+            user_agent=user_agent
+        )
+        
+        logger.info(f"🎯 Challenge generated for {body.wallet_address[:10]}...")
+        
+        return AuthChallengeResponse(
+            challenge_id=challenge.challenge_id,
+            wallet_address=challenge.wallet_address,
+            challenge_message=challenge.challenge_message,
+            expires_at=challenge.expires_at
+        )
+        
+    except Exception as e:
+        logger.error(f"Challenge generation error: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to generate authentication challenge"
+        )
+
+@app.post("/api/auth/verify", response_model=AuthVerifyResponse)
+async def auth_verify(request: Request, body: AuthVerifyRequest):
+    """
+    Step 2: Verify the signed challenge and create a session.
+    
+    Returns session tokens for authenticated access.
+    """
+    try:
+        authenticator: WCSAPAuthenticator = request.app.state.authenticator
+        db = request.app.state.auth_db
+        
+        # Get client info
+        ip_address = request.client.host if request.client else None
+        user_agent = request.headers.get("user-agent")
+        
+        # Complete authentication
+        session_assertion = authenticator.complete_authentication(
+            challenge_id=body.challenge_id,
+            signature=body.signature,
+            wallet_address=body.wallet_address
+        )
+        
+        if not session_assertion:
+            # Log failed attempt
+            db.log_auth_event(
+                wallet_address=body.wallet_address,
+                event_type="authentication_failed",
+                success=False,
+                challenge_id=body.challenge_id,
+                error_message="Invalid signature or expired challenge",
+                ip_address=ip_address,
+                user_agent=user_agent
+            )
+            
+            logger.warning(f"❌ Authentication failed for {body.wallet_address[:10]}...")
+            
+            return AuthVerifyResponse(
+                success=False,
+                error="Invalid signature or expired challenge"
+            )
+        
+        # Save session to database
+        db.save_session(
+            assertion_id=session_assertion.assertion_id,
+            wallet_address=session_assertion.wallet_address,
+            session_token=session_assertion.session_token,
+            refresh_token=session_assertion.refresh_token,
+            signature=session_assertion.signature,
+            issued_at=session_assertion.issued_at,
+            expires_at=session_assertion.expires_at,
+            not_before=session_assertion.not_before,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            metadata=session_assertion.metadata
+        )
+        
+        # Log successful authentication
+        db.log_auth_event(
+            wallet_address=body.wallet_address,
+            event_type="authentication_success",
+            success=True,
+            challenge_id=body.challenge_id,
+            assertion_id=session_assertion.assertion_id,
+            ip_address=ip_address,
+            user_agent=user_agent
+        )
+        
+        # Update challenge status
+        db.update_challenge_status(body.challenge_id, "used")
+        
+        logger.info(f"✅ Authentication successful for {body.wallet_address[:10]}...")
+        
+        return AuthVerifyResponse(
+            success=True,
+            session_token=session_assertion.session_token,
+            refresh_token=session_assertion.refresh_token,
+            wallet_address=session_assertion.wallet_address,
+            expires_at=session_assertion.expires_at,
+            expires_in=session_assertion.expires_at - session_assertion.issued_at
+        )
+        
+    except Exception as e:
+        logger.error(f"Authentication verification error: {str(e)}")
+        return AuthVerifyResponse(
+            success=False,
+            error="Failed to verify authentication"
+        )
+
+@app.post("/api/auth/refresh", response_model=AuthRefreshResponse)
+async def auth_refresh(request: Request, body: AuthRefreshRequest):
+    """
+    Refresh an expired session using a valid refresh token.
+    """
+    try:
+        authenticator: WCSAPAuthenticator = request.app.state.authenticator
+        db = request.app.state.auth_db
+        
+        # Refresh session
+        new_session = authenticator.refresh_session(
+            refresh_token=body.refresh_token,
+            old_session_token=body.session_token
+        )
+        
+        if not new_session:
+            logger.warning("❌ Session refresh failed")
+            return AuthRefreshResponse(
+                success=False,
+                error="Invalid refresh token or session"
+            )
+        
+        # Save new session to database
+        ip_address = request.client.host if request.client else None
+        user_agent = request.headers.get("user-agent")
+        
+        db.save_session(
+            assertion_id=new_session.assertion_id,
+            wallet_address=new_session.wallet_address,
+            session_token=new_session.session_token,
+            refresh_token=new_session.refresh_token,
+            signature=new_session.signature,
+            issued_at=new_session.issued_at,
+            expires_at=new_session.expires_at,
+            not_before=new_session.not_before,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            metadata=new_session.metadata
+        )
+        
+        # Log refresh event
+        db.log_auth_event(
+            wallet_address=new_session.wallet_address,
+            event_type="session_refreshed",
+            success=True,
+            assertion_id=new_session.assertion_id,
+            ip_address=ip_address,
+            user_agent=user_agent
+        )
+        
+        logger.info(f"🔄 Session refreshed for {new_session.wallet_address[:10]}...")
+        
+        return AuthRefreshResponse(
+            success=True,
+            session_token=new_session.session_token,
+            refresh_token=new_session.refresh_token,
+            expires_at=new_session.expires_at,
+            expires_in=new_session.expires_at - new_session.issued_at
+        )
+        
+    except Exception as e:
+        logger.error(f"Session refresh error: {str(e)}")
+        return AuthRefreshResponse(
+            success=False,
+            error="Failed to refresh session"
+        )
+
+@app.get("/api/auth/status", response_model=AuthStatusResponse)
+async def auth_status(wallet: Optional[Dict[str, Any]] = Depends(get_optional_wallet)):
+    """
+    Check authentication status for current session.
+    """
+    if not wallet:
+        return AuthStatusResponse(authenticated=False)
+    
+    return AuthStatusResponse(
+        authenticated=True,
+        wallet_address=wallet["address"],
+        expires_in=wallet["expires_in"],
+        session_info={
+            "assertion_id": wallet["assertion_id"],
+            "expires_at": wallet["expires_at"]
+        }
+    )
+
+@app.post("/api/auth/logout")
+async def auth_logout(request: Request, wallet: Dict[str, Any] = Depends(get_current_wallet)):
+    """
+    Logout and invalidate current session.
+    """
+    try:
+        authenticator: WCSAPAuthenticator = request.app.state.authenticator
+        db = request.app.state.auth_db
+        
+        # Get session token from wallet info
+        session = wallet.get("session")
+        if session:
+            # Invalidate in database
+            db.invalidate_session(session["assertion_id"])
+        
+        # Log logout event
+        db.log_auth_event(
+            wallet_address=wallet["address"],
+            event_type="logout",
+            success=True,
+            assertion_id=wallet.get("assertion_id"),
+            ip_address=request.client.host if request.client else None,
+            user_agent=request.headers.get("user-agent")
+        )
+        
+        logger.info(f"👋 Logout successful for {wallet['address'][:10]}...")
+        
+        return {"success": True, "message": "Logged out successfully"}
+        
+    except Exception as e:
+        logger.error(f"Logout error: {str(e)}")
+        return {"success": False, "error": "Failed to logout"}
+
+@app.get("/api/auth/sessions")
+async def get_user_sessions(wallet: Dict[str, Any] = Depends(get_current_wallet)):
+    """
+    Get all active sessions for the authenticated wallet.
+    """
+    try:
+        db = get_database()
+        sessions = db.get_active_sessions_by_wallet(wallet["address"])
+        
+        return {
+            "wallet_address": wallet["address"],
+            "active_sessions": len(sessions),
+            "sessions": [
+                {
+                    "assertion_id": s["assertion_id"],
+                    "created_at": s["created_at"],
+                    "last_activity": s["last_activity"],
+                    "expires_at": s["expires_at"],
+                    "ip_address": s["ip_address"],
+                    "user_agent": s["user_agent"]
+                }
+                for s in sessions
+            ]
+        }
+        
+    except Exception as e:
+        logger.error(f"Get sessions error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve sessions")
+
+@app.get("/api/auth/stats")
+async def get_auth_stats():
+    """
+    Get authentication system statistics (public endpoint).
+    """
+    try:
+        db = get_database()
+        stats = db.get_statistics()
+        
+        return {
+            "protocol": "W-CSAP",
+            "version": "1.0.0",
+            "statistics": stats,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Get stats error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve statistics")
+
+# ==================== END W-CSAP ENDPOINTS ====================
 
 # Main AI-powered contract generation
 @app.post("/api/full_flow")
