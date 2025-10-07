@@ -1,5 +1,11 @@
 # 🛡️ Guía de Seguridad - GigChain.io
 
+> **📖 Comprehensive Security Documentation**: See [OWASP Top 20 Security Risks](./OWASP_TOP_20_GIGCHAIN.md) for complete security assessment.
+>
+> **✅ Implementation Checklist**: See [Security Implementation Checklist](./SECURITY_IMPLEMENTATION_CHECKLIST.md) for quick reference.
+
+---
+
 ## Protección contra Código Malicioso en Plantillas
 
 ### 🚨 **Vulnerabilidades Identificadas y Solucionadas**
