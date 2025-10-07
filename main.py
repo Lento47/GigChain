@@ -41,6 +41,9 @@ from auth import (
     SessionCleanupMiddleware
 )
 
+# Import Gamification & Negotiation System
+from gamification_api import router as gamification_router
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -77,6 +80,9 @@ app = FastAPI(
     redoc_url="/redoc",
     lifespan=lifespan
 )
+
+# Include gamification router
+app.include_router(gamification_router)
 
 # CORS middleware - Production-ready configuration
 # Get allowed origins from environment or use defaults
