@@ -41,6 +41,7 @@ from auth.errors import (
     wcsap_exception_handler
 )
 from auth.routes import router as auth_router
+from auth.revocation import RevocationCache, get_revocation_cache
 from auth import schemas
 
 __all__ = [
@@ -77,6 +78,10 @@ __all__ = [
     
     # Routes
     'auth_router',
+    
+    # Revocation
+    'RevocationCache',
+    'get_revocation_cache',
     
     # Schemas module
     'schemas'

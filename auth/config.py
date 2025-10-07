@@ -47,18 +47,41 @@ class WCSAPConfig(BaseSettings):
         le=3600  # Maximum 1 hour
     )
     
+    # SECURITY ENHANCEMENT: Shorter access token TTL
+    access_token_ttl: int = Field(
+        default=900,  # 15 minutes (enterprise-grade)
+        description="Access token time-to-live in seconds (default: 15 minutes)",
+        ge=300,  # Minimum 5 minutes
+        le=3600  # Maximum 1 hour
+    )
+    
+    # Legacy: kept for backward compatibility
     session_ttl: int = Field(
         default=86400,
-        description="Session time-to-live in seconds (default: 24 hours)",
+        description="Session time-to-live in seconds (default: 24 hours) - DEPRECATED, use access_token_ttl",
         ge=300,  # Minimum 5 minutes
         le=2592000  # Maximum 30 days
     )
     
+    # SECURITY ENHANCEMENT: Shorter, rotating refresh tokens
     refresh_ttl: int = Field(
-        default=604800,
-        description="Refresh token time-to-live in seconds (default: 7 days)",
+        default=86400,  # 24 hours (enterprise-grade, down from 7 days)
+        description="Refresh token time-to-live in seconds (default: 24 hours)",
         ge=3600,  # Minimum 1 hour
-        le=7776000  # Maximum 90 days
+        le=604800  # Maximum 7 days
+    )
+    
+    # SECURITY ENHANCEMENT: Refresh token rotation
+    refresh_token_rotation: bool = Field(
+        default=True,
+        description="Enable refresh token rotation for enhanced security"
+    )
+    
+    refresh_token_reuse_window: int = Field(
+        default=60,
+        description="Grace period (seconds) for duplicate refresh requests (race conditions)",
+        ge=0,
+        le=300
     )
     
     # ==================== Database Settings ====================
@@ -82,9 +105,24 @@ class WCSAPConfig(BaseSettings):
         description="Enable rate limiting for authentication attempts"
     )
     
-    rate_limit_max_attempts: int = Field(
+    # SECURITY ENHANCEMENT: Granular rate limits per endpoint
+    rate_limit_challenge: int = Field(
         default=5,
-        description="Maximum authentication attempts per window",
+        description="Max challenge requests per window per IP",
+        ge=1,
+        le=100
+    )
+    
+    rate_limit_verify: int = Field(
+        default=5,
+        description="Max verify requests per window per wallet",
+        ge=1,
+        le=100
+    )
+    
+    rate_limit_refresh: int = Field(
+        default=10,
+        description="Max refresh requests per hour per wallet",
         ge=1,
         le=100
     )
@@ -93,6 +131,29 @@ class WCSAPConfig(BaseSettings):
         default=300,
         description="Rate limit window in seconds (default: 5 minutes)",
         ge=60,
+        le=3600
+    )
+    
+    # SECURITY ENHANCEMENT: Burst allowance
+    rate_limit_burst_allowance: int = Field(
+        default=2,
+        description="Additional requests allowed in burst",
+        ge=0,
+        le=10
+    )
+    
+    # SECURITY ENHANCEMENT: Failed attempt lockout
+    max_failed_attempts: int = Field(
+        default=5,
+        description="Max failed auth attempts before lockout",
+        ge=3,
+        le=20
+    )
+    
+    lockout_duration_seconds: int = Field(
+        default=900,
+        description="Lockout duration in seconds (default: 15 minutes)",
+        ge=300,
         le=3600
     )
     
@@ -134,9 +195,30 @@ class WCSAPConfig(BaseSettings):
         description="Require HTTPS for authentication endpoints (production: True)"
     )
     
+    require_tls_13: bool = Field(
+        default=False,
+        description="Require TLS 1.3 minimum (production: True)"
+    )
+    
     audit_logging_enabled: bool = Field(
         default=True,
         description="Enable comprehensive audit logging"
+    )
+    
+    # SECURITY ENHANCEMENT: Revocation
+    revocation_enabled: bool = Field(
+        default=True,
+        description="Enable token revocation (denylist cache)"
+    )
+    
+    revocation_cache_type: str = Field(
+        default="memory",
+        description="Revocation cache type: 'memory' or 'redis'"
+    )
+    
+    revocation_cache_redis_url: Optional[str] = Field(
+        default=None,
+        description="Redis URL for revocation cache (if type=redis)"
     )
     
     # ==================== CORS Settings ====================

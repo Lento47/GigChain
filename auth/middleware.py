@@ -13,8 +13,28 @@ from functools import wraps
 
 from auth.w_csap import WCSAPAuthenticator
 from auth.database import get_database
+from auth.config import get_config
 
 logger = logging.getLogger(__name__)
+
+# Import revocation cache (lazy import to avoid circular dependencies)
+_revocation_cache = None
+
+def get_revocation_cache_instance():
+    """Get revocation cache instance (lazy initialization)."""
+    global _revocation_cache
+    if _revocation_cache is None:
+        try:
+            from auth.revocation import get_revocation_cache
+            config = get_config()
+            _revocation_cache = get_revocation_cache(
+                cache_type=config.revocation_cache_type,
+                redis_url=config.revocation_cache_redis_url
+            )
+        except Exception as e:
+            logger.warning(f"Revocation cache not available: {str(e)}")
+            _revocation_cache = False  # Mark as unavailable
+    return _revocation_cache if _revocation_cache is not False else None
 
 # HTTP Bearer token scheme
 security = HTTPBearer(auto_error=False)
@@ -64,6 +84,15 @@ async def get_current_wallet(
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid or expired session token",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        # SECURITY ENHANCEMENT: Check revocation cache
+        revocation_cache = get_revocation_cache_instance()
+        if revocation_cache and revocation_cache.is_revoked(session_data["assertion_id"]):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Session has been revoked",
                 headers={"WWW-Authenticate": "Bearer"},
             )
         
