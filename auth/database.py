@@ -25,28 +25,45 @@ class WCSAPDatabase:
     
     def __init__(self, db_path: str = "data/w_csap.db"):
         self.db_path = db_path
+        self._shared_conn = None  # For in-memory databases
         self._ensure_directory()
         self._initialize_tables()
         logger.info(f"📦 W-CSAP Database initialized at {db_path}")
     
     def _ensure_directory(self):
-        """Ensure database directory exists."""
-        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
+        """Ensure database directory exists (skip for in-memory databases)."""
+        if self.db_path != ":memory:":
+            Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
     
     @contextmanager
     def get_connection(self):
         """Context manager for database connections."""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row  # Enable column access by name
-        try:
-            yield conn
-            conn.commit()
-        except Exception as e:
-            conn.rollback()
-            logger.error(f"Database error: {str(e)}")
-            raise
-        finally:
-            conn.close()
+        # For in-memory databases, reuse the same connection
+        if self.db_path == ":memory:":
+            if self._shared_conn is None:
+                self._shared_conn = sqlite3.connect(self.db_path, check_same_thread=False)
+                self._shared_conn.row_factory = sqlite3.Row
+            conn = self._shared_conn
+            try:
+                yield conn
+                conn.commit()
+            except Exception as e:
+                conn.rollback()
+                logger.error(f"Database error: {str(e)}")
+                raise
+        else:
+            # For file databases, create new connections each time
+            conn = sqlite3.connect(self.db_path)
+            conn.row_factory = sqlite3.Row
+            try:
+                yield conn
+                conn.commit()
+            except Exception as e:
+                conn.rollback()
+                logger.error(f"Database error: {str(e)}")
+                raise
+            finally:
+                conn.close()
     
     def _initialize_tables(self):
         """Create database tables if they don't exist."""
@@ -66,12 +83,14 @@ class WCSAPDatabase:
                     user_agent TEXT,
                     metadata TEXT,
                     status TEXT DEFAULT 'pending',
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    INDEX idx_wallet (wallet_address),
-                    INDEX idx_status (status),
-                    INDEX idx_expires (expires_at)
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
+            
+            # Create indexes for challenges table
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_challenges_wallet ON challenges(wallet_address)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_challenges_status ON challenges(status)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_challenges_expires ON challenges(expires_at)")
             
             # Sessions table
             cursor.execute("""
@@ -89,13 +108,15 @@ class WCSAPDatabase:
                     user_agent TEXT,
                     metadata TEXT,
                     status TEXT DEFAULT 'active',
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    INDEX idx_wallet (wallet_address),
-                    INDEX idx_session_token (session_token),
-                    INDEX idx_status (status),
-                    INDEX idx_expires (expires_at)
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
+            
+            # Create indexes for sessions table
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_wallet ON sessions(wallet_address)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(session_token)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_status ON sessions(status)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at)")
             
             # Authentication events (audit log)
             cursor.execute("""
@@ -110,12 +131,14 @@ class WCSAPDatabase:
                     ip_address TEXT,
                     user_agent TEXT,
                     metadata TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    INDEX idx_wallet (wallet_address),
-                    INDEX idx_event_type (event_type),
-                    INDEX idx_created (created_at)
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
+            
+            # Create indexes for auth_events table
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_events_wallet ON auth_events(wallet_address)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_events_type ON auth_events(event_type)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_events_created ON auth_events(created_at)")
             
             # Rate limiting table
             cursor.execute("""
@@ -127,11 +150,13 @@ class WCSAPDatabase:
                     attempt_count INTEGER DEFAULT 1,
                     last_attempt INTEGER NOT NULL,
                     blocked_until INTEGER,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    INDEX idx_wallet_action (wallet_address, action_type),
-                    INDEX idx_ip_action (ip_address, action_type)
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
+            
+            # Create indexes for rate_limits table
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_ratelimit_wallet_action ON rate_limits(wallet_address, action_type)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_ratelimit_ip_action ON rate_limits(ip_address, action_type)")
             
             logger.info("✅ Database tables initialized")
     

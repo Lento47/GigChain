@@ -65,8 +65,8 @@ def test_chat_session():
         print(f"❌ Error: {e}")
         return None
 
-def test_chat_message(session_id: str, message: str, expected_keywords: list = None):
-    """Prueba el envío de un mensaje"""
+def send_chat_message(session_id: str, message: str, expected_keywords: list = None):
+    """Prueba el envío de un mensaje (integration test helper)"""
     print(f"\n💭 Enviando mensaje: '{message}'")
     
     try:
@@ -115,8 +115,8 @@ def test_chat_message(session_id: str, message: str, expected_keywords: list = N
         print(f"❌ Error: {e}")
         return False
 
-def test_agent_switching(session_id: str):
-    """Prueba el cambio de agente"""
+def switch_chat_agent(session_id: str):
+    """Prueba el cambio de agente (integration test helper)"""
     print(f"\n🔄 Probando cambio de agente...")
     
     try:
@@ -138,8 +138,8 @@ def test_agent_switching(session_id: str):
         print(f"❌ Error: {e}")
         return False
 
-def test_chat_history(session_id: str):
-    """Prueba la obtención del historial"""
+def get_chat_history(session_id: str):
+    """Prueba la obtención del historial (integration test helper)"""
     print(f"\n📜 Probando historial de chat...")
     
     try:
@@ -193,7 +193,7 @@ def run_chat_conversation(session_id: str):
     success_count = 0
     for i, test_case in enumerate(test_cases, 1):
         print(f"\n--- Pregunta {i}/{len(test_cases)} ---")
-        success = test_chat_message(
+        success = send_chat_message(
             session_id, 
             test_case["message"], 
             test_case["keywords"]
@@ -240,12 +240,12 @@ def main():
         
         # Test 3: Mensaje básico
         total_tests += 1
-        if test_chat_message(session_id, "Hola, ¿puedes ayudarme?"):
+        if send_chat_message(session_id, "Hola, ¿puedes ayudarme?"):
             tests_passed += 1
         
         # Test 4: Cambio de agente
         total_tests += 1
-        if test_agent_switching(session_id):
+        if switch_chat_agent(session_id):
             tests_passed += 1
         
         # Test 5: Conversación completa
@@ -256,7 +256,7 @@ def main():
         
         # Test 6: Historial
         total_tests += 1
-        if test_chat_history(session_id):
+        if get_chat_history(session_id):
             tests_passed += 1
     
     # Resumen

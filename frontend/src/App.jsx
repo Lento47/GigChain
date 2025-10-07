@@ -40,6 +40,7 @@ import { useDashboardMetrics } from './hooks/useDashboardMetrics';
 import { truncateWalletAddress } from './utils/walletUtils';
 import { API_BASE_URL } from './constants/api';
 import { CONTRACT_TEMPLATES } from './constants/contractTemplates';
+import { logger } from './utils/logger';
 
 import './styles/index.css';
 
@@ -83,7 +84,7 @@ const ChatAI = ({ isConnected, walletInfo }) => {
         setIsLoading(false);
       }, 1500);
     } catch (error) {
-      console.error('Error sending message:', error);
+      logger.error('Error sending chat message:', error);
       setIsLoading(false);
     }
   };
@@ -233,7 +234,7 @@ const MainContent = ({ currentView, walletInfo, isConnected, onViewChange }) => 
         <JobsModal 
           onClose={() => setShowJobsModal(false)}
           onApply={(job) => {
-            console.log('Applied to job:', job);
+            logger.action('job_application', { jobId: job.id, title: job.title });
             setShowJobsModal(false);
           }}
         />

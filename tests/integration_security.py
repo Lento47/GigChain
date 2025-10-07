@@ -90,8 +90,8 @@ TEST_CASES = [
     }
 ]
 
-def test_template_validation(template: Dict[str, Any], test_name: str) -> bool:
-    """Prueba la validación de una plantilla"""
+def validate_template_test(template: Dict[str, Any], test_name: str) -> bool:
+    """Prueba la validación de una plantilla (integration test helper)"""
     print(f"\n🧪 Probando: {test_name}")
     print("-" * 50)
     
@@ -200,7 +200,7 @@ def main():
     total_tests = len(TEST_CASES)
     
     for test_case in TEST_CASES:
-        success = test_template_validation(
+        success = validate_template_test(
             test_case["template"], 
             test_case["name"]
         )
