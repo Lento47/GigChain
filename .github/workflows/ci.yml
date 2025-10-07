@@ -188,7 +188,7 @@ jobs:
       
       - name: Run backend integration tests
         run: |
-          python -m pytest test_backend.py -v
+          python -m pytest tests/test_backend.py -v
         env:
           OPENAI_API_KEY: sk-test-key-for-ci
 
