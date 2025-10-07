@@ -48,16 +48,18 @@ docker-compose up
 ## 🤖 **AGENTS AI**
 
 ### **Reglas Estrictas:**
-- Solo pseudocódigo Bubble (no código real ejecutable)
+- Código limpio y modular (Python/TypeScript)
 - Output siempre en formato YAML + explicación
 - Máximo 200 líneas por snippet
 - Validación de sintaxis antes de output
 - Temperatura 0.0 para exactitud
 
 ### **Agents Disponibles:**
-1. **WorkflowGeneratorAgent**: Workflows Bubble
-2. **UIElementAgent**: Elementos UI
+1. **WorkflowGeneratorAgent**: Generación de workflows
+2. **UIElementAgent**: Elementos UI React
 3. **ChainValidatorAgent**: Validación de chains AI
+4. **NegotiationAgent**: Negociación de precios
+5. **ContractGeneratorAgent**: Generación de contratos inteligentes
 
 ## 📝 **INSTRUCCIONES PARA AGENTS**
 

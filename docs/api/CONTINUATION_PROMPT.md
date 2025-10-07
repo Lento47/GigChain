@@ -28,8 +28,8 @@
 ## 🎯 **PRÓXIMAS TAREAS PRIORITARIAS**
 
 ### **Fase 1: Completar AI Agents (PRIORIDAD ALTA)**
-1. **WorkflowGeneratorAgent**: Generar workflows Bubble.io
-2. **UIElementAgent**: Crear elementos UI para chat
+1. **WorkflowGeneratorAgent**: Generar workflows FastAPI/React
+2. **UIElementAgent**: Crear componentes React para la UI
 3. **ChainValidatorAgent**: Validar chains de AI
 4. **NegotiationAgent**: Agente de negociación de precios
 5. **ContractGeneratorAgent**: Generar contratos inteligentes
@@ -133,7 +133,7 @@ GigChain/
 - **PaymentAgent**: Gestión de pagos y transacciones
 
 ### **Reglas Estrictas para Agents:**
-- Solo pseudocódigo Bubble (no código ejecutable)
+- Código limpio y modular (Python/TypeScript/React)
 - Output en formato YAML + explicación
 - Máximo 200 líneas por snippet
 - Temperatura 0.0 para exactitud
@@ -236,7 +236,8 @@ JWT_SECRET_KEY=tu_secret_key_super_segura
 - **Thirdweb Docs**: https://portal.thirdweb.com/
 - **FastAPI Docs**: https://fastapi.tiangolo.com/
 - **React Docs**: https://react.dev/
-- **Bubble.io Docs**: https://bubble.io/help
+- **Vite Docs**: https://vitejs.dev/
+- **Polygon Docs**: https://docs.polygon.technology/
 
 ---
 
