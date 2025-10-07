@@ -1,5 +1,6 @@
 """GigChain.io FastAPI Backend - Production-ready API server."""
 
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -44,13 +45,37 @@ from auth import (
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Lifespan context manager for startup/shutdown events
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initialize resources on startup and cleanup on shutdown."""
+    # Startup: Initialize authentication system
+    secret_key = os.getenv('W_CSAP_SECRET_KEY', os.urandom(32).hex())
+    
+    app.state.authenticator = WCSAPAuthenticator(
+        secret_key=secret_key,
+        challenge_ttl=300,  # 5 minutes
+        session_ttl=86400,  # 24 hours
+        refresh_ttl=604800  # 7 days
+    )
+    
+    app.state.auth_db = get_database()
+    
+    logger.info("🔐 W-CSAP Authentication system initialized")
+    
+    yield
+    
+    # Shutdown: Cleanup resources if needed
+    logger.info("🔒 Shutting down authentication system")
+
 # FastAPI app
 app = FastAPI(
     title="GigChain.io API",
     description="AI-powered contract generation for Web3 gig economy",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan
 )
 
 # CORS middleware - Production-ready configuration
@@ -86,26 +111,6 @@ else:
 # TODO: Implement as BaseHTTPMiddleware or pure ASGI middleware
 # app.add_middleware(RateLimitMiddleware)  # Uncomment to enable rate limiting
 # app.add_middleware(SessionCleanupMiddleware)  # Uncomment for auto cleanup
-
-# Initialize W-CSAP Authenticator on startup
-@app.on_event("startup")
-async def startup_event():
-    """Initialize authentication system on startup."""
-    # Get secret key from environment
-    secret_key = os.getenv('W_CSAP_SECRET_KEY', os.urandom(32).hex())
-    
-    # Initialize authenticator
-    app.state.authenticator = WCSAPAuthenticator(
-        secret_key=secret_key,
-        challenge_ttl=300,  # 5 minutes
-        session_ttl=86400,  # 24 hours
-        refresh_ttl=604800  # 7 days
-    )
-    
-    # Initialize database
-    app.state.auth_db = get_database()
-    
-    logger.info("🔐 W-CSAP Authentication system initialized")
 
 # Pydantic models for authentication
 class AuthChallengeRequest(BaseModel):
