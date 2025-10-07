@@ -231,8 +231,13 @@ class SignatureValidator:
                 signature=signature
             )
             
-            # Verify it matches expected address
-            is_valid = recovered_address.lower() == expected_address.lower()
+            # CONSTANT-TIME comparison (FIX MEDIUM-001: Timing attack protection)
+            # hmac.compare_digest prevents timing attacks by always taking
+            # the same amount of time regardless of where strings differ
+            is_valid = hmac.compare_digest(
+                recovered_address.lower(),
+                expected_address.lower()
+            )
             
             if is_valid:
                 logger.info(f"✅ Signature verified for {expected_address[:10]}...")

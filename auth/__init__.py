@@ -49,6 +49,8 @@ from auth.risk_scoring import RiskScorer, DeviceFingerprint, RiskAssessment, get
 from auth.step_up import StepUpManager, OperationClassifier, OperationRisk, require_step_up, get_step_up_manager
 from auth.kms import KMSKeyManager, get_kms_manager
 from auth.analytics import AnalyticsDashboard, ThreatIntelligence, get_analytics_dashboard, get_threat_intelligence
+from auth.global_rate_limiter import GlobalRateLimiter, get_global_rate_limiter
+from auth.proof_of_work import ProofOfWork, get_proof_of_work
 from auth import schemas
 
 __all__ = [
@@ -129,11 +131,17 @@ __all__ = [
     'get_analytics_dashboard',
     'get_threat_intelligence',
     
+    # Critical Security Fixes
+    'GlobalRateLimiter',
+    'get_global_rate_limiter',
+    'ProofOfWork',
+    'get_proof_of_work',
+    
     # Schemas module
     'schemas'
 ]
 
-__version__ = "3.0.0"  # Phase 3: Advanced Security & Operations
+__version__ = "3.0.1"  # Phase 3 + Critical Security Fixes
 __author__ = "GigChain.io"
 __protocol__ = "W-CSAP"
-__security_level__ = "Zero-Trust / WebAuthn-Plus"
+__security_level__ = "Zero-Trust / WebAuthn-Plus (Hardened)"

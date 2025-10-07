@@ -386,6 +386,59 @@ class WCSAPConfig(BaseSettings):
         description="Enable threat intelligence integration"
     )
     
+    # ==================== Critical Security Fixes ====================
+    
+    # Global Rate Limiting (FIX HIGH-001)
+    global_rate_limit_enabled: bool = Field(
+        default=True,
+        description="Enable global rate limiting per wallet (prevents IP rotation bypass)"
+    )
+    
+    global_rate_limit_per_hour: int = Field(
+        default=50,
+        description="Max authentication attempts per wallet per hour",
+        ge=1,
+        le=1000
+    )
+    
+    global_rate_limit_per_day: int = Field(
+        default=200,
+        description="Max authentication attempts per wallet per day",
+        ge=1,
+        le=10000
+    )
+    
+    # Proof-of-Work (FIX HIGH-002)
+    pow_enabled: bool = Field(
+        default=True,
+        description="Enable Proof-of-Work for DDoS protection"
+    )
+    
+    pow_difficulty: int = Field(
+        default=4,
+        description="PoW difficulty (4 = ~16 attempts, 8 = ~256 attempts)",
+        ge=2,
+        le=12
+    )
+    
+    pow_max_difficulty: int = Field(
+        default=12,
+        description="Maximum PoW difficulty (prevents DoS of legitimate users)",
+        ge=2,
+        le=16
+    )
+    
+    # KMS Monitoring (FIX HIGH-003)
+    kms_alert_webhook: Optional[str] = Field(
+        default=None,
+        description="Webhook URL for KMS security alerts (Slack, PagerDuty, etc.)"
+    )
+    
+    kms_require_mfa: bool = Field(
+        default=True,
+        description="Require MFA for KMS operations (AWS IAM policy enforcement)"
+    )
+    
     # ==================== Advanced Settings ====================
     
     enable_challenge_metadata: bool = Field(

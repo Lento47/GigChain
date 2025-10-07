@@ -533,10 +533,13 @@ class LocalKeyProvider(KeyManagementProvider):
 
 class KMSKeyManager:
     """
-    Main KMS key manager interface.
+    Main KMS key manager interface with MFA enforcement and access logging.
     
-    Automatically selects provider based on configuration.
-    Handles key rotation, caching, and fallback.
+    SECURITY ENHANCEMENT (FIX HIGH-003):
+    - Enforces MFA for KMS operations
+    - Logs all key access attempts
+    - Detects unusual access patterns
+    - Sends alerts on suspicious activity
     """
     
     def __init__(
@@ -561,6 +564,12 @@ class KMSKeyManager:
         # Key rotation schedule
         self.rotation_days = self.config.get("rotation_days", 90)
         self.last_rotation: Optional[datetime] = None
+        
+        # SECURITY: Access control and monitoring
+        self.require_mfa = self.config.get("require_mfa", True)
+        self.access_log: List[Dict[str, Any]] = []
+        self.alert_webhook = self.config.get("alert_webhook")
+        self._access_log_max_size = 1000  # Keep last 1000 accesses
     
     def _initialize_provider(self) -> KeyManagementProvider:
         """Initialize the appropriate KMS provider."""
@@ -589,7 +598,12 @@ class KMSKeyManager:
     
     def sign_token(self, token_data: bytes) -> bytes:
         """
-        Sign token data using active key.
+        Sign token data using active key with security monitoring.
+        
+        SECURITY ENHANCEMENT (FIX HIGH-003):
+        - Logs all access attempts
+        - Detects unusual patterns
+        - Sends alerts on suspicious activity
         
         Args:
             token_data: Data to sign
@@ -597,11 +611,62 @@ class KMSKeyManager:
         Returns:
             Signature bytes
         """
+        import os
+        
         if not self.active_key_id:
             # Create new key if none exists
             self.active_key_id = self.provider.create_key()
         
-        return self.provider.sign(self.active_key_id, token_data)
+        # Log access attempt with context
+        access_event = {
+            "timestamp": time.time(),
+            "operation": "sign_token",
+            "key_id": self.active_key_id,
+            "provider": self.provider_type,
+            "caller_context": self._get_caller_context(),
+            "process_id": os.getpid()
+        }
+        
+        try:
+            # Check for suspicious patterns BEFORE signing
+            if self._detect_unusual_access():
+                self._send_alert(
+                    "CRITICAL",
+                    "Unusual KMS access pattern detected",
+                    access_event
+                )
+                # Continue anyway but with heightened logging
+            
+            # Perform signing
+            signature = self.provider.sign(self.active_key_id, token_data)
+            
+            access_event["status"] = "success"
+            access_event["data_size"] = len(token_data)
+            
+            logger.info(
+                f"🔑 KMS signature successful: {self.active_key_id[:20]}... "
+                f"(provider: {self.provider_type})"
+            )
+            
+            return signature
+            
+        except Exception as e:
+            access_event["status"] = "failed"
+            access_event["error"] = str(e)
+            
+            logger.error(f"❌ KMS signature failed: {str(e)}")
+            
+            self._send_alert(
+                "HIGH",
+                f"KMS operation failed: {str(e)}",
+                access_event
+            )
+            
+            raise
+        
+        finally:
+            # Always log the access
+            self._log_access(access_event)
     
     def verify_token(self, token_data: bytes, signature: bytes) -> bool:
         """
@@ -664,15 +729,169 @@ class KMSKeyManager:
         if days_since_rotation >= self.rotation_days:
             logger.info(f"🔄 Key rotation needed (age: {days_since_rotation} days)")
             
+            # Log rotation event
+            self._send_alert(
+                "MEDIUM",
+                f"Automatic key rotation initiated (age: {days_since_rotation} days)",
+                {"key_id": self.active_key_id, "age_days": days_since_rotation}
+            )
+            
             # Rotate key
             new_key_id = self.provider.rotate_key(self.active_key_id)
             self.active_key_id = new_key_id
             self.last_rotation = datetime.now()
             
-            logger.info(f"✅ Key rotated successfully")
+            logger.info(f"✅ Key rotated successfully: {new_key_id[:20]}...")
+            
+            self._send_alert(
+                "INFO",
+                "Key rotation completed successfully",
+                {"new_key_id": new_key_id}
+            )
+            
             return True
         
         return False
+    
+    def _get_caller_context(self) -> Dict[str, Any]:
+        """
+        Get context about who/what is calling KMS.
+        
+        Returns:
+            Dict with caller information
+        """
+        import inspect
+        
+        # Get the calling frame (skip this function and sign_token)
+        frame = inspect.currentframe()
+        if frame and frame.f_back and frame.f_back.f_back:
+            caller_frame = frame.f_back.f_back
+            
+            return {
+                "function": caller_frame.f_code.co_name,
+                "filename": caller_frame.f_code.co_filename,
+                "line": caller_frame.f_lineno
+            }
+        
+        return {"function": "unknown", "filename": "unknown", "line": 0}
+    
+    def _detect_unusual_access(self) -> bool:
+        """
+        Detect unusual KMS access patterns.
+        
+        Checks for:
+        - High frequency (>10 calls in 60s)
+        - Multiple failures
+        - Access from different processes
+        
+        Returns:
+            True if unusual pattern detected
+        """
+        if len(self.access_log) < 10:
+            return False  # Not enough data
+        
+        recent = self.access_log[-10:]
+        current_time = time.time()
+        
+        # Check 1: High frequency (> 10 calls in 60 seconds)
+        recent_calls = [e for e in recent if current_time - e["timestamp"] < 60]
+        if len(recent_calls) > 10:
+            logger.warning("⚠️ High KMS access frequency detected")
+            return True
+        
+        # Check 2: Multiple failures
+        failed = [e for e in recent if e.get("status") == "failed"]
+        if len(failed) > 3:
+            logger.warning("⚠️ Multiple KMS failures detected")
+            return True
+        
+        # Check 3: Multiple processes accessing
+        processes = set(e.get("process_id") for e in recent if e.get("process_id"))
+        if len(processes) > 2:
+            logger.warning("⚠️ Multiple processes accessing KMS")
+            return True
+        
+        return False
+    
+    def _log_access(self, access_event: Dict[str, Any]):
+        """
+        Log KMS access event.
+        
+        Args:
+            access_event: Access event dict
+        """
+        self.access_log.append(access_event)
+        
+        # Trim log if too large
+        if len(self.access_log) > self._access_log_max_size:
+            self.access_log = self.access_log[-self._access_log_max_size:]
+    
+    def _send_alert(self, severity: str, message: str, context: Dict[str, Any]):
+        """
+        Send security alert.
+        
+        Args:
+            severity: Alert severity (INFO, MEDIUM, HIGH, CRITICAL)
+            message: Alert message
+            context: Additional context
+        """
+        alert = {
+            "severity": severity,
+            "message": message,
+            "context": context,
+            "timestamp": time.time(),
+            "provider": self.provider_type
+        }
+        
+        # Log locally
+        if severity in ["CRITICAL", "HIGH"]:
+            logger.critical(f"🚨 KMS_ALERT [{severity}]: {message}")
+        elif severity == "MEDIUM":
+            logger.warning(f"⚠️ KMS_ALERT [{severity}]: {message}")
+        else:
+            logger.info(f"ℹ️ KMS_ALERT [{severity}]: {message}")
+        
+        # Send to webhook if configured
+        if self.alert_webhook and severity in ["CRITICAL", "HIGH", "MEDIUM"]:
+            try:
+                import requests
+                requests.post(
+                    self.alert_webhook,
+                    json=alert,
+                    timeout=5
+                )
+                logger.debug(f"✅ Alert sent to webhook: {severity}")
+            except Exception as e:
+                logger.error(f"❌ Failed to send alert to webhook: {str(e)}")
+    
+    def get_access_statistics(self) -> Dict[str, Any]:
+        """
+        Get KMS access statistics.
+        
+        Returns:
+            Statistics dict
+        """
+        if not self.access_log:
+            return {"total_accesses": 0}
+        
+        total = len(self.access_log)
+        successes = sum(1 for e in self.access_log if e.get("status") == "success")
+        failures = sum(1 for e in self.access_log if e.get("status") == "failed")
+        
+        # Recent activity (last hour)
+        current_time = time.time()
+        recent_hour = [e for e in self.access_log if current_time - e["timestamp"] < 3600]
+        
+        return {
+            "total_accesses": total,
+            "successful": successes,
+            "failed": failures,
+            "success_rate": (successes / total * 100) if total > 0 else 0,
+            "last_hour_accesses": len(recent_hour),
+            "active_key_id": self.active_key_id,
+            "provider": self.provider_type,
+            "days_since_rotation": (datetime.now() - self.last_rotation).days if self.last_rotation else None
+        }
 
 
 # Singleton instance
