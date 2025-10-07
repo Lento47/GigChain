@@ -57,12 +57,13 @@
 - **Session Management**: Tokens JWT con refresh tokens y expiración
 - **HTTPS Support**: SSL/TLS ready con Nginx reverse proxy
 
-### 🐳 DevOps & Deployment
-- **Docker Containerization**: Multi-stage builds optimizados
-- **Docker Compose**: Orchestration completo con Nginx
-- **CI/CD Pipeline**: GitHub Actions con testing automático
-- **VPS Scripts**: Deployment automatizado para DigitalOcean, AWS, etc.
-- **Environment Management**: Configuración por variables de entorno
+### 🐳 DevOps & Deployment (⏳ Planeado)
+- **Local Development**: Python main.py + npm run dev (ACTUAL)
+- **Docker Containerization**: Multi-stage builds optimizados (FUTURO)
+- **Docker Compose**: Orchestration completo con Nginx (FUTURO)
+- **CI/CD Pipeline**: GitHub Actions con testing automático (FUTURO)
+- **VPS Scripts**: Deployment automatizado para DigitalOcean, AWS, etc. (FUTURO)
+- **Environment Management**: ✅ Configuración por variables de entorno (.env)
 
 ## 🏗️ Arquitectura del Sistema
 
@@ -290,7 +291,10 @@ Factores:
 
 ## 🚀 Quick Start
 
-### 1. Setup Local (Recommended: FastAPI)
+### 1. Setup Local (ACTUAL DEVELOPMENT APPROACH)
+
+⚠️ **IMPORTANTE**: Por ahora, estamos usando SOLO desarrollo local sin Docker para optimizar velocidad de desarrollo.
+
 ```bash
 # Clone repository
 git clone <your-repo-url>
@@ -299,32 +303,47 @@ cd GigChain
 # Install dependencies
 pip install -r requirements.txt
 
-# Configure environment
-cp .env.example .env
-# Edit .env with your OPENAI_API_KEY and other variables
+# Configure environment (NO MODIFICAR sin consultar)
+# El archivo .env ya debe estar configurado
+# Verificar variables requeridas:
+cat .env  # Linux/Mac
+type .env # Windows
 
-# Run tests
-python -m pytest tests/ -v
+# Verificar estado del servidor
+curl http://localhost:5000/health
 
-# Start FastAPI development server (recommended)
+# Run tests (individual scripts)
+python test_chat.py
+python test_contract_ai.py
+python test_api.py
+
+# Start FastAPI development server (✨ USAR ESTE)
 python main.py
 # Server runs at http://localhost:5000
 # API docs available at http://localhost:5000/docs
 # Alternative docs at http://localhost:5000/redoc
-
-# Or start Flask server (legacy)
-python app.py
 ```
 
-### 2. Docker Deployment
+### 2. Frontend Setup (Terminal separada)
 ```bash
-# Quick start with Docker
+cd frontend
+npm install
+npm run dev
+# Frontend runs at http://localhost:5173
+```
+
+### 3. Docker Deployment (⚠️ SOLO AL FINAL DEL PROYECTO)
+```bash
+# ❌ POR AHORA NO USAR DOCKER
+# Docker solo cuando todas las funcionalidades estén completas
+
+# Quick start with Docker (FUTURO)
 ./deploy.sh dev
 
-# Or with PowerShell on Windows
+# Or with PowerShell on Windows (FUTURO)
 .\deploy.ps1 dev
 
-# Production deployment
+# Production deployment (FUTURO)
 ./deploy.sh production
 ```
 
@@ -850,25 +869,38 @@ npm run deploy:amoy
 | **CORS** | Cross-origin security |
 | **Rate Limiting** | DDoS protection |
 
-## 🐳 Docker Deployment
+## 🐳 Docker Deployment (⚠️ PENDIENTE - SOLO AL FINAL)
 
-### Development
+> **NOTA IMPORTANTE**: Docker está deshabilitado temporalmente. Usamos desarrollo local con `python main.py` para mayor velocidad de iteración.
+
+### Development (FUTURO)
 ```bash
+# ❌ NO USAR POR AHORA
 docker-compose up gigchain-api
 ```
 
-### Production
+### Production (FUTURO)
 ```bash
+# ❌ NO USAR POR AHORA
 docker-compose --profile production up -d
 ```
 
-### Features
-- ✅ Nginx reverse proxy
-- ✅ Rate limiting (10 req/s)
-- ✅ Security headers
-- ✅ CORS configuration
-- ✅ Health checks
-- ✅ Auto-restart
+### Features Planeadas
+- ⏳ Nginx reverse proxy
+- ⏳ Rate limiting (10 req/s)
+- ⏳ Security headers
+- ⏳ CORS configuration
+- ⏳ Health checks
+- ⏳ Auto-restart
+
+### Workflow Actual (Sin Docker)
+```bash
+# Terminal 1: Backend
+python main.py
+
+# Terminal 2: Frontend (opcional)
+cd frontend && npm run dev
+```
 
 ## 📁 Project Structure
 
@@ -1198,4 +1230,5 @@ furnished to do so, subject to the following conditions:
 
 **Last Updated**: 2025-10-07  
 **Version**: 1.0.0  
-**Status**: ✅ Production Ready (Testnet)
+**Status**: ✅ Development Ready (Local-First Approach)  
+**Deployment**: 🚀 Local Development | ⏳ Docker (Coming Soon)

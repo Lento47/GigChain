@@ -1,13 +1,14 @@
-# 🚀 GigChain API - Deployment Local (Sin Docker)
+# 🚀 GigChain API - Deployment Local (Enfoque Actual)
 
-## ✅ Status: FUNCIONANDO
+## ✅ Status: DESARROLLO LOCAL ACTIVO
 
-Tu API GigChain está **ejecutándose correctamente** en `http://localhost:5000`
+La API GigChain se ejecuta en modo **desarrollo local** en `http://localhost:5000`
 
-## 🔧 Problema Docker Desktop Solucionado
+## 🎯 Enfoque de Desarrollo Actual
 
-**Problema**: Docker Desktop no estaba ejecutándose en Windows
-**Solución**: Usamos deployment local con Flask directamente
+**Decisión**: Desarrollo local sin Docker hasta finalizar todas las funcionalidades
+**Razón**: Mayor velocidad de iteración y debugging
+**Método**: `python main.py` directamente en localhost:5000
 
 ## 📊 API Endpoints Funcionando
 
@@ -84,24 +85,32 @@ $response = Invoke-WebRequest -Uri "http://localhost:5000/api/full_flow" -Method
 $response.Content | ConvertFrom-Json | ConvertTo-Json -Depth 10
 ```
 
-## 🐳 Para Usar Docker (Cuando esté listo)
+## 🐳 Para Usar Docker (⚠️ SOLO AL FINAL DEL PROYECTO)
 
-### 1. Iniciar Docker Desktop
+> **IMPORTANTE**: Docker está DESHABILITADO temporalmente para desarrollo rápido.
+
+### Cuándo Usar Docker:
+- ✅ Al finalizar todas las funcionalidades core
+- ✅ Para deployment en producción
+- ✅ Para testing de integración final
+- ❌ NO para desarrollo diario (usar `python main.py`)
+
+### 1. Iniciar Docker Desktop (FUTURO)
 - Buscar "Docker Desktop" en Windows
 - Ejecutar Docker Desktop
 - Esperar a que aparezca el ícono en la bandeja del sistema
 
-### 2. Verificar Docker
+### 2. Verificar Docker (FUTURO)
 ```powershell
 docker info
 # Debe mostrar información del servidor Docker
 ```
 
-### 3. Deploy con Docker
+### 3. Deploy con Docker (FUTURO)
 ```powershell
 # Crear .env con tu API key
 # Luego ejecutar:
-.\deploy.ps1 dev
+.\deploy.ps1 production  # Solo producción al final
 ```
 
 ## 📁 Archivos Importantes
