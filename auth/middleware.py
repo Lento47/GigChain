@@ -9,6 +9,7 @@ from fastapi import Request, HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional, Dict, Any
 import logging
+import time
 from functools import wraps
 
 from auth.w_csap import WCSAPAuthenticator
@@ -19,6 +20,8 @@ logger = logging.getLogger(__name__)
 
 # Import revocation cache (lazy import to avoid circular dependencies)
 _revocation_cache = None
+_dpop_validator = None
+_jwt_manager = None
 
 def get_revocation_cache_instance():
     """Get revocation cache instance (lazy initialization)."""
@@ -36,6 +39,41 @@ def get_revocation_cache_instance():
             _revocation_cache = False  # Mark as unavailable
     return _revocation_cache if _revocation_cache is not False else None
 
+def get_dpop_validator_instance():
+    """Get DPoP validator instance (lazy initialization)."""
+    global _dpop_validator
+    if _dpop_validator is None:
+        try:
+            from auth.dpop import get_dpop_validator
+            config = get_config()
+            _dpop_validator = get_dpop_validator(
+                clock_skew_seconds=getattr(config, 'dpop_clock_skew', 60),
+                nonce_cache_ttl=getattr(config, 'dpop_nonce_cache_ttl', 300)
+            )
+        except Exception as e:
+            logger.warning(f"DPoP validator not available: {str(e)}")
+            _dpop_validator = False
+    return _dpop_validator if _dpop_validator is not False else None
+
+def get_jwt_manager_instance():
+    """Get JWT manager instance (lazy initialization)."""
+    global _jwt_manager
+    if _jwt_manager is None:
+        try:
+            from auth.jwt_tokens import get_jwt_manager
+            config = get_config()
+            _jwt_manager = get_jwt_manager(
+                algorithm=getattr(config, 'jwt_algorithm', 'ES256'),
+                issuer=getattr(config, 'token_issuer', 'https://auth.gigchain.io'),
+                audience=getattr(config, 'token_audience', 'https://api.gigchain.io'),
+                access_token_ttl=config.access_token_ttl,
+                refresh_token_ttl=config.refresh_ttl
+            )
+        except Exception as e:
+            logger.warning(f"JWT manager not available: {str(e)}")
+            _jwt_manager = False
+    return _jwt_manager if _jwt_manager is not False else None
+
 # HTTP Bearer token scheme
 security = HTTPBearer(auto_error=False)
 
@@ -51,6 +89,11 @@ async def get_current_wallet(
 ) -> Dict[str, Any]:
     """
     Dependency to get current authenticated wallet from request.
+    
+    PHASE 2 ENHANCEMENTS:
+    - DPoP validation (if enabled)
+    - JWT token support (asymmetric signatures)
+    - Scope and audience validation
     
     Usage:
         @app.get("/api/protected")
@@ -72,20 +115,84 @@ async def get_current_wallet(
         )
     
     session_token = credentials.credentials
+    config = get_config()
     
     try:
-        # Get authenticator from app state
-        authenticator: WCSAPAuthenticator = request.app.state.authenticator
+        # PHASE 2: Try JWT validation first (if enabled)
+        jwt_manager = get_jwt_manager_instance()
+        if jwt_manager and getattr(config, 'use_jwt_tokens', False):
+            is_valid, token_claims, error = jwt_manager.verify_token(session_token)
+            
+            if is_valid and token_claims:
+                # Extract session data from JWT claims
+                session_data = {
+                    "assertion_id": token_claims.get("jti"),
+                    "wallet_address": token_claims.get("sub"),
+                    "expires_at": token_claims.get("exp"),
+                    "expires_in": token_claims.get("exp") - int(time.time()) if token_claims.get("exp") else 0
+                }
+                
+                # PHASE 2: DPoP validation (if enabled)
+                dpop_header = request.headers.get("DPoP")
+                if getattr(config, 'dpop_enabled', False):
+                    if not dpop_header:
+                        raise HTTPException(
+                            status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="DPoP proof required but not provided",
+                            headers={"WWW-Authenticate": 'DPoP'},
+                        )
+                    
+                    # Validate DPoP proof
+                    dpop_validator = get_dpop_validator_instance()
+                    if dpop_validator:
+                        expected_jkt = token_claims.get("cnf", {}).get("jkt") if isinstance(token_claims.get("cnf"), dict) else None
+                        
+                        is_valid_dpop, dpop_proof, dpop_error = dpop_validator.validate_dpop_proof(
+                            dpop_header=dpop_header,
+                            http_method=request.method,
+                            http_uri=str(request.url),
+                            access_token=session_token,
+                            expected_jkt=expected_jkt
+                        )
+                        
+                        if not is_valid_dpop:
+                            raise HTTPException(
+                                status_code=status.HTTP_401_UNAUTHORIZED,
+                                detail=f"Invalid DPoP proof: {dpop_error}",
+                                headers={"WWW-Authenticate": 'DPoP'},
+                            )
+                
+                # Use JWT claims as session data
+                full_session_data = token_claims
+                
+            else:
+                # JWT validation failed, fall back to HMAC
+                logger.debug(f"JWT validation failed: {error}, trying HMAC")
+                authenticator: WCSAPAuthenticator = request.app.state.authenticator
+                is_valid, session_data = authenticator.validate_session(session_token)
+                
+                if not is_valid or not session_data:
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="Invalid or expired session token",
+                        headers={"WWW-Authenticate": "Bearer"},
+                    )
+                
+                full_session_data = session_data
         
-        # Validate session token
-        is_valid, session_data = authenticator.validate_session(session_token)
-        
-        if not is_valid or not session_data:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid or expired session token",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+        else:
+            # Use original HMAC validation
+            authenticator: WCSAPAuthenticator = request.app.state.authenticator
+            is_valid, session_data = authenticator.validate_session(session_token)
+            
+            if not is_valid or not session_data:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid or expired session token",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+            
+            full_session_data = session_data
         
         # SECURITY ENHANCEMENT: Check revocation cache
         revocation_cache = get_revocation_cache_instance()
@@ -96,20 +203,14 @@ async def get_current_wallet(
                 headers={"WWW-Authenticate": "Bearer"},
             )
         
-        # Get full session from database
+        # Get full session from database (if using HMAC)
         db = get_database()
-        session = db.get_session_by_token(session_token)
+        session = db.get_session_by_token(session_token) if not jwt_manager or not getattr(config, 'use_jwt_tokens', False) else None
         
-        if not session:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Session not found",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        
-        # Update last activity
-        import time
-        db.update_session_activity(session['assertion_id'], int(time.time()))
+        if session:
+            # Update last activity
+            import time
+            db.update_session_activity(session['assertion_id'], int(time.time()))
         
         # Return wallet information
         return {
@@ -117,7 +218,8 @@ async def get_current_wallet(
             "assertion_id": session_data["assertion_id"],
             "expires_at": session_data["expires_at"],
             "expires_in": session_data["expires_in"],
-            "session": session
+            "session": session or full_session_data,
+            "scope": full_session_data.get("scope", "profile") if isinstance(full_session_data, dict) else "profile"
         }
         
     except HTTPException:

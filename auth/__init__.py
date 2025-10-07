@@ -42,6 +42,9 @@ from auth.errors import (
 )
 from auth.routes import router as auth_router
 from auth.revocation import RevocationCache, get_revocation_cache
+from auth.dpop import DPoPValidator, DPoPTokenGenerator, get_dpop_validator
+from auth.jwt_tokens import JWTTokenManager, TokenClaims, get_jwt_manager
+from auth.scope_validator import ScopeValidator, AudienceValidator, require_scope, require_any_scope
 from auth import schemas
 
 __all__ = [
@@ -83,10 +86,27 @@ __all__ = [
     'RevocationCache',
     'get_revocation_cache',
     
+    # Phase 2: DPoP
+    'DPoPValidator',
+    'DPoPTokenGenerator',
+    'get_dpop_validator',
+    
+    # Phase 2: JWT Tokens
+    'JWTTokenManager',
+    'TokenClaims',
+    'get_jwt_manager',
+    
+    # Phase 2: Scope & Audience
+    'ScopeValidator',
+    'AudienceValidator',
+    'require_scope',
+    'require_any_scope',
+    
     # Schemas module
     'schemas'
 ]
 
-__version__ = "1.0.0"
+__version__ = "2.0.0"  # Phase 2: WebAuthn-Level
 __author__ = "GigChain.io"
 __protocol__ = "W-CSAP"
+__security_level__ = "WebAuthn-Level"
