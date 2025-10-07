@@ -112,11 +112,30 @@ All environment variables are documented in `env.example` and [DEPLOYMENT.md](de
 
 ## 📅 Documentation Updates
 
-This documentation is regularly updated. Last major update: **2025-10-06**
+This documentation is regularly updated. Last major update: **2025-10-07**
+
+**Current Development Approach**: Local development only (No Docker until all features complete)
 
 For the latest changes, check the git history:
 ```bash
 git log --oneline docs/
+```
+
+## ⚠️ IMPORTANT: Development Approach
+
+**NO DOCKER**: Currently using local development with `python main.py` on port 5000 for faster iteration.
+
+**Key Commands:**
+```bash
+# Start server
+python main.py
+
+# Run tests
+python test_chat.py
+python test_api.py
+
+# Check status
+curl http://localhost:5000/health
 ```
 
 ---

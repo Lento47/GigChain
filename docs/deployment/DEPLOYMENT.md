@@ -1,13 +1,22 @@
 # 🚀 GigChain API Deployment Guide
 
-Esta guía te ayudará a deployar tu propia instancia de la API de GigChain usando Docker y Flask.
+Esta guía te ayudará a deployar tu propia instancia de la API de GigChain.
+
+## ⚠️ ENFOQUE ACTUAL: DESARROLLO LOCAL
+
+**Por ahora, usamos SOLO desarrollo local sin Docker** para optimizar velocidad de desarrollo.
 
 ## 📋 Prerrequisitos
 
-- Docker y Docker Compose instalados
-- Python 3.11+ (para desarrollo local)
-- OpenAI API Key
-- Git
+### Desarrollo Local (ACTUAL)
+- Python 3.10+ ✅ REQUERIDO
+- Node.js 18+ (para frontend) ✅ REQUERIDO
+- OpenAI API Key ✅ REQUERIDO
+- Git ✅ REQUERIDO
+
+### Producción con Docker (FUTURO)
+- Docker y Docker Compose instalados ⏳ OPCIONAL (solo al final)
+- VPS o servidor cloud ⏳ OPCIONAL (solo al final)
 
 ## 🔧 Configuración Inicial
 
@@ -40,21 +49,51 @@ pip install -r requirements.txt
 pip install flask flask-cors
 ```
 
-## 🐳 Deployment con Docker
+## 🚀 Deployment Local (MÉTODO ACTUAL)
 
-### Opción 1: Docker Compose (Recomendado)
+### Opción 1: Desarrollo Local (RECOMENDADO)
 
-**Para Desarrollo:**
+**Para Desarrollo Diario:**
 ```bash
-# Linux/Mac
-./deploy.sh dev
+# Verificar ambiente
+cat .env  # Verificar que está configurado
 
-# Windows PowerShell
-.\deploy.ps1 dev
+# Verificar dependencias
+pip list | grep -E "(fastapi|openai|uvicorn)"
+
+# Verificar servidor
+curl http://localhost:5000/health
+
+# Iniciar servidor Backend
+python main.py
+# Server runs at http://localhost:5000
+
+# En terminal separada: Frontend (opcional)
+cd frontend
+npm install
+npm run dev
+# Frontend runs at http://localhost:5173
 ```
 
-**Para Producción:**
+**Tests Individuales:**
 ```bash
+# Test específicos (sin Docker)
+python test_chat.py
+python test_contract_ai.py
+python test_api.py
+python test_agents_enhanced.py
+```
+
+## 🐳 Deployment con Docker (⚠️ SOLO AL FINAL)
+
+> **IMPORTANTE**: Docker está deshabilitado temporalmente. Solo usar cuando todas las funcionalidades estén completas.
+
+### Opción 1: Docker Compose (FUTURO)
+
+**Para Producción (al final):**
+```bash
+# ❌ NO USAR POR AHORA
+
 # Linux/Mac
 ./deploy.sh production
 
@@ -62,8 +101,10 @@ pip install flask flask-cors
 .\deploy.ps1 production
 ```
 
-### Opción 2: Docker Manual
+### Opción 2: Docker Manual (FUTURO)
 ```bash
+# ❌ NO USAR POR AHORA
+
 # Build de la imagen
 docker build -t gigchain-api .
 

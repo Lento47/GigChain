@@ -1,10 +1,22 @@
 # 🧪 GigChain Testing Guide
 
-## Testing Thirdweb Transactions
+## ⚠️ ENFOQUE ACTUAL: Testing Local
 
-### 1. **Polygon Mumbai Testnet Setup**
+**NO DOCKER**: Usamos scripts de testing individuales con `python test_*.py`
 
-The application is now configured to use **Polygon Mumbai Testnet** for safe testing.
+## Testing Approach
+
+### Desarrollo Local (ACTUAL)
+- Tests individuales: `python test_chat.py`, `python test_api.py`
+- Sin Docker, sin pytest en Docker
+- FastAPI TestClient para tests de endpoints
+- OpenAI mockeado donde sea necesario
+
+### Testing Thirdweb Transactions
+
+### 1. **Polygon Mumbai/Amoy Testnet Setup**
+
+The application is configured to use **Polygon Amoy Testnet** for safe testing.
 
 #### Get Testnet Tokens:
 1. **Mumbai MATIC**: Get free testnet MATIC from [Polygon Faucet](https://faucet.polygon.technology/)
@@ -112,27 +124,55 @@ VITE_API_URL=http://localhost:8000
 VITE_THIRDWEB_CLIENT_ID=your_thirdweb_client_id_here
 ```
 
-### 8. **Testing Commands**
+### 8. **Testing Commands (MÉTODO ACTUAL)**
+
+#### Verificar Ambiente Primero:
+```bash
+# Verificar .env configurado
+cat .env  # Linux/Mac
+type .env # Windows
+
+# Verificar dependencias
+pip list | grep -E "(fastapi|openai|uvicorn)"
+
+# Verificar servidor activo
+curl http://localhost:5000/health
+```
 
 #### Start Development Servers:
 ```bash
-# Backend
+# Backend (Terminal 1)
 python main.py
+# Runs on http://localhost:5000
 
-# Frontend
+# Frontend (Terminal 2 - opcional)
 cd frontend
 npm run dev
+# Runs on http://localhost:5173
 ```
 
 #### Test API Endpoints:
 ```bash
 # Health check
-curl http://localhost:8000/health
+curl http://localhost:5000/health
 
 # Test contract generation
-curl -X POST http://localhost:8000/api/full_flow \
+curl -X POST http://localhost:5000/api/full_flow \
   -H "Content-Type: application/json" \
   -d '{"text":"Test contract description"}'
+```
+
+#### Run Individual Test Scripts (SIN DOCKER):
+```bash
+# Tests específicos
+python test_chat.py
+python test_contract_ai.py
+python test_api.py
+python test_agents_enhanced.py
+
+# ❌ NO USAR Docker tests
+# ❌ NO USAR: docker-compose up
+# ❌ NO USAR: pytest en Docker
 ```
 
 ## 🚀 Ready to Test!

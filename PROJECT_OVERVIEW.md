@@ -22,22 +22,35 @@
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Python 3.10+
-- Node.js 18+
-- Git
+- Python 3.10+ ✅ REQUERIDO
+- Node.js 18+ ✅ REQUERIDO
+- Git ✅ REQUERIDO
+- Docker ❌ NO USAR (solo al final)
 
-### 1-Minute Setup
+### 1-Minute Setup (Desarrollo Local)
+
+⚠️ **IMPORTANTE**: Usamos SOLO desarrollo local sin Docker.
+
 ```bash
 # Clone repository
 git clone <your-repo-url>
 cd GigChain
 
 # Backend setup
-cp env.example .env
-pip install -r requirements.txt
+# NO CREAR .env si ya existe - solo verificar
+cat .env  # Linux/Mac
+type .env # Windows
+
+# Verificar dependencias
+pip list | grep -E "(fastapi|openai|uvicorn)"
+
+# Verificar servidor
+curl http://localhost:5000/health
+
+# Iniciar servidor
 python main.py
 
-# Frontend setup (new terminal)
+# Frontend setup (nueva terminal)
 cd frontend
 npm install
 npm run dev
@@ -47,6 +60,14 @@ Access:
 - Backend API: http://localhost:5000
 - API Docs: http://localhost:5000/docs
 - Frontend: http://localhost:5173
+
+### Tests (Sin Docker)
+```bash
+# Tests individuales
+python test_chat.py
+python test_contract_ai.py
+python test_api.py
+```
 
 ---
 
@@ -355,7 +376,10 @@ Calculated from:
 
 ## 🛠️ Development Workflow
 
-### Local Development
+### Local Development (ENFOQUE ACTUAL)
+
+⚠️ **SIN DOCKER** - Solo desarrollo local con `python main.py`
+
 ```bash
 # Backend (Terminal 1)
 python main.py
@@ -365,15 +389,18 @@ python main.py
 cd frontend && npm run dev
 # Runs on http://localhost:5173
 
-# Smart Contracts (Terminal 3 - optional)
+# Smart Contracts (Terminal 3 - opcional)
 cd contracts && npm run node
 # Local Hardhat node on localhost:8545
 ```
 
-### Testing
+### Testing (Scripts Individuales)
 ```bash
-# Backend tests
-pytest tests/ -v
+# Backend tests (sin Docker)
+python test_chat.py
+python test_contract_ai.py
+python test_api.py
+python test_agents_enhanced.py
 
 # Frontend tests
 cd frontend && npm test
@@ -382,13 +409,17 @@ cd frontend && npm test
 cd contracts && npm test
 ```
 
-### Deployment
+### Deployment (⚠️ SOLO AL FINAL)
 ```bash
-# Development
+# ❌ NO USAR Docker por ahora
+# Development (FUTURO)
 ./deploy.sh dev
 
-# Production
+# Production (FUTURO)
 ./deploy.sh production
+
+# ✅ USAR desarrollo local
+python main.py
 ```
 
 ---
@@ -581,4 +612,6 @@ MIT License - See [LICENSE](LICENSE)
 
 **Last Updated**: 2025-10-07  
 **Maintained by**: GigChain Team  
-**Version**: 1.0.0
+**Version**: 1.0.0  
+**Development Mode**: 🚀 Local Development (No Docker)  
+**Status**: ✅ Active Development

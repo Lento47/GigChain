@@ -14,6 +14,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Multi-language support (i18n)
 - Advanced analytics dashboard
 - Multi-chain support (Ethereum, BSC, Arbitrum)
+- Docker deployment (cuando funcionalidades core estén completas)
+
+---
+
+## [1.0.1] - 2025-10-07
+
+### Changed - Documentation Update: Local-First Approach
+- 📝 **Updated All Documentation for Local Development**
+  - README.md: Updated Quick Start to emphasize local development
+  - PROJECT_OVERVIEW.md: Added local-first development workflow
+  - docs/deployment/LOCAL_DEPLOYMENT.md: Clarified local deployment approach
+  - docs/deployment/DEPLOYMENT.md: Marked Docker as future feature
+  - docs/testing/TESTING_GUIDE.md: Updated testing commands for local env
+  - docs/guides/CHAT_GUIDE.md: Added local development instructions
+  - docs/INDEX.md: Added current development approach note
+
+- ⚠️ **Development Approach Clarification**
+  - NO DOCKER: Disabled temporarily for faster iteration
+  - Local development only: `python main.py` on port 5000
+  - Individual test scripts: `python test_*.py`
+  - Docker marked as "FUTURO" (future feature)
+  - Environment verification protocol emphasized
+
+- 🔧 **Updated Development Commands**
+  - Emphasized `python main.py` for backend
+  - Added `npm run dev` for frontend (optional)
+  - Removed Docker commands from active workflows
+  - Added verification steps before development
+
+### Documentation Standards
+- ✅ All .md files reviewed and updated
+- ✅ Consistent messaging across all docs
+- ✅ Dates updated to 2025-10-07
+- ✅ Spanish/English consistency maintained
+- ✅ Clear warnings about Docker usage
 
 ---
 

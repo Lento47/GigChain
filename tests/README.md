@@ -1,5 +1,9 @@
 # GigChain.io Test Suite
 
+## ⚠️ ENFOQUE ACTUAL: Testing Local Sin Docker
+
+**Importante**: Usamos testing local con scripts individuales (`python test_*.py`) para desarrollo rápido.
+
 ## 📁 Test Organization
 
 This directory contains all tests for the GigChain.io backend. Tests are organized by type:
@@ -27,9 +31,31 @@ These scripts require a running server on `localhost:8000`:
 
 ---
 
-## 🚀 Running Tests
+## 🚀 Running Tests (MÉTODO ACTUAL)
 
-### Run All Unit and Integration Tests
+### ⚠️ Verificar Ambiente Primero
+```bash
+# Verificar configuración
+cat .env  # Linux/Mac
+type .env # Windows
+
+# Verificar dependencias
+pip list | grep -E "(fastapi|openai|pytest)"
+
+# Verificar servidor (si está corriendo)
+curl http://localhost:5000/health
+```
+
+### Run Individual Test Scripts (RECOMENDADO)
+```bash
+# Tests específicos sin Docker
+python test_chat.py
+python test_contract_ai.py
+python test_api.py
+python test_agents_enhanced.py
+```
+
+### Run All Unit and Integration Tests (Pytest)
 ```bash
 # From project root
 pytest tests/ -v
@@ -37,8 +63,8 @@ pytest tests/ -v
 # With coverage
 pytest tests/ -v --cov=. --cov-report=html
 
-# Parallel execution (faster)
-pytest tests/ -n auto
+# ❌ NO USAR: Parallel execution requiere configuración adicional
+# pytest tests/ -n auto
 ```
 
 ### Run Specific Test Files
@@ -56,14 +82,18 @@ pytest tests/test_api.py -v
 pytest tests/test_agents*.py -v
 ```
 
-### Run Integration Scripts
+### Run Integration Scripts (MÉTODO ACTUAL)
 ```bash
-# Start the server first
+# Terminal 1: Start the server
 python main.py
+# Server runs on http://localhost:5000
 
-# In another terminal:
+# Terminal 2: Run integration tests
 python tests/integration_chat.py
 python tests/integration_security.py
+
+# ❌ NO USAR Docker para tests
+# ✅ USAR desarrollo local directo
 ```
 
 ---
@@ -262,5 +292,7 @@ Expected coverage target: **> 80%**
 
 ---
 
-**Last Updated**: 2025-10-06  
-**Test Files**: 9 (7 pytest + 2 integration scripts)
+**Last Updated**: 2025-10-07  
+**Test Files**: 9 (7 pytest + 2 integration scripts)  
+**Testing Approach**: 🚀 Local Development (No Docker)  
+**Recommended**: Individual test scripts for faster iteration

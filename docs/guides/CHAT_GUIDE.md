@@ -26,11 +26,32 @@
 
 ## 🚀 **Cómo Usar el Chat**
 
-### **Acceso al Chat:**
-1. Inicia la aplicación: `python main.py`
-2. Abre el frontend en tu navegador
-3. Haz clic en "Chat AI" en el sidebar
-4. ¡Comienza a chatear!
+### **Acceso al Chat (Desarrollo Local):**
+
+⚠️ **IMPORTANTE**: Usamos desarrollo local sin Docker.
+
+1. **Verificar ambiente:**
+   ```bash
+   cat .env  # Verificar configuración
+   curl http://localhost:5000/health
+   ```
+
+2. **Iniciar Backend:**
+   ```bash
+   python main.py
+   # Runs on http://localhost:5000
+   ```
+
+3. **Iniciar Frontend (opcional):**
+   ```bash
+   cd frontend
+   npm run dev
+   # Runs on http://localhost:5173
+   ```
+
+4. Abre el frontend en tu navegador
+5. Haz clic en "Chat AI" en el sidebar
+6. ¡Comienza a chatear!
 
 ### **Cambiar de Agente:**
 1. Usa el selector en la parte superior del chat
