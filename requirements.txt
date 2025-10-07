@@ -40,10 +40,17 @@ eth-utils==5.1.0
 eth-typing==5.0.1
 eth-hash[pycryptodome]==0.7.0
 hexbytes==1.2.1
+mnemonic==0.21  # BIP39 mnemonic for wallet recovery
 
-# Cryptography
+# Cryptography & JWT
 cryptography==43.0.3
 pycryptodome==3.21.0
+PyJWT[crypto]==2.9.0  # JWT tokens with cryptographic signing
+
+# Caching & KMS (Optional - for advanced features)
+redis==5.0.8  # Token revocation cache
+# boto3==1.35.0  # AWS KMS (uncomment if using AWS)
+# hvac==2.3.0  # HashiCorp Vault (uncomment if using Vault)
 
 # Additional utilities
 typing-extensions==4.12.2
