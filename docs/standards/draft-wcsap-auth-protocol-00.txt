@@ -1,0 +1,1202 @@
+
+
+
+Internet Engineering Task Force                              GigChain.io
+Internet-Draft                                           October 7, 2025
+Intended status: Standards Track                                        
+Expires: April 10, 2026
+
+
+    Wallet-Based Cryptographic Session Assertion Protocol (W-CSAP)
+                   draft-wcsap-auth-protocol-00
+
+
+Abstract
+
+   This document specifies the Wallet-Based Cryptographic Session
+   Assertion Protocol (W-CSAP), a novel authentication protocol that
+   uses blockchain wallet signatures for cryptographically secure
+   authentication without requiring centralized identity providers.
+   W-CSAP combines challenge-response authentication with cryptographic
+   session assertions, providing SAML-inspired security architecture
+   while maintaining complete decentralization.
+
+   The protocol is designed to be phishing-resistant, prevent replay
+   attacks, and provide enterprise-grade security features including
+   session management, token refresh mechanisms, and comprehensive audit
+   logging, all without requiring users to manage passwords or rely on
+   external authentication services.
+
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on April 10, 2026.
+
+
+Copyright Notice
+
+   Copyright (c) 2025 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents
+   (https://trustee.ietf.org/license-info) in effect on the date of
+   publication of this document.  Please review these documents
+   carefully, as they describe your rights and restrictions with respect
+   to this document.
+
+
+Table of Contents
+
+   1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   3
+     1.1.  Motivation  . . . . . . . . . . . . . . . . . . . . . . .   3
+     1.2.  Terminology . . . . . . . . . . . . . . . . . . . . . . .   4
+   2.  Protocol Overview . . . . . . . . . . . . . . . . . . . . . .   5
+     2.1.  Architecture  . . . . . . . . . . . . . . . . . . . . . .   5
+     2.2.  Authentication Flow . . . . . . . . . . . . . . . . . . .   6
+   3.  Challenge Generation  . . . . . . . . . . . . . . . . . . . .   7
+     3.1.  Challenge Request . . . . . . . . . . . . . . . . . . . .   7
+     3.2.  Challenge Structure . . . . . . . . . . . . . . . . . . .   8
+     3.3.  Challenge Message Format  . . . . . . . . . . . . . . . .   9
+   4.  Signature Verification  . . . . . . . . . . . . . . . . . . .  10
+     4.1.  Signature Algorithm . . . . . . . . . . . . . . . . . . .  10
+     4.2.  Verification Process  . . . . . . . . . . . . . . . . . .  11
+   5.  Session Management  . . . . . . . . . . . . . . . . . . . . .  12
+     5.1.  Session Assertion Structure . . . . . . . . . . . . . . .  12
+     5.2.  Access Token Format . . . . . . . . . . . . . . . . . . .  13
+     5.3.  Refresh Token Mechanism . . . . . . . . . . . . . . . . .  14
+   6.  Token Revocation  . . . . . . . . . . . . . . . . . . . . . .  15
+   7.  HTTP API Specification  . . . . . . . . . . . . . . . . . . .  16
+     7.1.  Challenge Endpoint  . . . . . . . . . . . . . . . . . . .  16
+     7.2.  Verification Endpoint . . . . . . . . . . . . . . . . . .  17
+     7.3.  Refresh Endpoint  . . . . . . . . . . . . . . . . . . . .  18
+     7.4.  Revocation Endpoint . . . . . . . . . . . . . . . . . . .  19
+   8.  Security Considerations . . . . . . . . . . . . . . . . . . .  20
+     8.1.  Replay Attack Prevention  . . . . . . . . . . . . . . . .  20
+     8.2.  Man-in-the-Middle Protection  . . . . . . . . . . . . . .  20
+     8.3.  Token Theft Mitigation  . . . . . . . . . . . . . . . . .  21
+     8.4.  Phishing Resistance . . . . . . . . . . . . . . . . . . .  21
+   9.  Privacy Considerations  . . . . . . . . . . . . . . . . . . .  22
+   10. IANA Considerations . . . . . . . . . . . . . . . . . . . . .  23
+   11. References  . . . . . . . . . . . . . . . . . . . . . . . . .  24
+     11.1.  Normative References . . . . . . . . . . . . . . . . . .  24
+     11.2.  Informative References . . . . . . . . . . . . . . . . .  24
+   Appendix A.  Example Exchange . . . . . . . . . . . . . . . . . .  25
+   Appendix B.  Comparison with Existing Protocols . . . . . . . . .  27
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  28
+
+
+1.  Introduction
+
+1.1.  Motivation
+
+   Current authentication systems on the web primarily rely on one of
+   three approaches:
+
+   1.  Password-based authentication, which suffers from weak passwords,
+       credential reuse, phishing attacks, and the burden of password
+       management.
+
+   2.  OAuth 2.0 / OpenID Connect, which requires centralized identity
+       providers and introduces redirect-based complexity.
+
+   3.  WebAuthn / FIDO2, which provides strong authentication but
+       requires dedicated hardware or platform authenticators.
+
+   With the rise of blockchain technology and decentralized
+   applications, a new class of cryptographic authenticators has become
+   ubiquitous: blockchain wallets.  These wallets, such as MetaMask,
+   Phantom, and hardware wallets like Ledger, provide users with strong
+   cryptographic keypairs and signature capabilities.  However, no
+   standardized protocol exists to leverage these capabilities for web
+   authentication in a secure, standardized manner.
+
+   W-CSAP addresses this gap by providing a protocol that:
+
+   o  Uses wallet signatures for authentication, eliminating passwords
+
+   o  Operates without centralized identity providers
+
+   o  Provides challenge-response authentication to prevent replay
+      attacks
+
+   o  Issues cryptographically signed session assertions similar to SAML
+
+   o  Supports session refresh mechanisms for seamless user experience
+
+   o  Enables comprehensive audit logging and security monitoring
+
+   The protocol is inspired by SAML's assertion-based architecture but
+   redesigned for the decentralized web, using wallet signatures instead
+   of IdP-issued tokens.
+
+
+1.2.  Terminology
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in
+   BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals, as shown here.
+
+   This document uses the following terms:
+
+   Wallet:  A cryptographic key management system that can generate and
+      store private keys and produce digital signatures.  Examples
+      include browser extensions (MetaMask), mobile applications
+      (Phantom), and hardware devices (Ledger).
+
+   Wallet Address:  A unique identifier derived from the wallet's public
+      key, typically formatted according to blockchain-specific
+      standards (e.g., Ethereum addresses are 20-byte values commonly
+      represented as 0x-prefixed hexadecimal strings).
+
+   Challenge:  A unique, time-bound message generated by the
+      authentication server that must be signed by the user's wallet to
+      prove ownership.
+
+   Session Assertion:  A cryptographically signed token issued by the
+      authentication server after successful challenge verification,
+      granting the user access to protected resources.
+
+   Access Token:  A short-lived token that grants access to protected
+      resources.
+
+   Refresh Token:  A longer-lived token that can be used to obtain new
+      access tokens without requiring the user to sign a new challenge.
+
+   Assertion Server (AS):  The server component that generates
+      challenges, verifies signatures, and issues session assertions.
+
+   Resource Server (RS):  The server that hosts protected resources and
+      validates session assertions.
+
+   User Agent (UA):  The client software (typically a web browser) that
+      interfaces with both the wallet and the servers.
+
+
+2.  Protocol Overview
+
+2.1.  Architecture
+
+   W-CSAP operates with three primary actors:
+
+   1.  User Agent (UA): The client application, typically a web browser,
+       that initiates authentication requests and interacts with the
+       wallet.
+
+   2.  Wallet: The cryptographic key management system that holds the
+       user's private key and can produce digital signatures.
+
+   3.  Assertion Server (AS): The authentication server that generates
+       challenges, verifies signatures, and issues session assertions.
+
+   The protocol flow is stateless from the AS perspective for token
+   validation (using cryptographic verification), but the AS MAY
+   maintain state for challenge tracking, session management, and
+   revocation.
+
+   Figure 1: W-CSAP Architecture
+
+   +-------------+                +-------------+
+   |             |                |             |
+   | User Agent  |                |   Wallet    |
+   |    (UA)     |<-------------->|             |
+   |             |   Signatures   |             |
+   +------+------+                +-------------+
+          |
+          |  HTTPS
+          |  (Challenge Request,
+          |   Signature Verification,
+          |   Token Refresh)
+          |
+   +------v------+
+   |             |
+   | Assertion   |
+   |  Server     |
+   |    (AS)     |
+   |             |
+   +------+------+
+          |
+          |  Token
+          |  Validation
+          |
+   +------v------+
+   |             |
+   |  Resource   |
+   |   Server    |
+   |    (RS)     |
+   |             |
+   +-------------+
+
+
+2.2.  Authentication Flow
+
+   The W-CSAP authentication flow consists of the following steps:
+
+   1.  Challenge Request: The UA requests a challenge from the AS,
+       providing the wallet address that will be used for
+       authentication.
+
+   2.  Challenge Generation: The AS generates a unique, time-bound
+       challenge that includes a nonce, timestamps, and binding
+       information.
+
+   3.  Challenge Signing: The UA prompts the wallet to sign the
+       challenge message using the wallet's private key.
+
+   4.  Signature Verification: The UA submits the signed challenge to
+       the AS, which verifies the signature cryptographically.
+
+   5.  Session Assertion Issuance: Upon successful verification, the AS
+       issues a session assertion containing access and refresh tokens.
+
+   6.  Resource Access: The UA includes the access token in subsequent
+       requests to protected resources.
+
+   7.  Token Refresh: When the access token expires, the UA can use the
+       refresh token to obtain a new access token without re-signing.
+
+   Figure 2: W-CSAP Authentication Flow
+
+   UA                Wallet              AS
+   |                   |                  |
+   |-- Challenge Request ----------------->|
+   |                   |                  |
+   |<------------- Challenge --------------|
+   |                   |                  |
+   |-- Sign Request -->|                  |
+   |                   |                  |
+   |<--- Signature ----|                  |
+   |                   |                  |
+   |-- Verify Signature ------------------>|
+   |                   |                  |
+   |<--------- Session Assertion ---------|
+   |                   |                  |
+   |-- Access Protected Resource --------->|
+   |                   |                  |
+   |<--------- Protected Resource --------|
+   |                   |                  |
+   |-- Refresh Token (when expired) ----->|
+   |                   |                  |
+   |<--------- New Session Assertion -----|
+
+
+3.  Challenge Generation
+
+3.1.  Challenge Request
+
+   The challenge request is initiated by the UA to obtain a unique
+   challenge that will be signed by the wallet.
+
+   The challenge request MUST be sent via HTTP POST to the challenge
+   endpoint with the following parameters:
+
+   wallet_address:  REQUIRED.  The wallet address that will be used for
+      authentication.  This MUST be a valid address according to the
+      blockchain-specific format (e.g., Ethereum addresses are
+      hexadecimal strings prefixed with "0x" and are 42 characters
+      long).
+
+   Example request:
+
+   POST /api/auth/challenge HTTP/1.1
+   Host: auth.example.com
+   Content-Type: application/json
+
+   {
+     "wallet_address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0"
+   }
+
+
+3.2.  Challenge Structure
+
+   Upon receiving a valid challenge request, the AS MUST generate a
+   challenge with the following properties:
+
+   challenge_id:  A unique identifier for the challenge.  This MUST be
+      cryptographically random and have sufficient entropy to prevent
+      guessing attacks.  RECOMMENDED length is 256 bits (64 hexadecimal
+      characters).
+
+   wallet_address:  The wallet address from the request, normalized to
+      the blockchain's canonical format (e.g., EIP-55 checksum format
+      for Ethereum).
+
+   challenge_message:  A human-readable message that will be displayed
+      to the user in their wallet for signing.  This MUST include all
+      security-relevant information.
+
+   nonce:  A cryptographically random value that MUST be unique for each
+      challenge.  RECOMMENDED length is 256 bits (64 hexadecimal
+      characters).
+
+   issued_at:  The Unix timestamp (seconds since epoch) when the
+      challenge was generated.
+
+   expires_at:  The Unix timestamp when the challenge expires.  The AS
+      MUST reject signatures for expired challenges.  RECOMMENDED expiry
+      is 300 seconds (5 minutes).
+
+   metadata:  OPTIONAL.  Additional information about the challenge,
+      such as the client's IP address, user agent, or application name.
+
+   Example response:
+
+   HTTP/1.1 200 OK
+   Content-Type: application/json
+
+   {
+     "challenge_id": "a1b2c3d4e5f6...",
+     "wallet_address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+     "challenge_message": "Sign this message to authenticate...",
+     "nonce": "9f8e7d6c5b4a...",
+     "issued_at": 1704123456,
+     "expires_at": 1704123756,
+     "metadata": {
+       "app_name": "example.com",
+       "version": "1.0.0"
+     }
+   }
+
+
+3.3.  Challenge Message Format
+
+   The challenge message is the text that will be signed by the user's
+   wallet.  To ensure security and user awareness, the message SHOULD
+   follow this format:
+
+   o  Clear identification of the application requesting authentication
+
+   o  The wallet address being authenticated
+
+   o  A unique challenge identifier (abbreviated for readability)
+
+   o  The cryptographic nonce
+
+   o  Issuance and expiration timestamps
+
+   o  A warning to only sign if the user initiated the login
+
+   o  A statement that the signature should never be shared
+
+   RECOMMENDED format (inspired by Sign-In with Ethereum [ERC-4361]):
+
+   [App Name] - Wallet Authentication
+
+   Sign this message to authenticate your wallet.
+
+   Wallet: [wallet_address]
+   Challenge ID: [challenge_id (first 16 chars)]...
+   Nonce: [nonce (first 16 chars)]...
+
+   Issued: [ISO 8601 timestamp]
+   Expires: [ISO 8601 timestamp]
+
+   ⚠️ Only sign this if you initiated the login.
+   Never share this signature with anyone.
+
+   Security: This is a one-time authentication challenge.
+
+   The AS SHOULD include domain binding to prevent cross-origin attacks:
+
+   URI: https://[domain]
+   Chain ID: [blockchain network identifier]
+
+   Example:
+
+   🔐 example.com - Wallet Authentication
+
+   Sign this message to authenticate your wallet.
+
+   URI: https://example.com
+   Chain ID: 1
+   Wallet: 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0
+   Challenge ID: a1b2c3d4e5f6...
+   Nonce: 9f8e7d6c5b4a...
+
+   Issued: 2025-10-07T12:34:56Z
+   Expires: 2025-10-07T12:39:56Z
+
+   ⚠️ Only sign this if you initiated login on example.com.
+   Never share this signature with anyone.
+
+   Security: This is a one-time authentication challenge.
+
+
+4.  Signature Verification
+
+4.1.  Signature Algorithm
+
+   W-CSAP uses the signature algorithm native to the blockchain
+   ecosystem being used.  For Ethereum and EVM-compatible chains, this
+   is the secp256k1 elliptic curve with ECDSA signatures, following
+   EIP-191 message signing.
+
+   The signature MUST be produced by applying the wallet's private key
+   to the challenge message according to the blockchain's signing
+   standard:
+
+   1.  For Ethereum: The challenge message is prefixed with
+       "\x19Ethereum Signed Message:\n" followed by the message length,
+       then the message itself.  This prevents transaction signing
+       attacks.
+
+   2.  The prefixed message is hashed using Keccak-256.
+
+   3.  The hash is signed using ECDSA with the secp256k1 curve.
+
+   4.  The resulting signature is typically 65 bytes: r (32 bytes), s
+       (32 bytes), and v (1 byte for recovery).
+
+   Other blockchain ecosystems MAY use different algorithms (e.g.,
+   Ed25519 for Solana, sr25519 for Polkadot), but the same principles
+   apply: deterministic, non-replayable signing of the challenge
+   message.
+
+
+4.2.  Verification Process
+
+   When the UA submits a signed challenge, the verification request MUST
+   include:
+
+   challenge_id:  The identifier of the challenge being verified.
+
+   signature:  The hex-encoded signature produced by the wallet.
+
+   wallet_address:  The wallet address that signed the challenge.
+
+   Example request:
+
+   POST /api/auth/verify HTTP/1.1
+   Host: auth.example.com
+   Content-Type: application/json
+
+   {
+     "challenge_id": "a1b2c3d4e5f6...",
+     "signature": "0x1234567890abcdef...",
+     "wallet_address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0"
+   }
+
+   The AS MUST perform the following verification steps:
+
+   1.  Retrieve the challenge from storage using the challenge_id.  If
+       not found, reject with an error.
+
+   2.  Verify that the challenge has not expired by comparing the
+       current time with expires_at.  If expired, reject with an error.
+
+   3.  Verify that the wallet_address in the request matches the
+       wallet_address in the stored challenge.  If mismatch, reject.
+
+   4.  Reconstruct the challenge message exactly as it was presented to
+       the user.
+
+   5.  Recover the public key/address from the signature and message
+       using the blockchain's signature recovery algorithm.
+
+   6.  Verify that the recovered address matches the expected
+       wallet_address.  If mismatch, reject.
+
+   7.  Mark the challenge as used to prevent replay attacks.  The AS
+       MUST ensure that each challenge can only be verified once.
+
+   If all verification steps succeed, the AS proceeds to issue a session
+   assertion.
+
+
+5.  Session Management
+
+5.1.  Session Assertion Structure
+
+   Upon successful signature verification, the AS issues a session
+   assertion containing the following elements:
+
+   assertion_id:  A unique identifier for this session assertion.
+      RECOMMENDED length is 256 bits.
+
+   wallet_address:  The authenticated wallet address.
+
+   issued_at:  Unix timestamp when the assertion was issued.
+
+   expires_at:  Unix timestamp when the access token expires.
+      RECOMMENDED value is 900 seconds (15 minutes) from issuance.
+
+   not_before:  Unix timestamp before which the assertion is not valid.
+      Typically set to issued_at.
+
+   access_token:  The token used to access protected resources.
+
+   refresh_token:  A token used to obtain new access tokens without re-
+      signing.
+
+   metadata:  OPTIONAL.  Additional claims such as scopes, roles, or
+      application-specific data.
+
+
+5.2.  Access Token Format
+
+   W-CSAP supports two token formats:
+
+   1.  HMAC-based tokens (stateless validation)
+
+   2.  JWT-based tokens with asymmetric signatures (recommended for
+       production)
+
+   HMAC-based format:
+
+   access_token = assertion_id || "." || wallet_address || "." ||
+                  expires_at || "." || HMAC-SHA256(secret, data)
+
+   Where:
+   o  assertion_id: The unique session identifier
+   o  wallet_address: The authenticated wallet address
+   o  expires_at: Expiration timestamp
+   o  HMAC: Computed over assertion_id || wallet_address || expires_at
+
+   Example:
+   "a1b2c3...xyz.0x742d35...bEb0.1704124356.9f8e7d6c5b4a..."
+
+   JWT-based format (RECOMMENDED):
+
+   The access token MAY be a signed JWT (JSON Web Token) [RFC7519] with
+   the following claims:
+
+   iss:  Issuer - The authentication server's identifier
+
+   sub:  Subject - The wallet address
+
+   aud:  Audience - The intended recipient(s) of the token
+
+   exp:  Expiration time - Unix timestamp
+
+   nbf:  Not before time - Unix timestamp
+
+   iat:  Issued at time - Unix timestamp
+
+   jti:  JWT ID - The assertion_id
+
+   scope:  OPTIONAL.  Space-separated list of scopes
+
+   cnf:  OPTIONAL.  Confirmation claim for proof-of-possession (DPoP)
+
+   The JWT MUST be signed using ES256 (ECDSA with P-256 and SHA-256) or
+   EdDSA for strong security without relying on a single symmetric
+   secret.
+
+   Example JWT payload:
+
+   {
+     "iss": "https://auth.example.com",
+     "sub": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+     "aud": "https://api.example.com",
+     "exp": 1704124356,
+     "nbf": 1704123456,
+     "iat": 1704123456,
+     "jti": "a1b2c3d4e5f6...",
+     "scope": "read write",
+     "cnf": {
+       "jkt": "0V...qw"
+     }
+   }
+
+
+5.3.  Refresh Token Mechanism
+
+   Refresh tokens allow users to obtain new access tokens without
+   requiring them to sign a new challenge.  This improves user
+   experience while maintaining security.
+
+   The refresh token SHOULD be:
+
+   o  Long-lived compared to access tokens (RECOMMENDED: 24 hours to 7
+      days)
+
+   o  Single-use with rotation (a new refresh token is issued with each
+      refresh)
+
+   o  Bound to the original assertion_id for audit purposes
+
+   o  Stored server-side or cryptographically signed for validation
+
+   Refresh request:
+
+   POST /api/auth/refresh HTTP/1.1
+   Host: auth.example.com
+   Content-Type: application/json
+
+   {
+     "refresh_token": "rt_a1b2c3...",
+     "access_token": "at_xyz789..."  (optional, for validation)
+   }
+
+   The AS MUST:
+
+   1.  Validate the refresh token's signature and expiration
+
+   2.  Verify that the refresh token has not been revoked
+
+   3.  Check for token reuse within a grace period (to handle race
+       conditions)
+
+   4.  Generate a new access token and refresh token
+
+   5.  Revoke the old refresh token (if rotation is enabled)
+
+   6.  Return the new tokens to the client
+
+   Response:
+
+   HTTP/1.1 200 OK
+   Content-Type: application/json
+
+   {
+     "access_token": "new_at_...",
+     "refresh_token": "new_rt_...",
+     "expires_in": 900,
+     "token_type": "Bearer"
+   }
+
+
+6.  Token Revocation
+
+   W-CSAP supports token revocation to handle security incidents, user
+   logout, and administrative actions.
+
+   Because W-CSAP tokens can be validated statelessly (via HMAC or JWT
+   signature), immediate revocation requires maintaining a denial list
+   (denylist) of revoked assertion IDs until their natural expiration.
+
+   Revocation request:
+
+   POST /api/auth/revoke HTTP/1.1
+   Host: auth.example.com
+   Authorization: Bearer [access_token]
+   Content-Type: application/json
+
+   {
+     "token": "[access_token_or_refresh_token]"
+   }
+
+   The AS MUST:
+
+   1.  Validate the request is authenticated (via valid access token)
+
+   2.  Extract the assertion_id from the token being revoked
+
+   3.  Add the assertion_id to the revocation cache with TTL equal to
+       the token's remaining lifetime
+
+   4.  Mark all associated refresh tokens as revoked
+
+   When validating tokens, the AS MUST check the revocation cache before
+   accepting the token.
+
+   For high-security scenarios, the AS MAY support "revoke all sessions"
+   for a wallet:
+
+   POST /api/auth/revoke-all HTTP/1.1
+   Host: auth.example.com
+   Authorization: Bearer [access_token]
+   Content-Type: application/json
+
+   {
+     "wallet_address": "0x742d35...",
+     "reason": "security_incident"
+   }
+
+   This revokes all active sessions for the specified wallet address.
+
+
+7.  HTTP API Specification
+
+7.1.  Challenge Endpoint
+
+   Endpoint: POST /api/auth/challenge
+
+   Request Parameters:
+
+   o  wallet_address (required): Wallet address seeking authentication
+
+   Response (Success - 200 OK):
+
+   {
+     "challenge_id": "unique_challenge_identifier",
+     "wallet_address": "normalized_wallet_address",
+     "challenge_message": "message_to_sign",
+     "nonce": "cryptographic_nonce",
+     "issued_at": unix_timestamp,
+     "expires_at": unix_timestamp,
+     "expires_in": seconds_until_expiry,
+     "metadata": { }
+   }
+
+   Error Responses:
+
+   o  400 Bad Request: Invalid wallet address format
+
+   o  429 Too Many Requests: Rate limit exceeded
+
+   o  500 Internal Server Error: Server-side error
+
+
+7.2.  Verification Endpoint
+
+   Endpoint: POST /api/auth/verify
+
+   Request Parameters:
+
+   o  challenge_id (required): Challenge identifier
+
+   o  signature (required): Hex-encoded signature
+
+   o  wallet_address (required): Wallet that signed the challenge
+
+   Response (Success - 200 OK):
+
+   {
+     "success": true,
+     "message": "Authentication successful",
+     "session": {
+       "assertion_id": "unique_assertion_id",
+       "wallet_address": "authenticated_wallet",
+       "access_token": "bearer_token",
+       "refresh_token": "refresh_token",
+       "issued_at": unix_timestamp,
+       "expires_at": unix_timestamp,
+       "expires_in": seconds_until_expiry,
+       "token_type": "Bearer",
+       "metadata": { }
+     }
+   }
+
+   Error Responses:
+
+   o  400 Bad Request: Invalid request parameters
+
+   o  401 Unauthorized: Invalid signature or expired challenge
+
+   o  404 Not Found: Challenge not found
+
+   o  429 Too Many Requests: Rate limit exceeded
+
+   o  500 Internal Server Error: Server-side error
+
+
+7.3.  Refresh Endpoint
+
+   Endpoint: POST /api/auth/refresh
+
+   Request Parameters:
+
+   o  refresh_token (required): Valid refresh token
+
+   o  access_token (optional): Current access token for validation
+
+   Response (Success - 200 OK):
+
+   {
+     "success": true,
+     "message": "Session refreshed",
+     "session": {
+       "assertion_id": "new_assertion_id",
+       "wallet_address": "authenticated_wallet",
+       "access_token": "new_bearer_token",
+       "refresh_token": "new_refresh_token",
+       "issued_at": unix_timestamp,
+       "expires_at": unix_timestamp,
+       "expires_in": seconds_until_expiry,
+       "token_type": "Bearer"
+     }
+   }
+
+   Error Responses:
+
+   o  401 Unauthorized: Invalid or expired refresh token
+
+   o  429 Too Many Requests: Rate limit exceeded
+
+   o  500 Internal Server Error: Server-side error
+
+
+7.4.  Revocation Endpoint
+
+   Endpoint: POST /api/auth/revoke
+
+   Request Headers:
+
+   o  Authorization: Bearer [access_token]
+
+   Request Parameters:
+
+   o  token (optional): Specific token to revoke (defaults to current)
+
+   Response (Success - 200 OK):
+
+   {
+     "success": true,
+     "message": "Session revoked"
+   }
+
+   Error Responses:
+
+   o  401 Unauthorized: Invalid or missing access token
+
+   o  500 Internal Server Error: Server-side error
+
+
+8.  Security Considerations
+
+8.1.  Replay Attack Prevention
+
+   W-CSAP prevents replay attacks through multiple mechanisms:
+
+   1.  Unique Nonces: Each challenge includes a cryptographically random
+       nonce that MUST be unique.  The AS MUST maintain a record of used
+       nonces within the challenge TTL window.
+
+   2.  Time Bounds: Challenges have a limited validity period
+       (RECOMMENDED: 5 minutes).  The AS MUST reject challenges outside
+       their valid time window.
+
+   3.  Single-Use Challenges: Each challenge can only be verified once.
+       The AS MUST mark challenges as "used" immediately upon successful
+       verification.
+
+   4.  Domain Binding: The challenge message SHOULD include the domain
+       (URI) to prevent cross-origin replay attacks.
+
+   5.  Chain ID Binding: For blockchain-specific implementations, the
+       challenge SHOULD include the chain ID to prevent cross-chain
+       replay.
+
+
+8.2.  Man-in-the-Middle Protection
+
+   W-CSAP relies on TLS for transport security:
+
+   1.  TLS Requirement: All W-CSAP communications MUST occur over TLS
+       1.3 or higher.  Implementations SHOULD enforce HSTS (HTTP Strict
+       Transport Security).
+
+   2.  Certificate Validation: Clients MUST validate server certificates
+       according to [RFC5280] and [RFC6125].
+
+   3.  Perfect Forward Secrecy: TLS connections SHOULD use cipher suites
+       that provide perfect forward secrecy.
+
+   Additional protections:
+
+   4.  Token Binding: Access tokens MAY include binding to the client's
+       TLS channel or include proof-of-possession claims (see DPoP
+       [RFC9449]).
+
+   5.  Origin Validation: The AS SHOULD validate the Origin header in
+       requests to prevent unauthorized cross-origin requests.
+
+
+8.3.  Token Theft Mitigation
+
+   To mitigate the impact of stolen access tokens:
+
+   1.  Short Lifetimes: Access tokens SHOULD have short lifetimes
+       (RECOMMENDED: 15 minutes or less).
+
+   2.  Refresh Token Rotation: Refresh tokens SHOULD rotate upon each
+       use, with the old token immediately invalidated.
+
+   3.  Revocation Support: The AS MUST support token revocation and
+       maintain a revocation cache.
+
+   4.  DPoP (RECOMMENDED): Implementations SHOULD support Demonstrating
+       Proof-of-Possession (DPoP) [RFC9449] to bind tokens to the
+       client's cryptographic key.  This prevents stolen tokens from
+       being used by attackers.
+
+   5.  Device Binding (OPTIONAL): Sessions MAY be bound to IP address
+       and/or User-Agent, with anomaly detection for changes.
+
+   6.  Rate Limiting: The AS MUST implement rate limiting on all
+       endpoints to prevent brute force attacks.
+
+
+8.4.  Phishing Resistance
+
+   W-CSAP provides strong phishing resistance:
+
+   1.  No Reusable Credentials: Users never share passwords or reusable
+       secrets that can be phished.
+
+   2.  Wallet UI: Wallet applications display the challenge message,
+       allowing users to verify the request before signing.
+
+   3.  Domain Display: The challenge message SHOULD clearly display the
+       requesting domain, allowing users to detect phishing attempts.
+
+   4.  User Education: The challenge message SHOULD include warnings
+       against signing unexpected requests.
+
+   However, users remain vulnerable to:
+
+   o  Blind Signing: If users sign challenges without reading them, they
+      may authenticate to malicious sites.
+
+   o  Wallet Compromise: If the wallet's private key is stolen, the
+      attacker can authenticate as the user.
+
+   Mitigations:
+
+   o  Wallet implementations SHOULD clearly display all challenge
+      details and require explicit user confirmation.
+
+   o  Users SHOULD use hardware wallets for high-value accounts.
+
+   o  The AS MAY implement anomaly detection for suspicious
+      authentication patterns.
+
+
+9.  Privacy Considerations
+
+   W-CSAP has several privacy advantages over traditional authentication:
+
+   1.  Minimal PII: W-CSAP uses wallet addresses, which are
+       pseudonymous.  No email, phone number, or other PII is required.
+
+   2.  No Third-Party Tracking: Unlike OAuth/OIDC, there is no
+       centralized IdP that can track user authentication across
+       services.
+
+   3.  User Control: Users control their wallet keys and can create new
+       wallets for different contexts.
+
+   Privacy risks:
+
+   1.  Wallet Address Linkability: Wallet addresses can be linked across
+      services if the same address is used.  Users SHOULD use different
+      wallet addresses for different contexts.
+
+   2.  On-Chain Linkability: Blockchain transactions are public.  If a
+      wallet address is used for authentication and on-chain
+      transactions, activities can be correlated.
+
+   3.  Metadata Leakage: IP addresses, user agents, and timing
+      information are logged by the AS and may reveal user patterns.
+
+   Recommendations:
+
+   o  Services SHOULD clearly document what information is logged and
+      how long it is retained.
+
+   o  Users concerned about linkability SHOULD use dedicated wallet
+      addresses for authentication.
+
+   o  The AS SHOULD implement data minimization practices, collecting
+      only necessary metadata.
+
+
+10.  IANA Considerations
+
+   This document has no IANA actions at this time.
+
+   Future versions may request:
+
+   1.  Registration of "W-CSAP" as an HTTP Authentication Scheme
+
+   2.  Registration of media types for W-CSAP-specific message formats
+
+   3.  Registration of URN sub-namespace for W-CSAP-specific identifiers
+
+
+11.  References
+
+11.1.  Normative References
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/info/rfc2119>.
+
+   [RFC5280]  Cooper, D., et al., "Internet X.509 Public Key
+              Infrastructure Certificate and Certificate Revocation List
+              (CRL) Profile", RFC 5280, DOI 10.17487/RFC5280, May 2008,
+              <https://www.rfc-editor.org/info/rfc5280>.
+
+   [RFC6125]  Saint-Andre, P. and J. Hodges, "Representation and
+              Verification of Domain-Based Application Service Identity
+              within Internet Public Key Infrastructure Using X.509
+              (PKIX) Certificates in the Context of Transport Layer
+              Security (TLS)", RFC 6125, DOI 10.17487/RFC6125,
+              March 2011, <https://www.rfc-editor.org/info/rfc6125>.
+
+   [RFC7519]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web Token
+              (JWT)", RFC 7519, DOI 10.17487/RFC7519, May 2015,
+              <https://www.rfc-editor.org/info/rfc7519>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/info/rfc8174>.
+
+
+11.2.  Informative References
+
+   [RFC9449]  Fett, D., Campbell, B., Bradley, J., Lodderstedt, T.,
+              Jones, M., and D. Waite, "OAuth 2.0 Demonstrating Proof-
+              of-Possession at the Application Layer (DPoP)", RFC 9449,
+              DOI 10.17487/RFC9449, September 2023,
+              <https://www.rfc-editor.org/info/rfc9449>.
+
+   [ERC-4361] Sign-In with Ethereum, Ethereum Improvement Proposals,
+              <https://eips.ethereum.org/EIPS/eip-4361>.
+
+   [WebAuthn] W3C Web Authentication Working Group, "Web Authentication:
+              An API for accessing Public Key Credentials", W3C
+              Recommendation, <https://www.w3.org/TR/webauthn/>.
+
+
+Appendix A.  Example Exchange
+
+A.1.  Complete Authentication Flow
+
+   This appendix provides a complete example of a W-CSAP authentication
+   exchange.
+
+   Step 1: Challenge Request
+
+   POST /api/auth/challenge HTTP/1.1
+   Host: auth.example.com
+   Content-Type: application/json
+
+   {
+     "wallet_address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0"
+   }
+
+   Step 2: Challenge Response
+
+   HTTP/1.1 200 OK
+   Content-Type: application/json
+
+   {
+     "challenge_id": "a1b2c3d4e5f67890abcdef1234567890abcdef12",
+     "wallet_address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+     "challenge_message": "🔐 example.com - Wallet Authentication\n\n...",
+     "nonce": "9f8e7d6c5b4a39281f0e1d2c3b4a59687f6e5d4c",
+     "issued_at": 1704123456,
+     "expires_at": 1704123756,
+     "expires_in": 300
+   }
+
+   Step 3: User Signs Challenge in Wallet
+
+   (User interaction with wallet - not part of HTTP exchange)
+
+   Step 4: Signature Verification Request
+
+   POST /api/auth/verify HTTP/1.1
+   Host: auth.example.com
+   Content-Type: application/json
+
+   {
+     "challenge_id": "a1b2c3d4e5f67890abcdef1234567890abcdef12",
+     "signature": "0x1234567890abcdef...[130 hex chars]...fedcba09876543210",
+     "wallet_address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0"
+   }
+
+   Step 5: Session Assertion Response
+
+   HTTP/1.1 200 OK
+   Content-Type: application/json
+
+   {
+     "success": true,
+     "message": "Authentication successful",
+     "session": {
+       "assertion_id": "f1e2d3c4b5a69780...",
+       "wallet_address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+       "access_token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9...",
+       "refresh_token": "rt_9f8e7d6c5b4a...",
+       "issued_at": 1704123456,
+       "expires_at": 1704124356,
+       "expires_in": 900,
+       "token_type": "Bearer"
+     }
+   }
+
+   Step 6: Accessing Protected Resource
+
+   GET /api/user/profile HTTP/1.1
+   Host: api.example.com
+   Authorization: Bearer eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9...
+
+   Step 7: Token Refresh (after access token expires)
+
+   POST /api/auth/refresh HTTP/1.1
+   Host: auth.example.com
+   Content-Type: application/json
+
+   {
+     "refresh_token": "rt_9f8e7d6c5b4a..."
+   }
+
+
+Appendix B.  Comparison with Existing Protocols
+
+B.1.  W-CSAP vs. OAuth 2.0 / OpenID Connect
+
+   Similarities:
+   o  Token-based authentication
+   o  Supports refresh tokens
+   o  Bearer token usage for API access
+
+   Differences:
+   o  W-CSAP uses cryptographic signatures instead of passwords
+   o  No centralized identity provider required
+   o  Challenge-response instead of redirect-based flows
+   o  Wallet-based instead of credential-based
+
+B.2.  W-CSAP vs. WebAuthn
+
+   Similarities:
+   o  Cryptographic authentication
+   o  Phishing-resistant
+   o  No passwords
+
+   Differences:
+   o  W-CSAP uses existing wallet infrastructure
+   o  WebAuthn uses platform/hardware authenticators
+   o  W-CSAP is blockchain-ecosystem native
+   o  Different signing algorithms and key management
+
+B.3.  W-CSAP vs. SAML
+
+   Similarities:
+   o  Assertion-based architecture
+   o  Session management
+   o  Time-bound assertions
+
+   Differences:
+   o  W-CSAP uses wallet signatures instead of IdP assertions
+   o  Decentralized vs. centralized trust model
+   o  JSON instead of XML
+   o  REST API instead of SOAP
+
+
+Authors' Addresses
+
+   GigChain.io Development Team
+
+   Email: security@gigchain.io
+   URI:   https://gigchain.io
+

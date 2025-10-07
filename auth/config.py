@@ -1,0 +1,577 @@
+"""
+W-CSAP Configuration Management
+================================
+
+Centralized configuration for WCSAP authentication system.
+Handles environment variables, defaults, and validation.
+"""
+
+import os
+import secrets
+from typing import Optional
+from pydantic import Field, validator
+from pydantic_settings import BaseSettings
+from pathlib import Path
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class WCSAPConfig(BaseSettings):
+    """
+    Configuration settings for W-CSAP authentication system.
+    
+    All settings can be overridden via environment variables with W_CSAP_ prefix.
+    Example: W_CSAP_SECRET_KEY, W_CSAP_CHALLENGE_TTL, etc.
+    """
+    
+    # ==================== Security Settings ====================
+    
+    secret_key: str = Field(
+        default_factory=lambda: secrets.token_hex(32),
+        description="Secret key for HMAC signing (REQUIRED in production)"
+    )
+    
+    @validator('secret_key')
+    def validate_secret_key(cls, v):
+        """Ensure secret key is strong enough."""
+        if len(v) < 32:
+            logger.warning("⚠️ Secret key is too short! Use at least 32 characters.")
+        return v
+    
+    # ==================== Time-to-Live Settings ====================
+    
+    challenge_ttl: int = Field(
+        default=300,
+        description="Challenge time-to-live in seconds (default: 5 minutes)",
+        ge=60,  # Minimum 1 minute
+        le=3600  # Maximum 1 hour
+    )
+    
+    # SECURITY ENHANCEMENT: Shorter access token TTL
+    access_token_ttl: int = Field(
+        default=900,  # 15 minutes (enterprise-grade)
+        description="Access token time-to-live in seconds (default: 15 minutes)",
+        ge=300,  # Minimum 5 minutes
+        le=3600  # Maximum 1 hour
+    )
+    
+    # Legacy: kept for backward compatibility
+    session_ttl: int = Field(
+        default=86400,
+        description="Session time-to-live in seconds (default: 24 hours) - DEPRECATED, use access_token_ttl",
+        ge=300,  # Minimum 5 minutes
+        le=2592000  # Maximum 30 days
+    )
+    
+    # SECURITY ENHANCEMENT: Shorter, rotating refresh tokens
+    refresh_ttl: int = Field(
+        default=86400,  # 24 hours (enterprise-grade, down from 7 days)
+        description="Refresh token time-to-live in seconds (default: 24 hours)",
+        ge=3600,  # Minimum 1 hour
+        le=604800  # Maximum 7 days
+    )
+    
+    # SECURITY ENHANCEMENT: Refresh token rotation
+    refresh_token_rotation: bool = Field(
+        default=True,
+        description="Enable refresh token rotation for enhanced security"
+    )
+    
+    refresh_token_reuse_window: int = Field(
+        default=60,
+        description="Grace period (seconds) for duplicate refresh requests (race conditions)",
+        ge=0,
+        le=300
+    )
+    
+    # ==================== Database Settings ====================
+    
+    db_path: str = Field(
+        default="data/w_csap.db",
+        description="Path to SQLite database file"
+    )
+    
+    db_pool_size: int = Field(
+        default=5,
+        description="Database connection pool size",
+        ge=1,
+        le=50
+    )
+    
+    # ==================== Rate Limiting Settings ====================
+    
+    rate_limit_enabled: bool = Field(
+        default=True,
+        description="Enable rate limiting for authentication attempts"
+    )
+    
+    # SECURITY ENHANCEMENT: Granular rate limits per endpoint
+    rate_limit_challenge: int = Field(
+        default=5,
+        description="Max challenge requests per window per IP",
+        ge=1,
+        le=100
+    )
+    
+    rate_limit_verify: int = Field(
+        default=5,
+        description="Max verify requests per window per wallet",
+        ge=1,
+        le=100
+    )
+    
+    rate_limit_refresh: int = Field(
+        default=10,
+        description="Max refresh requests per hour per wallet",
+        ge=1,
+        le=100
+    )
+    
+    rate_limit_window_seconds: int = Field(
+        default=300,
+        description="Rate limit window in seconds (default: 5 minutes)",
+        ge=60,
+        le=3600
+    )
+    
+    # SECURITY ENHANCEMENT: Burst allowance
+    rate_limit_burst_allowance: int = Field(
+        default=2,
+        description="Additional requests allowed in burst",
+        ge=0,
+        le=10
+    )
+    
+    # SECURITY ENHANCEMENT: Failed attempt lockout
+    max_failed_attempts: int = Field(
+        default=5,
+        description="Max failed auth attempts before lockout",
+        ge=3,
+        le=20
+    )
+    
+    lockout_duration_seconds: int = Field(
+        default=900,
+        description="Lockout duration in seconds (default: 15 minutes)",
+        ge=300,
+        le=3600
+    )
+    
+    # ==================== Cleanup Settings ====================
+    
+    cleanup_enabled: bool = Field(
+        default=True,
+        description="Enable automatic cleanup of expired data"
+    )
+    
+    cleanup_interval_seconds: int = Field(
+        default=3600,
+        description="Cleanup interval in seconds (default: 1 hour)",
+        ge=300,
+        le=86400
+    )
+    
+    # ==================== Application Settings ====================
+    
+    app_name: str = Field(
+        default="GigChain.io",
+        description="Application name shown in challenge messages"
+    )
+    
+    protocol_version: str = Field(
+        default="1.0.0",
+        description="W-CSAP protocol version"
+    )
+    
+    # ==================== Security Features ====================
+    
+    session_binding_enabled: bool = Field(
+        default=False,
+        description="Bind sessions to IP address and user agent"
+    )
+    
+    require_https: bool = Field(
+        default=False,
+        description="Require HTTPS for authentication endpoints (production: True)"
+    )
+    
+    require_tls_13: bool = Field(
+        default=False,
+        description="Require TLS 1.3 minimum (production: True)"
+    )
+    
+    audit_logging_enabled: bool = Field(
+        default=True,
+        description="Enable comprehensive audit logging"
+    )
+    
+    # SECURITY ENHANCEMENT: Revocation
+    revocation_enabled: bool = Field(
+        default=True,
+        description="Enable token revocation (denylist cache)"
+    )
+    
+    revocation_cache_type: str = Field(
+        default="memory",
+        description="Revocation cache type: 'memory' or 'redis'"
+    )
+    
+    revocation_cache_redis_url: Optional[str] = Field(
+        default=None,
+        description="Redis URL for revocation cache (if type=redis)"
+    )
+    
+    # ==================== CORS Settings ====================
+    
+    allowed_origins: list = Field(
+        default_factory=lambda: [
+            "http://localhost:3000",
+            "http://localhost:5173",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:5173"
+        ],
+        description="Allowed CORS origins"
+    )
+    
+    # ==================== Phase 2 Settings ====================
+    
+    # JWT Tokens (Phase 2)
+    use_jwt_tokens: bool = Field(
+        default=False,
+        description="Use JWT tokens instead of HMAC (recommended for production)"
+    )
+    
+    jwt_algorithm: str = Field(
+        default="ES256",
+        description="JWT signing algorithm: ES256 or EdDSA"
+    )
+    
+    token_issuer: str = Field(
+        default="https://auth.gigchain.io",
+        description="Token issuer identifier (iss claim)"
+    )
+    
+    token_audience: str = Field(
+        default="https://api.gigchain.io",
+        description="Token audience identifier (aud claim)"
+    )
+    
+    # DPoP (Phase 2)
+    dpop_enabled: bool = Field(
+        default=False,
+        description="Enable DPoP (Demonstrating Proof-of-Possession)"
+    )
+    
+    dpop_clock_skew: int = Field(
+        default=60,
+        description="DPoP clock skew tolerance in seconds",
+        ge=0,
+        le=300
+    )
+    
+    dpop_nonce_cache_ttl: int = Field(
+        default=300,
+        description="DPoP nonce (JTI) cache TTL in seconds",
+        ge=60,
+        le=3600
+    )
+    
+    # Scopes (Phase 2)
+    default_scope: str = Field(
+        default="profile",
+        description="Default scope if not specified"
+    )
+    
+    enforce_scope: bool = Field(
+        default=False,
+        description="Enforce scope validation on protected routes"
+    )
+    
+    enforce_audience: bool = Field(
+        default=False,
+        description="Enforce audience validation on tokens"
+    )
+    
+    # ==================== Phase 3 Settings ====================
+    
+    # Risk Scoring (Phase 3)
+    risk_scoring_enabled: bool = Field(
+        default=False,
+        description="Enable device risk scoring and behavioral analysis"
+    )
+    
+    risk_score_threshold_block: int = Field(
+        default=70,
+        description="Risk score threshold for blocking (0-100)",
+        ge=0,
+        le=100
+    )
+    
+    risk_score_threshold_challenge: int = Field(
+        default=50,
+        description="Risk score threshold for step-up challenge (0-100)",
+        ge=0,
+        le=100
+    )
+    
+    # Step-Up Authentication (Phase 3)
+    step_up_enabled: bool = Field(
+        default=False,
+        description="Enable step-up authentication for high-risk operations"
+    )
+    
+    step_up_grace_period: int = Field(
+        default=300,
+        description="Grace period after step-up in seconds",
+        ge=0,
+        le=3600
+    )
+    
+    step_up_high_value_threshold: float = Field(
+        default=10000.0,
+        description="Transaction value requiring step-up authentication"
+    )
+    
+    # KMS/HSM (Phase 3)
+    use_kms: bool = Field(
+        default=False,
+        description="Use KMS/HSM for key management"
+    )
+    
+    kms_provider: str = Field(
+        default="local",
+        description="KMS provider: aws, vault, gcp, azure, or local"
+    )
+    
+    kms_key_id: Optional[str] = Field(
+        default=None,
+        description="KMS key ID/ARN"
+    )
+    
+    kms_region: str = Field(
+        default="us-east-1",
+        description="KMS region (for AWS/GCP)"
+    )
+    
+    vault_addr: Optional[str] = Field(
+        default=None,
+        description="HashiCorp Vault address"
+    )
+    
+    vault_token: Optional[str] = Field(
+        default=None,
+        description="HashiCorp Vault token"
+    )
+    
+    key_rotation_days: int = Field(
+        default=90,
+        description="Automatic key rotation interval in days",
+        ge=30,
+        le=365
+    )
+    
+    # Analytics (Phase 3)
+    analytics_enabled: bool = Field(
+        default=True,
+        description="Enable behavioral analytics and monitoring"
+    )
+    
+    anomaly_detection_enabled: bool = Field(
+        default=False,
+        description="Enable anomaly detection"
+    )
+    
+    threat_intelligence_enabled: bool = Field(
+        default=False,
+        description="Enable threat intelligence integration"
+    )
+    
+    # ==================== Critical Security Fixes ====================
+    
+    # Global Rate Limiting (FIX HIGH-001)
+    global_rate_limit_enabled: bool = Field(
+        default=True,
+        description="Enable global rate limiting per wallet (prevents IP rotation bypass)"
+    )
+    
+    global_rate_limit_per_hour: int = Field(
+        default=50,
+        description="Max authentication attempts per wallet per hour",
+        ge=1,
+        le=1000
+    )
+    
+    global_rate_limit_per_day: int = Field(
+        default=200,
+        description="Max authentication attempts per wallet per day",
+        ge=1,
+        le=10000
+    )
+    
+    # Proof-of-Work (FIX HIGH-002)
+    pow_enabled: bool = Field(
+        default=True,
+        description="Enable Proof-of-Work for DDoS protection"
+    )
+    
+    pow_difficulty: int = Field(
+        default=4,
+        description="PoW difficulty (4 = ~16 attempts, 8 = ~256 attempts)",
+        ge=2,
+        le=12
+    )
+    
+    pow_max_difficulty: int = Field(
+        default=12,
+        description="Maximum PoW difficulty (prevents DoS of legitimate users)",
+        ge=2,
+        le=16
+    )
+    
+    # KMS Monitoring (FIX HIGH-003)
+    kms_alert_webhook: Optional[str] = Field(
+        default=None,
+        description="Webhook URL for KMS security alerts (Slack, PagerDuty, etc.)"
+    )
+    
+    kms_require_mfa: bool = Field(
+        default=True,
+        description="Require MFA for KMS operations (AWS IAM policy enforcement)"
+    )
+    
+    # ==================== Advanced Settings ====================
+    
+    enable_challenge_metadata: bool = Field(
+        default=True,
+        description="Include IP and user agent in challenge metadata"
+    )
+    
+    enable_session_activity_tracking: bool = Field(
+        default=True,
+        description="Track last activity timestamp for sessions"
+    )
+    
+    max_active_sessions_per_wallet: int = Field(
+        default=5,
+        description="Maximum concurrent sessions per wallet (0 = unlimited)",
+        ge=0,
+        le=100
+    )
+    
+    class Config:
+        env_prefix = "W_CSAP_"
+        case_sensitive = False
+        env_file = ".env"
+        env_file_encoding = "utf-8"
+    
+    def validate_production_settings(self) -> list[str]:
+        """
+        Validate settings for production deployment.
+        
+        Returns:
+            List of warning messages for insecure settings
+        """
+        warnings = []
+        
+        if self.secret_key == secrets.token_hex(32):
+            warnings.append(
+                "⚠️ Using auto-generated secret key! Set W_CSAP_SECRET_KEY environment variable."
+            )
+        
+        if not self.require_https:
+            warnings.append(
+                "⚠️ HTTPS is not required! Set W_CSAP_REQUIRE_HTTPS=true in production."
+            )
+        
+        if not self.rate_limit_enabled:
+            warnings.append(
+                "⚠️ Rate limiting is disabled! Enable it to prevent brute-force attacks."
+            )
+        
+        if self.session_ttl > 86400:  # More than 24 hours
+            warnings.append(
+                f"⚠️ Session TTL is {self.session_ttl // 3600} hours. Consider reducing for security."
+            )
+        
+        if not self.audit_logging_enabled:
+            warnings.append(
+                "⚠️ Audit logging is disabled! Enable it for security monitoring."
+            )
+        
+        return warnings
+    
+    def get_summary(self) -> dict:
+        """Get configuration summary."""
+        return {
+            "app_name": self.app_name,
+            "protocol_version": self.protocol_version,
+            "challenge_ttl": f"{self.challenge_ttl}s ({self.challenge_ttl // 60}m)",
+            "session_ttl": f"{self.session_ttl}s ({self.session_ttl // 3600}h)",
+            "refresh_ttl": f"{self.refresh_ttl}s ({self.refresh_ttl // 86400}d)",
+            "rate_limiting": "enabled" if self.rate_limit_enabled else "disabled",
+            "cleanup": "enabled" if self.cleanup_enabled else "disabled",
+            "session_binding": "enabled" if self.session_binding_enabled else "disabled",
+            "audit_logging": "enabled" if self.audit_logging_enabled else "disabled",
+            "database": self.db_path,
+        }
+
+
+# Singleton instance
+_config_instance: Optional[WCSAPConfig] = None
+
+
+def get_config() -> WCSAPConfig:
+    """
+    Get or create configuration singleton instance.
+    
+    Returns:
+        WCSAPConfig instance
+    """
+    global _config_instance
+    if _config_instance is None:
+        _config_instance = WCSAPConfig()
+        
+        # Log configuration summary
+        logger.info("🔧 W-CSAP Configuration loaded:")
+        for key, value in _config_instance.get_summary().items():
+            logger.info(f"  {key}: {value}")
+        
+        # Check for production warnings
+        warnings = _config_instance.validate_production_settings()
+        if warnings:
+            logger.warning("⚠️ Production security warnings:")
+            for warning in warnings:
+                logger.warning(f"  {warning}")
+    
+    return _config_instance
+
+
+def reset_config():
+    """Reset configuration singleton (useful for testing)."""
+    global _config_instance
+    _config_instance = None
+
+
+# Export convenience function
+def load_config(**kwargs) -> WCSAPConfig:
+    """
+    Load configuration with optional overrides.
+    
+    Args:
+        **kwargs: Configuration overrides
+        
+    Returns:
+        WCSAPConfig instance
+    """
+    global _config_instance
+    _config_instance = WCSAPConfig(**kwargs)
+    return _config_instance
+
+
+__all__ = [
+    'WCSAPConfig',
+    'get_config',
+    'reset_config',
+    'load_config'
+]
