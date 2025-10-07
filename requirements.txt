@@ -26,6 +26,7 @@ werkzeug==3.0.4
 python-dotenv==1.0.1
 pydantic==2.9.2
 pydantic-core==2.23.4
+pydantic-settings==2.5.2  # BaseSettings moved to separate package in v2
 python-multipart==0.0.17
 
 # HTTP Clients

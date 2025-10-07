@@ -9,7 +9,8 @@ Handles environment variables, defaults, and validation.
 import os
 import secrets
 from typing import Optional
-from pydantic import BaseSettings, Field, validator
+from pydantic import Field, validator
+from pydantic_settings import BaseSettings
 from pathlib import Path
 import logging
 
