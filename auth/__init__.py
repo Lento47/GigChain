@@ -45,6 +45,10 @@ from auth.revocation import RevocationCache, get_revocation_cache
 from auth.dpop import DPoPValidator, DPoPTokenGenerator, get_dpop_validator
 from auth.jwt_tokens import JWTTokenManager, TokenClaims, get_jwt_manager
 from auth.scope_validator import ScopeValidator, AudienceValidator, require_scope, require_any_scope
+from auth.risk_scoring import RiskScorer, DeviceFingerprint, RiskAssessment, get_risk_scorer
+from auth.step_up import StepUpManager, OperationClassifier, OperationRisk, require_step_up, get_step_up_manager
+from auth.kms import KMSKeyManager, get_kms_manager
+from auth.analytics import AnalyticsDashboard, ThreatIntelligence, get_analytics_dashboard, get_threat_intelligence
 from auth import schemas
 
 __all__ = [
@@ -102,11 +106,34 @@ __all__ = [
     'require_scope',
     'require_any_scope',
     
+    # Phase 3: Risk Scoring
+    'RiskScorer',
+    'DeviceFingerprint',
+    'RiskAssessment',
+    'get_risk_scorer',
+    
+    # Phase 3: Step-Up Authentication
+    'StepUpManager',
+    'OperationClassifier',
+    'OperationRisk',
+    'require_step_up',
+    'get_step_up_manager',
+    
+    # Phase 3: KMS/HSM
+    'KMSKeyManager',
+    'get_kms_manager',
+    
+    # Phase 3: Analytics
+    'AnalyticsDashboard',
+    'ThreatIntelligence',
+    'get_analytics_dashboard',
+    'get_threat_intelligence',
+    
     # Schemas module
     'schemas'
 ]
 
-__version__ = "2.0.0"  # Phase 2: WebAuthn-Level
+__version__ = "3.0.0"  # Phase 3: Advanced Security & Operations
 __author__ = "GigChain.io"
 __protocol__ = "W-CSAP"
-__security_level__ = "WebAuthn-Level"
+__security_level__ = "Zero-Trust / WebAuthn-Plus"

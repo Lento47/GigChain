@@ -233,6 +233,159 @@ class WCSAPConfig(BaseSettings):
         description="Allowed CORS origins"
     )
     
+    # ==================== Phase 2 Settings ====================
+    
+    # JWT Tokens (Phase 2)
+    use_jwt_tokens: bool = Field(
+        default=False,
+        description="Use JWT tokens instead of HMAC (recommended for production)"
+    )
+    
+    jwt_algorithm: str = Field(
+        default="ES256",
+        description="JWT signing algorithm: ES256 or EdDSA"
+    )
+    
+    token_issuer: str = Field(
+        default="https://auth.gigchain.io",
+        description="Token issuer identifier (iss claim)"
+    )
+    
+    token_audience: str = Field(
+        default="https://api.gigchain.io",
+        description="Token audience identifier (aud claim)"
+    )
+    
+    # DPoP (Phase 2)
+    dpop_enabled: bool = Field(
+        default=False,
+        description="Enable DPoP (Demonstrating Proof-of-Possession)"
+    )
+    
+    dpop_clock_skew: int = Field(
+        default=60,
+        description="DPoP clock skew tolerance in seconds",
+        ge=0,
+        le=300
+    )
+    
+    dpop_nonce_cache_ttl: int = Field(
+        default=300,
+        description="DPoP nonce (JTI) cache TTL in seconds",
+        ge=60,
+        le=3600
+    )
+    
+    # Scopes (Phase 2)
+    default_scope: str = Field(
+        default="profile",
+        description="Default scope if not specified"
+    )
+    
+    enforce_scope: bool = Field(
+        default=False,
+        description="Enforce scope validation on protected routes"
+    )
+    
+    enforce_audience: bool = Field(
+        default=False,
+        description="Enforce audience validation on tokens"
+    )
+    
+    # ==================== Phase 3 Settings ====================
+    
+    # Risk Scoring (Phase 3)
+    risk_scoring_enabled: bool = Field(
+        default=False,
+        description="Enable device risk scoring and behavioral analysis"
+    )
+    
+    risk_score_threshold_block: int = Field(
+        default=70,
+        description="Risk score threshold for blocking (0-100)",
+        ge=0,
+        le=100
+    )
+    
+    risk_score_threshold_challenge: int = Field(
+        default=50,
+        description="Risk score threshold for step-up challenge (0-100)",
+        ge=0,
+        le=100
+    )
+    
+    # Step-Up Authentication (Phase 3)
+    step_up_enabled: bool = Field(
+        default=False,
+        description="Enable step-up authentication for high-risk operations"
+    )
+    
+    step_up_grace_period: int = Field(
+        default=300,
+        description="Grace period after step-up in seconds",
+        ge=0,
+        le=3600
+    )
+    
+    step_up_high_value_threshold: float = Field(
+        default=10000.0,
+        description="Transaction value requiring step-up authentication"
+    )
+    
+    # KMS/HSM (Phase 3)
+    use_kms: bool = Field(
+        default=False,
+        description="Use KMS/HSM for key management"
+    )
+    
+    kms_provider: str = Field(
+        default="local",
+        description="KMS provider: aws, vault, gcp, azure, or local"
+    )
+    
+    kms_key_id: Optional[str] = Field(
+        default=None,
+        description="KMS key ID/ARN"
+    )
+    
+    kms_region: str = Field(
+        default="us-east-1",
+        description="KMS region (for AWS/GCP)"
+    )
+    
+    vault_addr: Optional[str] = Field(
+        default=None,
+        description="HashiCorp Vault address"
+    )
+    
+    vault_token: Optional[str] = Field(
+        default=None,
+        description="HashiCorp Vault token"
+    )
+    
+    key_rotation_days: int = Field(
+        default=90,
+        description="Automatic key rotation interval in days",
+        ge=30,
+        le=365
+    )
+    
+    # Analytics (Phase 3)
+    analytics_enabled: bool = Field(
+        default=True,
+        description="Enable behavioral analytics and monitoring"
+    )
+    
+    anomaly_detection_enabled: bool = Field(
+        default=False,
+        description="Enable anomaly detection"
+    )
+    
+    threat_intelligence_enabled: bool = Field(
+        default=False,
+        description="Enable threat intelligence integration"
+    )
+    
     # ==================== Advanced Settings ====================
     
     enable_challenge_metadata: bool = Field(
