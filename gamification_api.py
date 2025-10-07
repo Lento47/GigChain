@@ -67,6 +67,7 @@ class ContractCompletionRequest(BaseModel):
     review: Optional[str] = None
     was_on_time: bool = True
     days_early_or_late: int = 0
+    contract_value: Optional[float] = Field(None, gt=0, description="Contract value in USD for GSL rewards")
 
 
 class UserStatsResponse(BaseModel):
@@ -409,12 +410,17 @@ async def generate_counter_offer(request: CounterOfferRequest):
 @router.post("/contracts/complete")
 async def complete_contract(request: ContractCompletionRequest):
     """
-    Mark contract as completed and award XP/badges
+    Mark contract as completed and award XP/badges + GSL tokens
     """
     user_stats = gamification_db.get_user_stats(request.user_id)
     
     if not user_stats:
         raise HTTPException(status_code=404, detail="User not found")
+    
+    # Import token system for rewards
+    from token_system import TokenRewardCalculator
+    from token_database import token_db
+    import uuid as _uuid
     
     # Update contract stats
     user_stats.completed_contracts += 1
@@ -492,6 +498,59 @@ async def complete_contract(request: ContractCompletionRequest):
     user_stats.last_contract_date = datetime.now()
     gamification_db.save_user_stats(user_stats)
     
+    # ==================== AWARD GSL TOKENS ====================
+    # Calculate and award GigSoul (GSL) tokens for contract completion
+    gsl_reward = None
+    gsl_transaction_id = None
+    
+    try:
+        # Get or create token wallet
+        wallet = token_db.get_or_create_wallet(request.user_id, user_stats.user_id)
+        
+        # Get contract value from request or use average_contract_value as fallback
+        contract_value = request.contract_value or user_stats.average_contract_value or 500.0
+        
+        # Calculate GSL reward
+        reward_breakdown = TokenRewardCalculator.calculate_reward(
+            contract_value=contract_value,
+            user_level=user_stats.level,
+            trust_score=user_stats.trust_score,
+            rating=request.rating,
+            was_on_time=request.was_on_time,
+            days_early_or_late=request.days_early_or_late
+        )
+        
+        reward_amount = reward_breakdown["final_reward"]
+        
+        # Add reward to wallet
+        from token_system import TokenTransaction, TransactionType
+        
+        balance_before = wallet.balance
+        wallet.add_tokens(reward_amount, f"Contract completion reward")
+        wallet.total_earned += reward_amount
+        token_db.update_wallet(wallet)
+        
+        # Create transaction record
+        transaction = TokenTransaction(
+            transaction_id=str(_uuid.uuid4()),
+            user_id=request.user_id,
+            transaction_type=TransactionType.REWARD,
+            amount=reward_amount,
+            balance_before=balance_before,
+            balance_after=wallet.balance,
+            description=f"Contract completion reward",
+            related_contract_id=request.contract_id,
+            metadata=reward_breakdown
+        )
+        token_db.create_transaction(transaction)
+        gsl_transaction_id = transaction.transaction_id
+        gsl_reward = reward_amount
+        
+    except Exception as e:
+        # Log error but don't fail the contract completion
+        import logging
+        logging.error(f"Failed to award GSL tokens: {str(e)}")
+    
     return {
         "success": True,
         "xp_awarded": xp_awards,
@@ -503,10 +562,12 @@ async def complete_contract(request: ContractCompletionRequest):
             }
             for b in new_badges
         ],
+        "gsl_reward": gsl_reward,
+        "gsl_transaction_id": gsl_transaction_id,
         "new_level": user_stats.level,
         "new_trust_score": user_stats.trust_score,
         "visibility_multiplier": user_stats.visibility_multiplier,
-        "message": f"Contract completed! You earned {sum(a['xp'] for a in xp_awards)} XP and {len(new_badges)} new badge(s)!"
+        "message": f"Contract completed! You earned {sum(a['xp'] for a in xp_awards)} XP, {len(new_badges)} new badge(s), and {gsl_reward:.2f if gsl_reward else 0} GSL tokens!"
     }
 
 
