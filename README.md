@@ -1195,19 +1195,26 @@ furnished to do so, subject to the following conditions:
 - [ ] Reputation system NFTs
 - [ ] Template marketplace
 
-### 🔮 Phase 3: Scale (Planned) - [📋 See Detailed Plan](PHASE3_PLAN.md)
-- [ ] Multi-chain support (Ethereum, BSC, Arbitrum, Optimism, Base)
-- [ ] DAO governance (Governor + Timelock + Treasury)
-- [ ] Token launch ($GIGS) - 1B supply, fair distribution
-- [ ] Professional audit (Trail of Bits / Consensys)
-- [ ] Mainnet production deployment (5+ chains)
+### 🔮 Phase 3: Scale (Planned) - [📋 See Revised Plan](PHASE3_PLAN_REVISED.md)
+- [ ] Multi-chain escrow support (Ethereum, BSC, Arbitrum)
+- [ ] **$GIGS Internal Token System** - Earn by working & gaining XP 🆕
+- [ ] Off-chain DAO governance (snapshot voting)
+- [ ] Professional audit (escrow contracts - Trail of Bits / Consensys)
+- [ ] Mainnet production deployment (4 chains)
 - [ ] Mobile apps (iOS + Android) - Native React Native
 
+**🔄 MAJOR UPDATE**: Tokens are now **internal app currency** (database-backed), not blockchain ERC20 yet.
+- Earn GIGS by completing contracts (100 GIGS per $1)
+- Earn GIGS by gaining XP (5 GIGS per XP)
+- Spend GIGS on premium features (featured profile, priority support, etc.)
+- Stake GIGS for benefits (trust score boost, XP multipliers)
+- Future conversion to blockchain tokens supported
+
 **📊 Resources:**
-- **[Phase 3 Full Plan](PHASE3_PLAN.md)** - Complete 50-page implementation guide
-- **[Phase 3 Checklist](PHASE3_CHECKLIST.md)** - 200+ actionable tasks
-- **[Executive Summary](PHASE3_EXECUTIVE_SUMMARY.md)** - TL;DR for stakeholders
-- **Budget**: $620k | **Duration**: 16 weeks | **Team**: 8-10 people
+- **[Phase 3 Revised Plan](PHASE3_PLAN_REVISED.md)** - Updated implementation guide
+- **[Phase 3 Revised Checklist](PHASE3_CHECKLIST_REVISED.md)** - 200+ actionable tasks
+- **[Token Database Schema](migrations/phase3_internal_tokens_schema.sql)** - SQL schema for internal tokens
+- **Budget**: $380k (down from $620k) | **Duration**: 12 weeks (down from 16) | **Team**: 6-8 people
 
 ### 💭 Future Ideas
 - AI-powered dispute mediation
