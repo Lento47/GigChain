@@ -537,14 +537,8 @@ async def get_statistics(request: Request) -> AuthStatsResponse:
 
 
 # ==================== Error Handler ====================
-
-@router.exception_handler(WCSAPException)
-async def wcsap_exception_handler(request: Request, exc: WCSAPException):
-    """Handle W-CSAP specific exceptions."""
-    return JSONResponse(
-        status_code=exc.http_status,
-        content=exc.to_dict()
-    )
+# Note: Exception handlers are registered in main.py on the FastAPI app instance
+# Router-level exception handlers are not supported in FastAPI
 
 
 __all__ = ['router']

@@ -48,6 +48,15 @@ cryptography==43.0.3
 pycryptodome==3.21.0
 PyJWT[crypto]==2.9.0  # JWT tokens with cryptographic signing
 
+# MFA & TOTP (Multi-Factor Authentication)
+pyotp==2.9.0  # Time-based One-Time Passwords
+qrcode==7.4.2  # QR code generation for TOTP
+pillow==10.4.0  # Image processing for QR codes
+
+# Database - Production Scaling (PostgreSQL)
+psycopg2-binary==2.9.9  # PostgreSQL adapter for Python
+sqlalchemy==2.0.23  # Optional: ORM for advanced queries (if needed)
+
 # Caching & KMS (Optional - for advanced features)
 redis==5.0.8  # Token revocation cache
 # boto3==1.35.0  # AWS KMS (uncomment if using AWS)

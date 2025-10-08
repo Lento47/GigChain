@@ -33,7 +33,7 @@ class AuthChallengeRequest(BaseModel):
             raise ValueError("Invalid Ethereum address format")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "wallet_address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0"
             }
@@ -79,7 +79,7 @@ class AuthVerifyRequest(BaseModel):
         return v
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "challenge_id": "a1b2c3d4e5f6789...",
                 "signature": "0xabcdef123456...",
@@ -102,7 +102,7 @@ class AuthRefreshRequest(BaseModel):
     )
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "refresh_token": "refresh_token_hash...",
                 "session_token": "assertion.wallet.expires.hmac"
@@ -135,7 +135,7 @@ class AuthChallengeResponse(BaseModel):
     metadata: Optional[Dict[str, Any]] = Field(None, description="Additional metadata")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "success": True,
                 "challenge_id": "a1b2c3d4e5f6...",
@@ -176,7 +176,7 @@ class AuthVerifyResponse(BaseModel):
     error: Optional[str] = Field(None, description="Error message if failed")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "success": True,
                 "message": "Authentication successful",
@@ -208,7 +208,7 @@ class AuthStatusResponse(BaseModel):
     session_info: Optional[Dict[str, Any]] = Field(None, description="Additional session info")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "authenticated": True,
                 "wallet_address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
@@ -266,7 +266,7 @@ class AuthStatsResponse(BaseModel):
     statistics: Dict[str, Any] = Field(..., description="Authentication statistics")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "success": True,
                 "statistics": {
@@ -299,7 +299,7 @@ class AuthErrorResponse(BaseModel):
     request_id: Optional[str] = Field(None, description="Request ID for tracking")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "success": False,
                 "error": {
@@ -329,7 +329,7 @@ class WalletInfo(BaseModel):
     session: Optional[Dict[str, Any]] = Field(None, description="Full session data")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
                 "assertion_id": "assertion123...",

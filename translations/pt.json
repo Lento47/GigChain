@@ -1,0 +1,127 @@
+{
+  "common": {
+    "success": "Sucesso",
+    "error": "Erro",
+    "warning": "Aviso",
+    "info": "Informação",
+    "loading": "Carregando...",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "delete": "Excluir",
+    "edit": "Editar",
+    "create": "Criar",
+    "update": "Atualizar",
+    "confirm": "Confirmar",
+    "back": "Voltar",
+    "next": "Próximo",
+    "finish": "Finalizar",
+    "close": "Fechar"
+  },
+  "auth": {
+    "challenge_requested": "Desafio de autenticação solicitado",
+    "challenge_success": "Desafio gerado com sucesso",
+    "authentication_success": "Autenticação bem-sucedida",
+    "authentication_failed": "Falha na autenticação",
+    "invalid_signature": "Assinatura inválida",
+    "session_expired": "Sessão expirada",
+    "session_refreshed": "Sessão renovada",
+    "logout_success": "Logout bem-sucedido",
+    "wallet_connected": "Carteira conectada: {address}",
+    "wallet_disconnected": "Carteira desconectada"
+  },
+  "contract": {
+    "created": "Contrato criado com sucesso",
+    "updated": "Contrato atualizado com sucesso",
+    "deleted": "Contrato excluído com sucesso",
+    "generation_started": "Geração de contrato iniciada",
+    "generation_complete": "Geração de contrato concluída",
+    "generation_failed": "Falha na geração do contrato",
+    "validation_success": "Contrato validado com sucesso",
+    "validation_failed": "Falha na validação do contrato",
+    "deployed": "Contrato implantado na blockchain",
+    "deployment_failed": "Falha na implantação do contrato",
+    "milestone_completed": "Marco concluído",
+    "dispute_raised": "Disputa iniciada",
+    "dispute_resolved": "Disputa resolvida",
+    "payment_released": "Pagamento liberado",
+    "escrow_funded": "Escrow financiado com sucesso"
+  },
+  "agent": {
+    "negotiation": "Agente de Negociação",
+    "contract_generator": "Agente Gerador de Contratos",
+    "quality": "Agente de Garantia de Qualidade",
+    "payment": "Agente de Pagamentos",
+    "dispute_resolver": "Agente Resolutor de Disputas",
+    "processing": "Agente processando solicitação...",
+    "success": "Agente concluído com sucesso",
+    "error": "Agente encontrou um erro",
+    "timeout": "Solicitação do agente expirou"
+  },
+  "gamification": {
+    "xp_earned": "Você ganhou {xp} XP!",
+    "level_up": "Subiu de nível! Você agora é nível {level}",
+    "badge_earned": "Emblema conquistado: {badge}",
+    "trust_score_updated": "Pontuação de confiança atualizada: {score}",
+    "warning_issued": "Aviso emitido: {reason}",
+    "user_banned": "Usuário banido: {reason}",
+    "visibility_boost": "Seu multiplicador de visibilidade: {multiplier}x"
+  },
+  "chat": {
+    "session_created": "Sessão de chat criada",
+    "message_sent": "Mensagem enviada",
+    "message_received": "Mensagem recebida",
+    "agent_switched": "Agente mudado para {agent}",
+    "history_loaded": "Histórico de chat carregado",
+    "error": "Erro de chat ocorreu"
+  },
+  "template": {
+    "validated": "Modelo validado com sucesso",
+    "validation_failed": "Falha na validação do modelo",
+    "uploaded": "Modelo carregado com sucesso",
+    "upload_failed": "Falha no upload do modelo",
+    "security_score": "Pontuação de segurança: {score}/100",
+    "purchased": "Modelo comprado com sucesso",
+    "listed": "Modelo listado no marketplace"
+  },
+  "analytics": {
+    "dashboard": "Painel de Análise",
+    "contracts_created": "Contratos Criados",
+    "total_volume": "Volume Total",
+    "active_users": "Usuários Ativos",
+    "success_rate": "Taxa de Sucesso",
+    "avg_completion_time": "Tempo Médio de Conclusão",
+    "revenue": "Receita",
+    "growth": "Crescimento"
+  },
+  "nft": {
+    "minted": "NFT cunhado com sucesso",
+    "transferred": "NFT transferido",
+    "reputation_updated": "NFT de reputação atualizado",
+    "level_badge": "Emblema Nível {level}",
+    "trust_badge": "Emblema Confiança {score}",
+    "achievement_unlocked": "Conquista desbloqueada: {achievement}"
+  },
+  "oracle": {
+    "dispute_submitted": "Disputa enviada ao oráculo",
+    "oracle_deciding": "Oráculo decidindo...",
+    "resolution_complete": "Resolução do oráculo concluída",
+    "resolution_failed": "Falha na resolução do oráculo",
+    "evidence_submitted": "Evidência enviada",
+    "voting_started": "Votação iniciada",
+    "voting_ended": "Votação encerrada"
+  },
+  "errors": {
+    "internal_server": "Erro interno do servidor",
+    "bad_request": "Solicitação incorreta",
+    "unauthorized": "Não autorizado",
+    "forbidden": "Proibido",
+    "not_found": "Não encontrado",
+    "validation_error": "Erro de validação",
+    "network_error": "Erro de rede",
+    "timeout": "Tempo limite da solicitação",
+    "insufficient_funds": "Fundos insuficientes",
+    "contract_not_found": "Contrato não encontrado",
+    "user_not_found": "Usuário não encontrado",
+    "agent_unavailable": "Agente AI não disponível"
+  }
+}

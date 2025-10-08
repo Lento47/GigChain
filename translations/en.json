@@ -1,0 +1,127 @@
+{
+  "common": {
+    "success": "Success",
+    "error": "Error",
+    "warning": "Warning",
+    "info": "Information",
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "update": "Update",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "finish": "Finish",
+    "close": "Close"
+  },
+  "auth": {
+    "challenge_requested": "Authentication challenge requested",
+    "challenge_success": "Challenge generated successfully",
+    "authentication_success": "Authentication successful",
+    "authentication_failed": "Authentication failed",
+    "invalid_signature": "Invalid signature",
+    "session_expired": "Session expired",
+    "session_refreshed": "Session refreshed",
+    "logout_success": "Logged out successfully",
+    "wallet_connected": "Wallet connected: {address}",
+    "wallet_disconnected": "Wallet disconnected"
+  },
+  "contract": {
+    "created": "Contract created successfully",
+    "updated": "Contract updated successfully",
+    "deleted": "Contract deleted successfully",
+    "generation_started": "Contract generation started",
+    "generation_complete": "Contract generation complete",
+    "generation_failed": "Contract generation failed",
+    "validation_success": "Contract validated successfully",
+    "validation_failed": "Contract validation failed",
+    "deployed": "Contract deployed to blockchain",
+    "deployment_failed": "Contract deployment failed",
+    "milestone_completed": "Milestone completed",
+    "dispute_raised": "Dispute raised",
+    "dispute_resolved": "Dispute resolved",
+    "payment_released": "Payment released",
+    "escrow_funded": "Escrow funded successfully"
+  },
+  "agent": {
+    "negotiation": "Negotiation Agent",
+    "contract_generator": "Contract Generator Agent",
+    "quality": "Quality Assurance Agent",
+    "payment": "Payment Agent",
+    "dispute_resolver": "Dispute Resolver Agent",
+    "processing": "Agent processing request...",
+    "success": "Agent completed successfully",
+    "error": "Agent encountered an error",
+    "timeout": "Agent request timed out"
+  },
+  "gamification": {
+    "xp_earned": "You earned {xp} XP!",
+    "level_up": "Level up! You are now level {level}",
+    "badge_earned": "Badge earned: {badge}",
+    "trust_score_updated": "Trust score updated: {score}",
+    "warning_issued": "Warning issued: {reason}",
+    "user_banned": "User banned: {reason}",
+    "visibility_boost": "Your visibility multiplier: {multiplier}x"
+  },
+  "chat": {
+    "session_created": "Chat session created",
+    "message_sent": "Message sent",
+    "message_received": "Message received",
+    "agent_switched": "Agent switched to {agent}",
+    "history_loaded": "Chat history loaded",
+    "error": "Chat error occurred"
+  },
+  "template": {
+    "validated": "Template validated successfully",
+    "validation_failed": "Template validation failed",
+    "uploaded": "Template uploaded successfully",
+    "upload_failed": "Template upload failed",
+    "security_score": "Security score: {score}/100",
+    "purchased": "Template purchased successfully",
+    "listed": "Template listed on marketplace"
+  },
+  "analytics": {
+    "dashboard": "Analytics Dashboard",
+    "contracts_created": "Contracts Created",
+    "total_volume": "Total Volume",
+    "active_users": "Active Users",
+    "success_rate": "Success Rate",
+    "avg_completion_time": "Average Completion Time",
+    "revenue": "Revenue",
+    "growth": "Growth"
+  },
+  "nft": {
+    "minted": "NFT minted successfully",
+    "transferred": "NFT transferred",
+    "reputation_updated": "Reputation NFT updated",
+    "level_badge": "Level {level} Badge",
+    "trust_badge": "Trust Score {score} Badge",
+    "achievement_unlocked": "Achievement unlocked: {achievement}"
+  },
+  "oracle": {
+    "dispute_submitted": "Dispute submitted to oracle",
+    "oracle_deciding": "Oracle is deciding...",
+    "resolution_complete": "Oracle resolution complete",
+    "resolution_failed": "Oracle resolution failed",
+    "evidence_submitted": "Evidence submitted",
+    "voting_started": "Voting started",
+    "voting_ended": "Voting ended"
+  },
+  "errors": {
+    "internal_server": "Internal server error",
+    "bad_request": "Bad request",
+    "unauthorized": "Unauthorized",
+    "forbidden": "Forbidden",
+    "not_found": "Not found",
+    "validation_error": "Validation error",
+    "network_error": "Network error",
+    "timeout": "Request timeout",
+    "insufficient_funds": "Insufficient funds",
+    "contract_not_found": "Contract not found",
+    "user_not_found": "User not found",
+    "agent_unavailable": "AI Agent unavailable"
+  }
+}
