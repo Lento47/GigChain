@@ -1,0 +1,223 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Snapshot.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+
+/**
+ * @title GigsToken
+ * @notice Native token for GigChain.io platform
+ * @dev ERC20 with voting, snapshots, burning, and access control
+ * 
+ * Features:
+ * - Max supply: 1 billion GIGS
+ * - Voting power for governance
+ * - Snapshot for airdrops/voting
+ * - Burnable for deflationary mechanics
+ * - Permit for gasless approvals
+ * - Multi-chain via LayerZero (optional)
+ * 
+ * Tokenomics:
+ * - Community & Users: 40%
+ * - Team & Advisors: 20%
+ * - Investors: 15%
+ * - Ecosystem Development: 15%
+ * - DAO Treasury: 5%
+ * - Reserve: 5%
+ * 
+ * Phase 3 Implementation - GigChain.io
+ */
+contract GigsToken is
+    ERC20,
+    ERC20Burnable,
+    ERC20Snapshot,
+    ERC20Votes,
+    ERC20Permit,
+    AccessControl
+{
+    // ============ Constants ============
+
+    /// @notice Maximum token supply (1 billion GIGS)
+    uint256 public constant MAX_SUPPLY = 1_000_000_000e18;
+
+    /// @notice Role for minting new tokens (only during initial distribution)
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+
+    /// @notice Role for creating snapshots
+    bytes32 public constant SNAPSHOT_ROLE = keccak256("SNAPSHOT_ROLE");
+
+    /// @notice Role for pausing transfers (emergency only)
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+
+    // ============ State Variables ============
+
+    /// @notice Whether minting is permanently disabled
+    bool public mintingFinalized;
+
+    /// @notice Maximum transfer amount (anti-whale, 0 = disabled)
+    uint256 public maxTransferAmount;
+
+    /// @notice Mapping of addresses exempt from max transfer limit
+    mapping(address => bool) public isExemptFromLimit;
+
+    // ============ Events ============
+
+    event MintingFinalized();
+    event MaxTransferAmountUpdated(uint256 newAmount);
+    event ExemptionUpdated(address indexed account, bool isExempt);
+
+    // ============ Errors ============
+
+    error MintingAlreadyFinalized();
+    error MaxSupplyExceeded();
+    error TransferAmountExceedsMaximum();
+
+    /**
+     * @notice Constructor
+     * @param admin Address to grant admin role
+     */
+    constructor(address admin)
+        ERC20("GigChain Token", "GIGS")
+        ERC20Permit("GigChain Token")
+    {
+        require(admin != address(0), "Admin cannot be zero address");
+
+        // Grant roles to admin
+        _grantRole(DEFAULT_ADMIN_ROLE, admin);
+        _grantRole(MINTER_ROLE, admin);
+        _grantRole(SNAPSHOT_ROLE, admin);
+        _grantRole(PAUSER_ROLE, admin);
+
+        // Set initial max transfer (1M GIGS, can be changed)
+        maxTransferAmount = 1_000_000e18;
+
+        // Exempt admin and this contract from limits
+        isExemptFromLimit[admin] = true;
+        isExemptFromLimit[address(this)] = true;
+    }
+
+    /**
+     * @notice Mint new tokens (only during initial distribution)
+     * @param to Address to mint to
+     * @param amount Amount to mint
+     */
+    function mint(address to, uint256 amount) public onlyRole(MINTER_ROLE) {
+        if (mintingFinalized) revert MintingAlreadyFinalized();
+        if (totalSupply() + amount > MAX_SUPPLY) revert MaxSupplyExceeded();
+
+        _mint(to, amount);
+    }
+
+    /**
+     * @notice Permanently disable minting (call after initial distribution)
+     */
+    function finalizeMinting() public onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (mintingFinalized) revert MintingAlreadyFinalized();
+        mintingFinalized = true;
+        emit MintingFinalized();
+    }
+
+    /**
+     * @notice Create a snapshot of token balances
+     * @return Snapshot ID
+     */
+    function snapshot() public onlyRole(SNAPSHOT_ROLE) returns (uint256) {
+        return _snapshot();
+    }
+
+    /**
+     * @notice Update maximum transfer amount (anti-whale)
+     * @param newAmount New maximum (0 to disable)
+     */
+    function setMaxTransferAmount(uint256 newAmount)
+        public
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        maxTransferAmount = newAmount;
+        emit MaxTransferAmountUpdated(newAmount);
+    }
+
+    /**
+     * @notice Update exemption status for an address
+     * @param account Address to update
+     * @param exempt Whether to exempt from limits
+     */
+    function setExemption(address account, bool exempt)
+        public
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        isExemptFromLimit[account] = exempt;
+        emit ExemptionUpdated(account, exempt);
+    }
+
+    // ============ Internal Functions ============
+
+    /**
+     * @notice Hook called before any token transfer
+     * @dev Enforces max transfer amount if enabled
+     */
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal virtual {
+        // Check max transfer amount (skip for minting/burning)
+        if (
+            maxTransferAmount > 0 &&
+            from != address(0) &&
+            to != address(0) &&
+            !isExemptFromLimit[from] &&
+            !isExemptFromLimit[to]
+        ) {
+            if (amount > maxTransferAmount) {
+                revert TransferAmountExceedsMaximum();
+            }
+        }
+    }
+
+    // ============ Required Overrides ============
+
+    function _afterTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal override(ERC20, ERC20Votes) {
+        super._afterTokenTransfer(from, to, amount);
+    }
+
+    function _mint(address to, uint256 amount)
+        internal
+        override(ERC20, ERC20Votes)
+    {
+        super._mint(to, amount);
+    }
+
+    function _burn(address account, uint256 amount)
+        internal
+        override(ERC20, ERC20Votes)
+    {
+        super._burn(account, amount);
+    }
+
+    function _update(
+        address from,
+        address to,
+        uint256 amount
+    ) internal override(ERC20, ERC20Snapshot, ERC20Votes) {
+        _beforeTokenTransfer(from, to, amount);
+        super._update(from, to, amount);
+    }
+
+    function nonces(address owner)
+        public
+        view
+        override(ERC20Permit, Nonces)
+        returns (uint256)
+    {
+        return super.nonces(owner);
+    }
+}
