@@ -1,8 +1,8 @@
 # ✅ Phase 3: Scale - Implementation Checklist (REVISED)
 
-Quick reference checklist for implementing Phase 3 with **internal token system**.
+Quick reference checklist for implementing Phase 3 with **GigSoul (GSL) internal token system**.
 
-> **🔄 REVISION**: Tokens are now internal (database-backed), not blockchain ERC20. This simplifies development significantly.
+> **🔄 REVISION**: GigSoul (GSL) tokens are now internal (database-backed), not blockchain ERC20. This simplifies development significantly.
 
 **Progress Tracking**: Use `[x]` for completed items, `[ ]` for pending.
 
@@ -46,7 +46,7 @@ Quick reference checklist for implementing Phase 3 with **internal token system*
 
 ---
 
-## 💰 2. Internal Token System ($GIGS) (Weeks 3-8)
+## 💰 2. GigSoul (GSL) Internal Token System (Weeks 3-8)
 
 ### Database Schema (Week 3)
 - [ ] Create `user_token_balances` table
@@ -69,7 +69,7 @@ Quick reference checklist for implementing Phase 3 with **internal token system*
 
 **Earning System:**
 - [ ] `POST /api/tokens/earn/contract-completion` - Earn from contracts
-- [ ] `POST /api/tokens/earn/xp` - Auto-convert XP to GIGS
+- [ ] `POST /api/tokens/earn/xp` - Auto-convert XP to GSL
 - [ ] `POST /api/tokens/earn/referral` - Referral rewards
 - [ ] `POST /api/tokens/earn/milestone` - Daily/weekly bonuses
 - [ ] Implement earning rate calculator
@@ -124,7 +124,7 @@ Quick reference checklist for implementing Phase 3 with **internal token system*
   - Quick actions (stake, spend, transfer)
 
 **Earning Dashboard:**
-- [ ] Create `components/tokens/EarnGIGS.tsx`
+- [ ] Create `components/tokens/EarnGSL.tsx`
   - How to earn guide
   - Current earning rate
   - Pending rewards
@@ -139,7 +139,7 @@ Quick reference checklist for implementing Phase 3 with **internal token system*
   - Countdown to unlock
 
 **Spending Marketplace:**
-- [ ] Create `components/tokens/SpendGIGS.tsx`
+- [ ] Create `components/tokens/SpendGSL.tsx`
   - List premium features
   - Purchase modal
   - Confirmation dialog
@@ -155,7 +155,7 @@ Quick reference checklist for implementing Phase 3 with **internal token system*
 
 **Integration into Existing UI:**
 - [ ] Add token balance to header/navbar
-- [ ] Add "Earn GIGS" callouts on relevant pages
+- [ ] Add "Earn GSL" callouts on relevant pages
 - [ ] Show fee discount tier on contract creation
 - [ ] Add staking benefits to profile page
 - [ ] Token transfer in chat/messages
@@ -400,8 +400,8 @@ Quick reference checklist for implementing Phase 3 with **internal token system*
 
 ### End-to-End Testing
 - [ ] User signs up → Receives welcome tokens
-- [ ] User completes contract → Earns GIGS
-- [ ] User gains XP → Auto-converts to GIGS
+- [ ] User completes contract → Earns GSL
+- [ ] User gains XP → Auto-converts to GSL
 - [ ] User stakes tokens → Gets benefits
 - [ ] User spends tokens → Gets premium feature
 - [ ] User votes on proposal → Voting power calculated
@@ -435,8 +435,8 @@ Quick reference checklist for implementing Phase 3 with **internal token system*
 - [ ] Monitor database queries
 
 ### Token Economy Monitoring
-- [ ] Track total GIGS earned
-- [ ] Track total GIGS spent
+- [ ] Track total GSL earned
+- [ ] Track total GSL spent
 - [ ] Track staking rate
 - [ ] Monitor token velocity
 - [ ] Track fee discount usage
@@ -453,7 +453,7 @@ Quick reference checklist for implementing Phase 3 with **internal token system*
 ## 📚 Documentation (Week 10-11)
 
 ### User Documentation
-- [ ] How to earn GIGS guide
+- [ ] How to earn GSL guide
 - [ ] Staking tutorial
 - [ ] Premium features guide
 - [ ] DAO voting guide
@@ -482,21 +482,21 @@ Quick reference checklist for implementing Phase 3 with **internal token system*
 - [ ] 1,000+ users
 - [ ] 500+ contracts created
 - [ ] $100k+ escrow TVL
-- [ ] 50M+ GIGS earned
+- [ ] 50M+ GSL earned
 
 ### Month 1 Targets
 - [ ] 10,000+ users
 - [ ] 5,000+ contracts
 - [ ] $1M+ escrow TVL
-- [ ] 500M+ GIGS circulating
-- [ ] 50M+ GIGS staked
+- [ ] 500M+ GSL circulating
+- [ ] 50M+ GSL staked
 
 ### Month 3 Targets
 - [ ] 50,000+ users
 - [ ] 25,000+ contracts
 - [ ] $10M+ escrow TVL
-- [ ] 2B+ GIGS earned
-- [ ] 200M+ GIGS staked
+- [ ] 2B+ GSL earned
+- [ ] 200M+ GSL staked
 
 ---
 

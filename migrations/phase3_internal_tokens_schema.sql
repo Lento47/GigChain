@@ -1,12 +1,12 @@
 -- ============================================
 -- GIGCHAIN PHASE 3: INTERNAL TOKEN SYSTEM
--- Database Schema for Off-Chain GIGS Tokens
+-- Database Schema for Off-Chain GigSoul (GSL) Tokens
 -- ============================================
 -- Version: 1.0.0
 -- Date: 2025-10-08
 -- 
 -- This schema implements a complete internal token system
--- where users earn and spend GIGS tokens for platform activities.
+-- where users earn and spend GigSoul (GSL) tokens for platform activities.
 -- Future migration to blockchain ERC20 is supported.
 -- ============================================
 
@@ -52,7 +52,7 @@ CREATE INDEX idx_user_balances_address ON user_token_balances(user_address);
 CREATE INDEX idx_user_balances_balance ON user_token_balances(balance DESC);
 CREATE INDEX idx_user_balances_created ON user_token_balances(created_at);
 
-COMMENT ON TABLE user_token_balances IS 'Main table tracking user GIGS token balances';
+COMMENT ON TABLE user_token_balances IS 'Main table tracking user GigSoul (GSL) token balances';
 COMMENT ON COLUMN user_token_balances.balance IS 'Available balance (not staked)';
 COMMENT ON COLUMN user_token_balances.staked_amount IS 'Currently locked in staking';
 
@@ -188,19 +188,19 @@ CREATE TABLE IF NOT EXISTS token_earning_rules (
 CREATE INDEX idx_earning_rules_category ON token_earning_rules(category, is_active);
 CREATE INDEX idx_earning_rules_active ON token_earning_rules(is_active, priority);
 
-COMMENT ON TABLE token_earning_rules IS 'Defines how users earn GIGS tokens';
+COMMENT ON TABLE token_earning_rules IS 'Defines how users earn GSL tokens';
 
 -- Insert default earning rules
 INSERT INTO token_earning_rules (rule_name, category, percentage_of_value, description, formula) VALUES
-('contract_base', 'contract', 100, 'Base earning for contract completion', '100 GIGS per $1 contract value'),
+('contract_base', 'contract', 100, 'Base earning for contract completion', '100 GSL per $1 contract value'),
 ('contract_on_time', 'contract', 20, 'Bonus for on-time delivery', '+20% if delivered on time'),
 ('contract_high_rating', 'contract', 10, 'Bonus for 5-star rating', '+10% if rating >= 4.5'),
-('xp_conversion', 'xp', 5, 'Convert XP to GIGS', '5 GIGS per XP point'),
-('referral_signup', 'referral', 500, 'Friend signs up', '500 GIGS per referral'),
-('referral_first_contract', 'referral', 1000, 'Friend completes first contract', '1000 GIGS when referred user completes contract'),
-('profile_complete', 'bonus', 1000, 'Complete profile 100%', '1000 GIGS one-time'),
-('daily_login', 'bonus', 50, 'Daily login bonus', '50 GIGS per day'),
-('weekly_streak', 'bonus', 500, '7-day login streak', '500 GIGS per week');
+('xp_conversion', 'xp', 5, 'Convert XP to GigSoul tokens', '5 GSL per XP point'),
+('referral_signup', 'referral', 500, 'Friend signs up', '500 GSL per referral'),
+('referral_first_contract', 'referral', 1000, 'Friend completes first contract', '1000 GSL when referred user completes contract'),
+('profile_complete', 'bonus', 1000, 'Complete profile 100%', '1000 GSL one-time'),
+('daily_login', 'bonus', 50, 'Daily login bonus', '50 GSL per day'),
+('weekly_streak', 'bonus', 500, '7-day login streak', '500 GSL per week');
 
 -- ============================================
 -- 5. SPENDING CATALOG
@@ -245,7 +245,7 @@ CREATE TABLE IF NOT EXISTS token_spending_catalog (
 CREATE INDEX idx_spending_catalog_available ON token_spending_catalog(is_available, category);
 CREATE INDEX idx_spending_catalog_featured ON token_spending_catalog(is_featured) WHERE is_available = true;
 
-COMMENT ON TABLE token_spending_catalog IS 'Defines what users can purchase with GIGS';
+COMMENT ON TABLE token_spending_catalog IS 'Defines what users can purchase with GigSoul (GSL) tokens';
 
 -- Insert default spending items
 INSERT INTO token_spending_catalog (item_id, item_name, category, cost, duration_days, description) VALUES
@@ -297,7 +297,7 @@ CREATE INDEX idx_purchases_user ON token_purchases(user_address, created_at DESC
 CREATE INDEX idx_purchases_item ON token_purchases(item_id);
 CREATE INDEX idx_purchases_active ON token_purchases(user_address, is_active) WHERE is_active = true;
 
-COMMENT ON TABLE token_purchases IS 'History of user purchases with GIGS tokens';
+COMMENT ON TABLE token_purchases IS 'History of user purchases with GigSoul (GSL) tokens';
 
 -- ============================================
 -- 7. FUTURE BLOCKCHAIN CONVERSION
@@ -342,8 +342,8 @@ CREATE INDEX idx_conversion_status ON token_conversion_queue(status, created_at)
 CREATE INDEX idx_conversion_user ON token_conversion_queue(user_address);
 CREATE INDEX idx_conversion_blockchain ON token_conversion_queue(blockchain_tx_hash) WHERE blockchain_tx_hash IS NOT NULL;
 
-COMMENT ON TABLE token_conversion_queue IS 'Queue for future migration to blockchain ERC20 tokens';
-COMMENT ON COLUMN token_conversion_queue.erc20_amount IS 'Amount in wei (internal GIGS * 10^18)';
+COMMENT ON TABLE token_conversion_queue IS 'Queue for future migration to blockchain ERC20 GigSoul tokens';
+COMMENT ON COLUMN token_conversion_queue.erc20_amount IS 'Amount in wei (internal GSL * 10^18)';
 
 -- ============================================
 -- 8. SYSTEM STATISTICS (MATERIALIZED VIEW)
@@ -457,7 +457,7 @@ ON CONFLICT (user_address) DO NOTHING;
 -- ============================================
 
 -- Verify installation
-SELECT 'GigChain Phase 3 Internal Token System Schema installed successfully!' as message;
+SELECT 'GigChain Phase 3: GigSoul (GSL) Internal Token System Schema installed successfully!' as message;
 SELECT table_name FROM information_schema.tables 
 WHERE table_schema = 'public' AND table_name LIKE 'token%' OR table_name LIKE 'user_token%'
 ORDER BY table_name;

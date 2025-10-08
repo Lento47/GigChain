@@ -6,7 +6,7 @@
 **Budget**: $380,000 USD (reduced from $620k)  
 **Team Size**: 6-8 people
 
-> **🔄 MAJOR REVISION**: $GIGS tokens are now **internal app tokens** (database-backed), not blockchain ERC20 tokens. This significantly reduces complexity, cost, and time while maintaining full functionality. Future conversion to blockchain tokens remains possible.
+> **🔄 MAJOR REVISION**: **GigSoul (GSL)** tokens are now **internal app tokens** (database-backed), not blockchain ERC20 tokens. This significantly reduces complexity, cost, and time while maintaining full functionality. Future conversion to blockchain tokens remains possible.
 
 ---
 
@@ -33,7 +33,7 @@
 ### Revised Goals:
 1. ✅ Multi-chain smart contract support (Ethereum, BSC, Arbitrum) - **KEEP**
 2. ✅ DAO governance (future-ready, but simplified) - **MODIFIED**
-3. ✅ **$GIGS internal token system** - **NEW APPROACH**
+3. ✅ **GigSoul (GSL) internal token system** - **NEW APPROACH**
 4. ✅ Smart contract audit (escrow only) - **REDUCED SCOPE**
 5. ✅ Mainnet production deployment - **KEEP**
 6. ✅ Mobile apps (iOS + Android) - **KEEP**
@@ -60,10 +60,10 @@ Deploy smart contracts on multiple chains for escrow functionality.
 
 ---
 
-### 2. 💰 $GIGS Internal Token System (NEW APPROACH)
+### 2. 💰 GigSoul (GSL) Internal Token System (NEW APPROACH)
 
 #### Objective
-Create an **in-app token economy** where users earn and spend GIGS tokens for platform activities, **without blockchain complexity**.
+Create an **in-app token economy** where users earn and spend **GigSoul (GSL)** tokens for platform activities, **without blockchain complexity**.
 
 #### Token Architecture
 
@@ -96,7 +96,7 @@ Create an **in-app token economy** where users earn and spend GIGS tokens for pl
 │                                                     │
 │  Future: Blockchain Conversion                     │
 │  ┌──────────────────────────────────┐             │
-│  │  Internal GIGS → ERC20 GIGS      │             │
+│  │  Internal GSL → ERC20 GSL      │             │
 │  │  1:1 conversion when ready       │             │
 │  └──────────────────────────────────┘             │
 └─────────────────────────────────────────────────────┘
@@ -107,25 +107,25 @@ Create an **in-app token economy** where users earn and spend GIGS tokens for pl
 **Total Virtual Supply**: Unlimited (minted as earned)  
 **Initial Distribution**: None (all earned)
 
-##### How Users Earn GIGS
+##### How Users Earn GSL
 
 **1. Complete Contracts** (Primary Method)
 ```python
 contract_completion_rewards = {
-    "base_reward": 100 * contract_value_usd,  # 100 GIGS per $1
+    "base_reward": 100 * contract_value_usd,  # 100 GSL per $1
     "on_time_bonus": 20% if delivered_on_time else 0%,
     "rating_bonus": 10% if rating >= 4.5 else 0%,
     "first_time_bonus": 500 if first_contract else 0
 }
 
 # Example: $500 contract, on time, 5-star rating
-# = (100 * 500) + (20% bonus) + (10% bonus) = 65,000 GIGS
+# = (100 * 500) + (20% bonus) + (10% bonus) = 65,000 GSL
 ```
 
 **2. Earn XP / Level Up**
 ```python
 xp_to_gigs_conversion = {
-    "per_100_xp": 500,  # 500 GIGS per 100 XP gained
+    "per_100_xp": 500,  # 500 GSL per 100 XP gained
     "level_up_bonus": {
         "level_2": 1000,
         "level_3": 2500,
@@ -136,15 +136,15 @@ xp_to_gigs_conversion = {
 ```
 
 **3. Other Earning Methods**
-- Complete profile: 1,000 GIGS
-- Verify identity: 2,000 GIGS
-- Invite friend (referral): 500 GIGS
-- Create template (accepted): 1,000 GIGS
-- Write review: 50 GIGS
-- Daily login streak: 10-100 GIGS/day
+- Complete profile: 1,000 GSL
+- Verify identity: 2,000 GSL
+- Invite friend (referral): 500 GSL
+- Create template (accepted): 1,000 GSL
+- Write review: 50 GSL
+- Daily login streak: 10-100 GSL/day
 - Community contributions: Variable
 
-##### How Users Spend GIGS
+##### How Users Spend GSL
 
 **1. Premium Features**
 ```python
@@ -190,9 +190,9 @@ staking_benefits = {
 ```
 
 **4. Marketplace**
-- Purchase contract templates: 500-5,000 GIGS
-- Buy reputation boost: 10,000 GIGS
-- Custom badges: 2,000 GIGS
+- Purchase contract templates: 500-5,000 GSL
+- Buy reputation boost: 10,000 GSL
+- Custom badges: 2,000 GSL
 
 #### Database Schema
 
@@ -279,7 +279,7 @@ POST /api/tokens/earn/xp
   "user_address": "0x...",
   "xp_gained": 100
 }
-# Auto-converts XP to GIGS
+# Auto-converts XP to GSL
 
 # Spending tokens
 POST /api/tokens/spend
@@ -334,7 +334,7 @@ GET /api/tokens/stats
 - Staking positions
 - Earning summary
 
-// components/tokens/EarnGIGS.tsx
+// components/tokens/EarnGSL.tsx
 - How to earn guide
 - Current earning rate
 - Pending rewards
@@ -344,9 +344,9 @@ GET /api/tokens/stats
 - View staking positions
 - Calculate benefits
 
-// components/tokens/SpendGIGS.tsx
+// components/tokens/SpendGSL.tsx
 - Premium features marketplace
-- Purchase with GIGS
+- Purchase with GSL
 - Transaction confirmation
 
 // components/tokens/TokenHistory.tsx
@@ -395,13 +395,13 @@ When ready to convert to blockchain tokens:
 
 **Conversion Process:**
 1. Take snapshot of all internal balances
-2. Deploy ERC20 GIGS token
+2. Deploy ERC20 GSL token
 3. Mint exact amount for each user
 4. Users claim via signature
 5. Airdrop to wallets
 6. Freeze internal system or maintain hybrid
 
-**Conversion Rate**: 1 internal GIGS = 1 ERC20 GIGS
+**Conversion Rate**: 1 internal GSL = 1 ERC20 GSL
 
 **Timeline**: Phase 4+ (6-12 months after Phase 3)
 
@@ -416,7 +416,7 @@ Create a **lightweight governance system** using internal tokens for voting, wit
 
 **Voting System:**
 - Snapshot-style voting (off-chain)
-- Voting power = GIGS balance
+- Voting power = GSL balance
 - Proposals submitted via platform
 - 7-day voting period
 - Results published on-chain (hash)
@@ -447,7 +447,7 @@ CREATE TABLE governance_votes (
     proposal_id VARCHAR(66) NOT NULL,
     voter_address VARCHAR(42) NOT NULL,
     vote_choice INTEGER NOT NULL,  -- 0=against, 1=for, 2=abstain
-    voting_power NUMERIC(20, 2) NOT NULL,  -- GIGS balance at snapshot
+    voting_power NUMERIC(20, 2) NOT NULL,  -- GSL balance at snapshot
     reason TEXT,
     created_at TIMESTAMP DEFAULT NOW(),
     UNIQUE(proposal_id, voter_address)
@@ -657,12 +657,12 @@ Month 3 (Weeks 9-12): Audit & Launch
 - **Users**: 10,000+
 - **Contracts**: 5,000+
 - **TVL (escrow)**: $1M+
-- **GIGS Circulating**: 500M+ (earned)
-- **GIGS Staked**: 50M+
+- **GSL Circulating**: 500M+ (earned)
+- **GSL Staked**: 50M+
 
 ### Token Economy Metrics
-- **Avg GIGS earned per user**: 50,000
-- **Avg GIGS spent per user**: 10,000
+- **Avg GSL earned per user**: 50,000
+- **Avg GSL spent per user**: 10,000
 - **Token velocity**: 0.2 (20% spent/month)
 - **Staking rate**: 10% of supply
 
@@ -707,7 +707,7 @@ Month 3 (Weeks 9-12): Audit & Launch
 When ready (Phase 4+), convert to blockchain:
 
 **Step 1**: Snapshot balances
-**Step 2**: Deploy ERC20 GIGS
+**Step 2**: Deploy ERC20 GSL
 **Step 3**: Airdrop to users
 **Step 4**: Bridge or hybrid system
 

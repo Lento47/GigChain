@@ -1197,17 +1197,17 @@ furnished to do so, subject to the following conditions:
 
 ### 🔮 Phase 3: Scale (Planned) - [📋 See Revised Plan](PHASE3_PLAN_REVISED.md)
 - [ ] Multi-chain escrow support (Ethereum, BSC, Arbitrum)
-- [ ] **$GIGS Internal Token System** - Earn by working & gaining XP 🆕
+- [ ] **GigSoul (GSL) Internal Token System** - Earn by working & gaining XP 🆕
 - [ ] Off-chain DAO governance (snapshot voting)
 - [ ] Professional audit (escrow contracts - Trail of Bits / Consensys)
 - [ ] Mainnet production deployment (4 chains)
 - [ ] Mobile apps (iOS + Android) - Native React Native
 
-**🔄 MAJOR UPDATE**: Tokens are now **internal app currency** (database-backed), not blockchain ERC20 yet.
-- Earn GIGS by completing contracts (100 GIGS per $1)
-- Earn GIGS by gaining XP (5 GIGS per XP)
-- Spend GIGS on premium features (featured profile, priority support, etc.)
-- Stake GIGS for benefits (trust score boost, XP multipliers)
+**🔄 MAJOR UPDATE**: GigSoul (GSL) tokens are now **internal app currency** (database-backed), not blockchain ERC20 yet.
+- Earn GSL by completing contracts (100 GSL per $1)
+- Earn GSL by gaining XP (5 GSL per XP)
+- Spend GSL on premium features (featured profile, priority support, etc.)
+- Stake GSL for benefits (trust score boost, XP multipliers)
 - Future conversion to blockchain tokens supported
 
 **📊 Resources:**
