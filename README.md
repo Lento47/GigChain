@@ -1195,13 +1195,26 @@ furnished to do so, subject to the following conditions:
 - [ ] Reputation system NFTs
 - [ ] Template marketplace
 
-### 🔮 Phase 3: Scale (Planned)
-- [ ] Multi-chain support (Ethereum, BSC, Arbitrum)
-- [ ] DAO governance
-- [ ] Token launch ($GIGS)
-- [ ] Professional audit
-- [ ] Mainnet production deployment
-- [ ] Mobile apps (iOS + Android)
+### 🔮 Phase 3: Scale (Planned) - [📋 See Revised Plan](PHASE3_PLAN_REVISED.md)
+- [ ] Multi-chain escrow support (Ethereum, BSC, Arbitrum)
+- [ ] **GigSoul (GSL) Internal Token System** - Earn by working & gaining XP 🆕
+- [ ] Off-chain DAO governance (snapshot voting)
+- [ ] Professional audit (escrow contracts - Trail of Bits / Consensys)
+- [ ] Mainnet production deployment (4 chains)
+- [ ] Mobile apps (iOS + Android) - Native React Native
+
+**🔄 MAJOR UPDATE**: GigSoul (GSL) tokens are now **internal app currency** (database-backed), not blockchain ERC20 yet.
+- Earn GSL by completing contracts (100 GSL per $1)
+- Earn GSL by gaining XP (5 GSL per XP)
+- Spend GSL on premium features (featured profile, priority support, etc.)
+- Stake GSL for benefits (trust score boost, XP multipliers)
+- Future conversion to blockchain tokens supported
+
+**📊 Resources:**
+- **[Phase 3 Revised Plan](PHASE3_PLAN_REVISED.md)** - Updated implementation guide
+- **[Phase 3 Revised Checklist](PHASE3_CHECKLIST_REVISED.md)** - 200+ actionable tasks
+- **[Token Database Schema](migrations/phase3_internal_tokens_schema.sql)** - SQL schema for internal tokens
+- **Budget**: $380k (down from $620k) | **Duration**: 12 weeks (down from 16) | **Team**: 6-8 people
 
 ### 💭 Future Ideas
 - AI-powered dispute mediation

@@ -1,0 +1,228 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/governance/Governor.sol";
+import "@openzeppelin/contracts/governance/extensions/GovernorSettings.sol";
+import "@openzeppelin/contracts/governance/extensions/GovernorCountingSimple.sol";
+import "@openzeppelin/contracts/governance/extensions/GovernorVotes.sol";
+import "@openzeppelin/contracts/governance/extensions/GovernorVotesQuorumFraction.sol";
+import "@openzeppelin/contracts/governance/extensions/GovernorTimelockControl.sol";
+
+/**
+ * @title GigChainGovernor
+ * @notice DAO governance contract for GigChain.io
+ * @dev Implements OpenZeppelin Governor pattern with timelock
+ * 
+ * Features:
+ * - Voting delay: 1 day (allows users to delegate/buy tokens)
+ * - Voting period: 7 days (one week to vote)
+ * - Proposal threshold: 10,000 GIGS (prevents spam)
+ * - Quorum: 4% of total supply (reasonable participation)
+ * - Timelock: 48 hours (safety delay before execution)
+ * 
+ * Phase 3 Implementation - GigChain.io
+ */
+contract GigChainGovernor is
+    Governor,
+    GovernorSettings,
+    GovernorCountingSimple,
+    GovernorVotes,
+    GovernorVotesQuorumFraction,
+    GovernorTimelockControl
+{
+    /// @notice Voting delay (time before voting starts after proposal creation)
+    uint256 public constant VOTING_DELAY = 1 days; // 7200 blocks on Polygon
+
+    /// @notice Voting period (how long voting lasts)
+    uint256 public constant VOTING_PERIOD = 7 days; // 50400 blocks on Polygon
+
+    /// @notice Minimum GIGS tokens required to create a proposal
+    uint256 public constant PROPOSAL_THRESHOLD = 10_000e18; // 10,000 GIGS
+
+    /// @notice Quorum percentage (4% of total supply must participate)
+    uint256 public constant QUORUM_PERCENTAGE = 4; // 4%
+
+    /// @notice Timelock delay before execution (48 hours)
+    uint256 public constant TIMELOCK_DELAY = 48 hours;
+
+    /**
+     * @notice Proposal categories for classification
+     */
+    enum ProposalCategory {
+        FeeChange,          // Change platform fees
+        FeatureProposal,    // New feature or improvement
+        ContractUpgrade,    // Smart contract upgrade
+        TreasuryAllocation, // Spend from treasury
+        AgentParameter,     // Change AI agent parameters
+        Emergency           // Emergency action (shorter timelock)
+    }
+
+    /// @notice Mapping of proposal ID to category
+    mapping(uint256 => ProposalCategory) public proposalCategories;
+
+    /// @notice Event emitted when a proposal is created with a category
+    event ProposalCreatedWithCategory(
+        uint256 indexed proposalId,
+        ProposalCategory category,
+        address proposer,
+        string description
+    );
+
+    /**
+     * @notice Constructor
+     * @param _token Address of GIGS token (must implement IVotes)
+     * @param _timelock Address of TimelockController
+     */
+    constructor(
+        IVotes _token,
+        TimelockController _timelock
+    )
+        Governor("GigChain Governor")
+        GovernorSettings(
+            VOTING_DELAY,
+            VOTING_PERIOD,
+            PROPOSAL_THRESHOLD
+        )
+        GovernorVotes(_token)
+        GovernorVotesQuorumFraction(QUORUM_PERCENTAGE)
+        GovernorTimelockControl(_timelock)
+    {}
+
+    /**
+     * @notice Create a proposal with a category
+     * @param targets Contract addresses to call
+     * @param values ETH values to send
+     * @param calldatas Function call data
+     * @param description Proposal description (should include category in format "[CATEGORY] Description")
+     * @param category Proposal category
+     */
+    function proposeWithCategory(
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory calldatas,
+        string memory description,
+        ProposalCategory category
+    ) public returns (uint256) {
+        uint256 proposalId = propose(targets, values, calldatas, description);
+        proposalCategories[proposalId] = category;
+
+        emit ProposalCreatedWithCategory(
+            proposalId,
+            category,
+            msg.sender,
+            description
+        );
+
+        return proposalId;
+    }
+
+    /**
+     * @notice Get the category of a proposal
+     * @param proposalId The proposal ID
+     * @return The proposal category
+     */
+    function getProposalCategory(uint256 proposalId)
+        public
+        view
+        returns (ProposalCategory)
+    {
+        return proposalCategories[proposalId];
+    }
+
+    // ============ Required Overrides ============
+
+    function votingDelay()
+        public
+        view
+        override(IGovernor, GovernorSettings)
+        returns (uint256)
+    {
+        return super.votingDelay();
+    }
+
+    function votingPeriod()
+        public
+        view
+        override(IGovernor, GovernorSettings)
+        returns (uint256)
+    {
+        return super.votingPeriod();
+    }
+
+    function quorum(uint256 blockNumber)
+        public
+        view
+        override(IGovernor, GovernorVotesQuorumFraction)
+        returns (uint256)
+    {
+        return super.quorum(blockNumber);
+    }
+
+    function state(uint256 proposalId)
+        public
+        view
+        override(Governor, GovernorTimelockControl)
+        returns (ProposalState)
+    {
+        return super.state(proposalId);
+    }
+
+    function propose(
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory calldatas,
+        string memory description
+    )
+        public
+        override(Governor, IGovernor)
+        returns (uint256)
+    {
+        return super.propose(targets, values, calldatas, description);
+    }
+
+    function proposalThreshold()
+        public
+        view
+        override(Governor, GovernorSettings)
+        returns (uint256)
+    {
+        return super.proposalThreshold();
+    }
+
+    function _execute(
+        uint256 proposalId,
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory calldatas,
+        bytes32 descriptionHash
+    ) internal override(Governor, GovernorTimelockControl) {
+        super._execute(proposalId, targets, values, calldatas, descriptionHash);
+    }
+
+    function _cancel(
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory calldatas,
+        bytes32 descriptionHash
+    ) internal override(Governor, GovernorTimelockControl) returns (uint256) {
+        return super._cancel(targets, values, calldatas, descriptionHash);
+    }
+
+    function _executor()
+        internal
+        view
+        override(Governor, GovernorTimelockControl)
+        returns (address)
+    {
+        return super._executor();
+    }
+
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        override(Governor, GovernorTimelockControl)
+        returns (bool)
+    {
+        return super.supportsInterface(interfaceId);
+    }
+}
