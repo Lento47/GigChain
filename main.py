@@ -62,6 +62,9 @@ from reputation_nft_api import router as reputation_nft_router
 # Import Template Marketplace System
 from template_marketplace_api import router as marketplace_router
 
+# Import Admin System
+from admin_api import router as admin_router
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -119,6 +122,9 @@ app.include_router(reputation_nft_router)
 
 # Include marketplace router
 app.include_router(marketplace_router)
+
+# Include admin router
+app.include_router(admin_router)
 
 # CORS middleware - Production-ready configuration
 # Get allowed origins from environment or use defaults
