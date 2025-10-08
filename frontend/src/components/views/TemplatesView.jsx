@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { FileText, Copy, Plus, Search, Filter, Code } from 'lucide-react';
+import useDebounce from '../../hooks/useDebounce';
 import '../../styles/views/templates.css';
 
-const TemplatesView = () => {
+const TemplatesView = React.memo(() => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  
+  // Debounce search term to reduce re-renders
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   const templates = [
     {
@@ -49,23 +53,28 @@ const TemplatesView = () => {
     }
   ];
 
-  const categories = [
+  // Memoize categories to prevent recreation on every render
+  const categories = useMemo(() => [
     { id: 'all', name: 'Todas' },
     { id: 'development', name: 'Desarrollo' },
     { id: 'design', name: 'Diseño' },
     { id: 'consulting', name: 'Consultoría' },
     { id: 'marketing', name: 'Marketing' }
-  ];
+  ], []);
 
-  const filteredTemplates = templates.filter(template => {
-    const matchesSearch = template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         template.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         template.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesCategory = selectedCategory === 'all' || template.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  // Memoize filtered templates to only recalculate when dependencies change
+  const filteredTemplates = useMemo(() => {
+    return templates.filter(template => {
+      const matchesSearch = template.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+                           template.description.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+                           template.tags.some(tag => tag.toLowerCase().includes(debouncedSearchTerm.toLowerCase()));
+      const matchesCategory = selectedCategory === 'all' || template.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [templates, debouncedSearchTerm, selectedCategory]);
 
-  const handleUseTemplate = async (template) => {
+  // Memoize event handlers to prevent recreation
+  const handleUseTemplate = useCallback(async (template) => {
     try {
       // Navigate to contract creation with template pre-filled
       alert(`Plantilla "${template.name}" seleccionada. Esta funcionalidad abrirá el creador de contratos con los datos pre-cargados.`);
@@ -75,9 +84,9 @@ const TemplatesView = () => {
       console.error('Error using template:', error);
       alert('Error al cargar la plantilla. Por favor, intenta de nuevo.');
     }
-  };
+  }, []);
 
-  const handleCreateTemplate = () => {
+  const handleCreateTemplate = useCallback(() => {
     try {
       // Navigate to template creation form
       alert('Creación de plantilla personalizada. Esta funcionalidad abrirá un formulario de creación.');
@@ -87,7 +96,7 @@ const TemplatesView = () => {
       console.error('Error creating template:', error);
       alert('Error al abrir el creador de plantillas. Por favor, intenta de nuevo.');
     }
-  };
+  }, []);
 
   return (
     <div className="templates-view">
@@ -201,7 +210,9 @@ const TemplatesView = () => {
       </div>
     </div>
   );
-};
+});
+
+TemplatesView.displayName = 'TemplatesView';
 
 export { TemplatesView };
 export default TemplatesView;

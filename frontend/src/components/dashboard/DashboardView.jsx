@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { FileText, Zap } from 'lucide-react';
 import { useNotifications } from '../../components/NotificationCenter';
 import InteractiveChart from './InteractiveChart';
@@ -7,7 +7,7 @@ import ContractSetup from '../ContractSetup';
 import { MetricSkeleton } from '../LoadingSpinner';
 import { logger } from '../../utils/logger';
 
-const DashboardView = ({ metrics, isLoading = false }) => {
+const DashboardView = React.memo(({ metrics, isLoading = false }) => {
   const { notifications, addNotification } = useNotifications();
   const [showJobsModal, setShowJobsModal] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState(null);
@@ -23,17 +23,17 @@ const DashboardView = ({ metrics, isLoading = false }) => {
     recentActivity: []
   };
 
-  const handleDataPointClick = (data) => {
+  const handleDataPointClick = useCallback((data) => {
     setSelectedPeriod(data);
     setShowJobsModal(true);
-  };
+  }, []);
 
-  const handleCloseJobsModal = () => {
+  const handleCloseJobsModal = useCallback(() => {
     setShowJobsModal(false);
     setSelectedPeriod(null);
-  };
+  }, []);
 
-  const handleCreateContract = () => {
+  const handleCreateContract = useCallback(() => {
     addNotification({
       id: Date.now(),
       type: 'info',
@@ -43,9 +43,9 @@ const DashboardView = ({ metrics, isLoading = false }) => {
     });
     // Aquí se implementaría la navegación al asistente de contratos
     logger.action('create_first_contract_clicked');
-  };
+  }, [addNotification]);
 
-  const handleShowGuide = () => {
+  const handleShowGuide = useCallback(() => {
     addNotification({
       id: Date.now(),
       type: 'info',
@@ -55,7 +55,7 @@ const DashboardView = ({ metrics, isLoading = false }) => {
     });
     // Aquí se implementaría la navegación a la guía
     logger.action('show_getting_started_guide');
-  };
+  }, [addNotification]);
 
   return (
     <div className="dashboard">
@@ -202,7 +202,9 @@ const DashboardView = ({ metrics, isLoading = false }) => {
       />
     </div>
   );
-};
+});
+
+DashboardView.displayName = 'DashboardView';
 
 export { DashboardView };
 export default DashboardView;

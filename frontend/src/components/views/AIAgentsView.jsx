@@ -1,13 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Zap, Play, Pause, Settings, MessageSquare, Code, Brain, Search, Filter, AlertCircle, CheckCircle } from 'lucide-react';
 import axios from 'axios';
 import { API_BASE_URL } from '../../constants/api';
 import { logger } from '../../utils/logger';
+import useDebounce from '../../hooks/useDebounce';
 import '../../styles/views/ai-agents.css';
 
-const AIAgentsView = () => {
+const AIAgentsView = React.memo(() => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
+  
+  // Debounce search term for better performance
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [agents, setAgents] = useState([
     {
       id: 1,
@@ -65,12 +69,8 @@ const AIAgentsView = () => {
   const [testInput, setTestInput] = useState('');
   const [testResult, setTestResult] = useState(null);
 
-  // Fetch agents from backend on mount
-  useEffect(() => {
-    fetchAgentsStatus();
-  }, []);
-
-  const fetchAgentsStatus = async () => {
+  // Memoize fetchAgentsStatus to prevent recreation
+  const fetchAgentsStatus = useCallback(async () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/api/agents/status`);
       // Update agents with backend data if available
@@ -78,40 +78,49 @@ const AIAgentsView = () => {
     } catch (error) {
       logger.error('Error fetching agents status:', error);
     }
-  };
+  }, []);
 
-  const showNotification = (message, type = 'success') => {
+  // Fetch agents from backend on mount
+  useEffect(() => {
+    fetchAgentsStatus();
+  }, [fetchAgentsStatus]);
+
+  const showNotification = useCallback((message, type = 'success') => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 3000);
-  };
+  }, []);
 
-  const getStatusColor = (status) => {
+  // Memoize helper functions
+  const getStatusColor = useCallback((status) => {
     switch (status) {
       case 'active': return 'status-active';
       case 'inactive': return 'status-inactive';
       case 'training': return 'status-training';
       default: return '';
     }
-  };
+  }, []);
 
-  const getStatusText = (status) => {
+  const getStatusText = useCallback((status) => {
     switch (status) {
       case 'active': return 'Activo';
       case 'inactive': return 'Inactivo';
       case 'training': return 'Entrenando';
       default: return 'Desconocido';
     }
-  };
+  }, []);
 
-  const filteredAgents = agents.filter(agent => {
-    const matchesSearch = agent.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         agent.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         agent.capabilities.some(cap => cap.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesStatus = selectedStatus === 'all' || agent.status === selectedStatus;
-    return matchesSearch && matchesStatus;
-  });
+  // Memoize filtered agents to only recalculate when dependencies change
+  const filteredAgents = useMemo(() => {
+    return agents.filter(agent => {
+      const matchesSearch = agent.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+                           agent.description.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+                           agent.capabilities.some(cap => cap.toLowerCase().includes(debouncedSearchTerm.toLowerCase()));
+      const matchesStatus = selectedStatus === 'all' || agent.status === selectedStatus;
+      return matchesSearch && matchesStatus;
+    });
+  }, [agents, debouncedSearchTerm, selectedStatus]);
 
-  const handleToggleAgent = async (agent) => {
+  const handleToggleAgent = useCallback(async (agent) => {
     if (agent.status === 'training') {
       showNotification('No se puede modificar un agente en entrenamiento', 'error');
       return;
@@ -144,9 +153,9 @@ const AIAgentsView = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showNotification]);
 
-  const handleConfigureAgent = async (agent) => {
+  const handleConfigureAgent = useCallback(async (agent) => {
     // Open configuration modal
     const temperature = prompt('Ingrese la temperatura (0.0 - 1.0):', '0.1');
     if (temperature === null) return;
@@ -173,16 +182,16 @@ const AIAgentsView = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showNotification]);
 
-  const handleTestAgent = async (agent) => {
+  const handleTestAgent = useCallback(async (agent) => {
     setSelectedAgent(agent);
     setTestModalOpen(true);
     setTestInput('Cliente ofrece $1000 por proyecto en 10 días');
     setTestResult(null);
-  };
+  }, []);
 
-  const runAgentTest = async () => {
+  const runAgentTest = useCallback(async () => {
     if (!testInput.trim()) {
       showNotification('Por favor ingrese un texto de prueba', 'error');
       return;
@@ -211,7 +220,7 @@ const AIAgentsView = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedAgent, testInput, showNotification]);
 
   return (
     <div className="ai-agents-view">
@@ -354,7 +363,9 @@ const AIAgentsView = () => {
       )}
     </div>
   );
-};
+});
+
+AIAgentsView.displayName = 'AIAgentsView';
 
 export { AIAgentsView };
 export default AIAgentsView;
