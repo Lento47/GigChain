@@ -24,6 +24,12 @@ from admin_mfa_system import (
     MFASetup
 )
 
+from admin_export_system import (
+    admin_export_system,
+    ExportFormat,
+    TimeRange
+)
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/admin", tags=["Admin Management"])
@@ -1068,4 +1074,254 @@ async def run_diagnostics(admin: Dict[str, Any] = Depends(verify_admin)):
         
     except Exception as e:
         logger.error(f"Error running diagnostics: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== DATA EXPORT ENDPOINTS ====================
+
+@router.get("/export/kpis")
+async def export_kpis(
+    time_range: str = "7d",
+    format: str = "json",
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    admin: Dict[str, Any] = Depends(verify_admin)
+):
+    """
+    Export KPIs for specified time range.
+    
+    Time ranges:
+    - 24h: Last 24 hours
+    - 7d: Last 7 days
+    - 30d: Last 30 days
+    - 90d: Last 90 days
+    - this_month: Current month
+    - last_month: Previous month
+    - this_year: Current year
+    - all_time: All data
+    - custom: Specify start_date and end_date
+    
+    Formats: json, csv
+    """
+    try:
+        # Export KPIs
+        kpis_data = admin_export_system.export_kpis(
+            time_range=time_range,
+            start_date=start_date,
+            end_date=end_date
+        )
+        
+        # Log activity
+        admin_system.log_admin_activity(
+            admin["admin_id"],
+            "export_kpis",
+            details={"time_range": time_range, "format": format}
+        )
+        
+        # Format response
+        if format == ExportFormat.CSV.value:
+            from fastapi.responses import StreamingResponse
+            csv_data = admin_export_system.export_to_csv(kpis_data)
+            
+            return StreamingResponse(
+                iter([csv_data]),
+                media_type="text/csv",
+                headers={
+                    "Content-Disposition": f"attachment; filename=kpis_{time_range}_{datetime.now().strftime('%Y%m%d')}.csv"
+                }
+            )
+        else:
+            # JSON format
+            return {
+                "success": True,
+                "data": kpis_data,
+                "timestamp": datetime.now().isoformat()
+            }
+        
+    except Exception as e:
+        logger.error(f"Error exporting KPIs: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/export/users")
+async def export_users(
+    time_range: str = "all_time",
+    format: str = "json",
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    admin: Dict[str, Any] = Depends(verify_admin)
+):
+    """
+    Export detailed user list for specified time range.
+    
+    Returns user data including wallet addresses, reputation, earnings, etc.
+    """
+    try:
+        # Export users
+        users_data = admin_export_system.export_detailed_users(
+            time_range=time_range,
+            start_date=start_date,
+            end_date=end_date
+        )
+        
+        # Log activity
+        admin_system.log_admin_activity(
+            admin["admin_id"],
+            "export_users",
+            details={"time_range": time_range, "count": len(users_data)}
+        )
+        
+        # Format response
+        if format == ExportFormat.CSV.value:
+            from fastapi.responses import StreamingResponse
+            import csv
+            from io import StringIO
+            
+            output = StringIO()
+            if users_data:
+                writer = csv.DictWriter(output, fieldnames=users_data[0].keys())
+                writer.writeheader()
+                writer.writerows(users_data)
+            
+            return StreamingResponse(
+                iter([output.getvalue()]),
+                media_type="text/csv",
+                headers={
+                    "Content-Disposition": f"attachment; filename=users_{time_range}_{datetime.now().strftime('%Y%m%d')}.csv"
+                }
+            )
+        else:
+            # JSON format
+            return {
+                "success": True,
+                "count": len(users_data),
+                "data": users_data,
+                "timestamp": datetime.now().isoformat()
+            }
+        
+    except Exception as e:
+        logger.error(f"Error exporting users: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/export/contracts")
+async def export_contracts(
+    time_range: str = "30d",
+    format: str = "json",
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    admin: Dict[str, Any] = Depends(verify_admin)
+):
+    """
+    Export detailed contract list for specified time range.
+    
+    Returns contract events and metrics.
+    """
+    try:
+        # Export contracts
+        contracts_data = admin_export_system.export_detailed_contracts(
+            time_range=time_range,
+            start_date=start_date,
+            end_date=end_date
+        )
+        
+        # Log activity
+        admin_system.log_admin_activity(
+            admin["admin_id"],
+            "export_contracts",
+            details={"time_range": time_range, "count": len(contracts_data)}
+        )
+        
+        # Format response
+        if format == ExportFormat.CSV.value:
+            from fastapi.responses import StreamingResponse
+            import csv
+            from io import StringIO
+            
+            output = StringIO()
+            if contracts_data:
+                # Flatten metadata for CSV
+                flattened = []
+                for contract in contracts_data:
+                    flat = {k: v for k, v in contract.items() if k != 'metadata'}
+                    if contract.get('metadata'):
+                        flat['metadata'] = json.dumps(contract['metadata'])
+                    flattened.append(flat)
+                
+                writer = csv.DictWriter(output, fieldnames=flattened[0].keys())
+                writer.writeheader()
+                writer.writerows(flattened)
+            
+            return StreamingResponse(
+                iter([output.getvalue()]),
+                media_type="text/csv",
+                headers={
+                    "Content-Disposition": f"attachment; filename=contracts_{time_range}_{datetime.now().strftime('%Y%m%d')}.csv"
+                }
+            )
+        else:
+            # JSON format
+            return {
+                "success": True,
+                "count": len(contracts_data),
+                "data": contracts_data,
+                "timestamp": datetime.now().isoformat()
+            }
+        
+    except Exception as e:
+        logger.error(f"Error exporting contracts: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/export/database-info")
+async def get_database_info(admin: Dict[str, Any] = Depends(verify_admin)):
+    """
+    Get information about where platform data is stored.
+    
+    Returns database paths, sizes, and descriptions.
+    """
+    try:
+        db_info = admin_export_system.get_database_info()
+        
+        # Log activity
+        admin_system.log_admin_activity(
+            admin["admin_id"],
+            "view_database_info"
+        )
+        
+        return {
+            "success": True,
+            "databases": db_info,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting database info: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/export/backup")
+async def create_backup(
+    backup_path: Optional[str] = None,
+    admin: Dict[str, Any] = Depends(verify_super_admin)
+):
+    """
+    Create backup of all platform databases.
+    
+    Super Admin only - Creates timestamped backup of all databases.
+    """
+    try:
+        backups = admin_export_system.create_backup(backup_path)
+        
+        # Log activity
+        admin_system.log_admin_activity(
+            admin["admin_id"],
+            "create_backup",
+            details={"backup_count": len(backups)}
+        )
+        
+        return {
+            "success": True,
+            "message": "Backup created successfully",
+            "backups": backups,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error creating backup: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
