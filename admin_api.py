@@ -30,6 +30,13 @@ from admin_export_system import (
     TimeRange
 )
 
+from security_monitoring import (
+    security_monitor,
+    EventSeverity,
+    EventCategory,
+    log_security_event
+)
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/admin", tags=["Admin Management"])
@@ -1324,4 +1331,256 @@ async def create_backup(
         
     except Exception as e:
         logger.error(f"Error creating backup: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== SECURITY MONITORING ENDPOINTS ====================
+
+@router.get("/security/events")
+async def get_security_events(
+    limit: int = 100,
+    category: Optional[str] = None,
+    severity: Optional[str] = None,
+    admin: Dict[str, Any] = Depends(verify_admin)
+):
+    """
+    Get recent security events.
+    
+    Returns security events with AI risk analysis.
+    """
+    try:
+        events = list(security_monitor.event_buffer)[-limit:]
+        
+        # Filter by category
+        if category:
+            events = [e for e in events if e.category == category]
+        
+        # Filter by severity
+        if severity:
+            events = [e for e in events if e.severity == severity]
+        
+        # Convert to dict
+        events_data = [e.to_dict() for e in events]
+        
+        # Log activity
+        admin_system.log_admin_activity(
+            admin["admin_id"],
+            "view_security_events",
+            details={"limit": limit, "category": category, "severity": severity}
+        )
+        
+        return {
+            "success": True,
+            "count": len(events_data),
+            "events": events_data,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting security events: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/security/stats")
+async def get_security_stats(admin: Dict[str, Any] = Depends(verify_admin)):
+    """
+    Get security monitoring statistics.
+    
+    Returns stats about events, alerts, and integrations.
+    """
+    try:
+        stats = security_monitor.get_stats()
+        
+        # Log activity
+        admin_system.log_admin_activity(
+            admin["admin_id"],
+            "view_security_stats"
+        )
+        
+        return {
+            "success": True,
+            "stats": stats,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting security stats: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/security/high-risk")
+async def get_high_risk_events(
+    threshold: int = 50,
+    limit: int = 50,
+    admin: Dict[str, Any] = Depends(verify_admin)
+):
+    """
+    Get high-risk security events detected by AI.
+    
+    Returns events with risk score above threshold.
+    """
+    try:
+        events = list(security_monitor.event_buffer)
+        
+        # Filter high risk
+        high_risk = [e for e in events if e.risk_score >= threshold]
+        high_risk.sort(key=lambda e: e.risk_score, reverse=True)
+        high_risk = high_risk[:limit]
+        
+        # Convert to dict
+        events_data = [e.to_dict() for e in high_risk]
+        
+        # Log activity
+        admin_system.log_admin_activity(
+            admin["admin_id"],
+            "view_high_risk_events",
+            details={"threshold": threshold, "count": len(high_risk)}
+        )
+        
+        return {
+            "success": True,
+            "count": len(events_data),
+            "threshold": threshold,
+            "events": events_data,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting high-risk events: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/security/user-profile/{user_identifier}")
+async def get_user_security_profile(
+    user_identifier: str,
+    admin: Dict[str, Any] = Depends(verify_admin)
+):
+    """
+    Get AI security profile for a specific user.
+    
+    Shows behavioral patterns and risk indicators.
+    """
+    try:
+        # Get profile from anomaly detector
+        profile = security_monitor.anomaly_detector.user_profiles.get(user_identifier)
+        
+        if not profile:
+            raise HTTPException(status_code=404, detail="User profile not found")
+        
+        # Calculate statistics
+        profile_data = {
+            "user_identifier": user_identifier,
+            "total_events": profile["total_events"],
+            "first_seen": profile["first_seen"].isoformat() if profile["first_seen"] else None,
+            "last_seen": profile["last_seen"].isoformat() if profile["last_seen"] else None,
+            "profile_age_days": security_monitor.anomaly_detector._get_profile_age_days(profile),
+            "login_count": len(profile["login_times"]),
+            "unique_ips": len(set(profile["login_ips"])),
+            "failed_login_count": len(profile["failed_logins"]),
+            "average_contract_amount": sum(profile["contract_amounts"]) / len(profile["contract_amounts"]) if profile["contract_amounts"] else 0,
+            "api_calls_count": len(profile["api_calls"])
+        }
+        
+        # Log activity
+        admin_system.log_admin_activity(
+            admin["admin_id"],
+            "view_user_security_profile",
+            target_type="user",
+            target_id=user_identifier
+        )
+        
+        return {
+            "success": True,
+            "profile": profile_data,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting user profile: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/security/siem-status")
+async def get_siem_status(admin: Dict[str, Any] = Depends(verify_admin)):
+    """
+    Get status of SIEM integrations.
+    
+    Shows which SIEMs are configured and active.
+    """
+    try:
+        import os
+        
+        siem_status = {
+            "splunk": {
+                "configured": bool(os.getenv('SPLUNK_HEC_URL') and os.getenv('SPLUNK_HEC_TOKEN')),
+                "url": os.getenv('SPLUNK_HEC_URL', 'Not configured')
+            },
+            "elasticsearch": {
+                "configured": bool(os.getenv('ELASTIC_URL')),
+                "url": os.getenv('ELASTIC_URL', 'Not configured'),
+                "index": os.getenv('ELASTIC_INDEX', 'gigchain-security')
+            },
+            "datadog": {
+                "configured": bool(os.getenv('DATADOG_API_KEY')),
+                "site": os.getenv('DATADOG_SITE', 'datadoghq.com')
+            }
+        }
+        
+        active_siems = sum(1 for siem in siem_status.values() if siem["configured"])
+        
+        # Log activity
+        admin_system.log_admin_activity(
+            admin["admin_id"],
+            "view_siem_status"
+        )
+        
+        return {
+            "success": True,
+            "active_integrations": active_siems,
+            "total_adapters": len(security_monitor.siem_adapters),
+            "siems": siem_status,
+            "ai_anomaly_detection": "enabled",
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting SIEM status: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/security/test-alert")
+async def test_security_alert(admin: Dict[str, Any] = Depends(verify_super_admin)):
+    """
+    Send test security event to all configured SIEMs.
+    
+    Super Admin only - Used to test SIEM integrations.
+    """
+    try:
+        # Create test event
+        test_event = log_security_event(
+            category=EventCategory.SYSTEM.value,
+            action="test_alert",
+            result="success",
+            severity=EventSeverity.INFO.value,
+            user_id=admin["admin_id"],
+            ip_address="127.0.0.1",
+            details={
+                "test": True,
+                "message": "This is a test security alert",
+                "admin": admin["username"]
+            }
+        )
+        
+        # Log activity
+        admin_system.log_admin_activity(
+            admin["admin_id"],
+            "test_security_alert"
+        )
+        
+        return {
+            "success": True,
+            "message": "Test alert sent to all configured SIEMs",
+            "event_id": test_event.event_id,
+            "siems_notified": len(security_monitor.siem_adapters),
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error sending test alert: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
