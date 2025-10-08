@@ -47,6 +47,24 @@ from gamification_api import router as gamification_router
 # Import Token System
 from token_api import router as token_router
 
+# Import I18n System
+from i18n_api import router as i18n_router
+
+# Import Analytics System
+from analytics_api import router as analytics_router
+
+# Import Dispute Oracle System
+from dispute_oracle_api import router as dispute_oracle_router
+
+# Import Reputation NFT System
+from reputation_nft_api import router as reputation_nft_router
+
+# Import Template Marketplace System
+from template_marketplace_api import router as marketplace_router
+
+# Import Admin System
+from admin_api import router as admin_router
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -89,6 +107,24 @@ app.include_router(gamification_router)
 
 # Include token router
 app.include_router(token_router)
+
+# Include i18n router
+app.include_router(i18n_router)
+
+# Include analytics router
+app.include_router(analytics_router)
+
+# Include dispute oracle router
+app.include_router(dispute_oracle_router)
+
+# Include reputation NFT router
+app.include_router(reputation_nft_router)
+
+# Include marketplace router
+app.include_router(marketplace_router)
+
+# Include admin router
+app.include_router(admin_router)
 
 # CORS middleware - Production-ready configuration
 # Get allowed origins from environment or use defaults

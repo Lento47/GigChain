@@ -1,0 +1,30 @@
+{
+  "name": "gigchain-admin-panel",
+  "version": "1.0.0",
+  "description": "GigChain.io Admin Panel - Platform Management Dashboard",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 3001",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.20.0",
+    "axios": "^1.7.7",
+    "recharts": "^2.10.3",
+    "lucide-react": "^0.445.0",
+    "@tanstack/react-table": "^8.11.0",
+    "date-fns": "^3.0.0",
+    "zustand": "^4.4.7"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.3",
+    "vite": "^5.4.10",
+    "vitest": "^1.0.4"
+  }
+}
