@@ -270,8 +270,17 @@ def parse_input(text: str) -> ParsedAmounts:
     return _classify_amounts(text, amounts_raw)
 
 
-def full_flow(text: str) -> Dict[str, Any]:
-    """Full AI-powered flow with agent chaining for complex negotiations."""
+def full_flow(text: str, store_ipfs: bool = False) -> Dict[str, Any]:
+    """
+    Full AI-powered flow with agent chaining for complex negotiations.
+    
+    Args:
+        text: Contract description text
+        store_ipfs: Whether to store the contract on IPFS
+        
+    Returns:
+        Contract data with optional IPFS CID
+    """
     from agents import chain_agents, AgentInput
     
     parsed = parse_input(text)
@@ -291,11 +300,28 @@ def full_flow(text: str) -> Dict[str, Any]:
     )
     
     if complexity == "low":
-        return generate_contract(text)  # Rule-based fallback
+        result = generate_contract(text)  # Rule-based fallback
     else:
         ai_output = chain_agents(input_data)
-        return {
+        result = {
             "contract_id": f"gig_{_dt.datetime.now().isoformat()}",
             "json": ai_output,
             "escrow_ready": True  # Para Thirdweb deploy
         }
+    
+    # Store on IPFS if requested
+    if store_ipfs:
+        try:
+            from ipfs_storage import upload_contract_to_ipfs
+            cid = upload_contract_to_ipfs(result, pin=True)
+            if cid:
+                result['ipfs_cid'] = cid
+                result['ipfs_stored'] = True
+                result['ipfs_gateway'] = f"https://ipfs.io/ipfs/{cid}"
+        except Exception as e:
+            import logging
+            logging.warning(f"Failed to store contract on IPFS: {str(e)}")
+            result['ipfs_stored'] = False
+            result['ipfs_error'] = str(e)
+    
+    return result

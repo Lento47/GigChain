@@ -62,6 +62,10 @@ redis==5.0.8  # Token revocation cache
 # boto3==1.35.0  # AWS KMS (uncomment if using AWS)
 # hvac==2.3.0  # HashiCorp Vault (uncomment if using Vault)
 
+# IPFS Integration
+ipfshttpclient==0.8.0a2  # IPFS Python client
+py-cid==0.3.0  # Content Identifier utilities
+
 # Additional utilities
 typing-extensions==4.12.2
 annotated-types==0.7.0
