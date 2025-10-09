@@ -46,6 +46,16 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      // Path aliases for cleaner imports
+      '@': path.resolve(__dirname, './src'),
+      '@views': path.resolve(__dirname, './src/views'),
+      '@components': path.resolve(__dirname, './src/components'),
+      '@hooks': path.resolve(__dirname, './src/hooks'),
+      '@utils': path.resolve(__dirname, './src/utils'),
+      '@services': path.resolve(__dirname, './src/services'),
+      '@constants': path.resolve(__dirname, './src/constants'),
+      '@styles': path.resolve(__dirname, './src/styles'),
+      // Node polyfills
       buffer: 'buffer',
       process: 'process/browser',
       stream: 'stream-browserify',

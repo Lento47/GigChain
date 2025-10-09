@@ -1,39 +1,31 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { ThirdwebProvider, useAddress, useDisconnect } from '@thirdweb-dev/react';
 import { Mumbai } from '@thirdweb-dev/chains';
 import { MessageSquare, Eye, Send } from 'lucide-react';
 
-// Import components from new structure
-import { Sidebar } from './components/layout/Sidebar';
-import { Header } from './components/layout/Header';
-import { DashboardView } from './components/dashboard/DashboardView';
-import { InteractiveChart } from './components/dashboard/InteractiveChart';
-import { JobsModal } from './components/dashboard/JobsModal';
-import WalletConnection from './components/WalletConnection';
-// NetworkAlert removed - now handled in NotificationCenter
-import ContractStatus from './components/ContractStatus';
-import ThirdwebStatus from './components/ThirdwebStatus';
-import StatsWidget, { RealTimeStats } from './components/StatsWidget';
-import ChartWidget, { RevenueChart, ContractsChart } from './components/ChartWidget';
-import NotificationCenter, { NotificationProvider, useNotifications } from './components/NotificationCenter';
-
-// Import new views
-import { TemplatesView } from './components/views/TemplatesView';
-import { TransactionsView } from './components/views/TransactionsView';
-import { AIAgentsView } from './components/views/AIAgentsView';
-import { WalletsView } from './components/views/WalletsView';
-import { PaymentsView } from './components/views/PaymentsView';
-import { SettingsView } from './components/views/SettingsView';
-import { HelpView } from './components/views/HelpView';
+// Import components from new structure (non-lazy for layout)
+import { Sidebar, Header } from './components/layout';
+import { DashboardView } from './views/Dashboard';
+import { WalletConnection, ContractStatus } from './components/features';
+import { NotificationCenter, NotificationProvider, useNotifications } from './components/common';
 import { useWallet } from './hooks/useWallet';
 
-// Import new home and legal pages
-import HomePage from './components/HomePage';
-import TermsOfService from './components/legal/TermsOfService';
-import PrivacyPolicy from './components/legal/PrivacyPolicy';
-import ProhibitedActivities from './components/legal/ProhibitedActivities';
-import License from './components/legal/License';
-import CookieConsent from './components/CookieConsent';
+// Lazy load views for code splitting (improves initial load time)
+const TemplatesView = lazy(() => import('./views/Templates'));
+const TransactionsView = lazy(() => import('./views/Transactions'));
+const AIAgentsView = lazy(() => import('./views/AIAgents'));
+const WalletsView = lazy(() => import('./views/Wallets'));
+const PaymentsView = lazy(() => import('./views/Payments'));
+const SettingsView = lazy(() => import('./views/Settings'));
+const HelpView = lazy(() => import('./views/Help'));
+
+// Lazy load home and legal pages (rarely accessed)
+const HomePage = lazy(() => import('./views/Home'));
+const TermsOfService = lazy(() => import('./views/Legal').then(module => ({ default: module.TermsOfService })));
+const PrivacyPolicy = lazy(() => import('./views/Legal').then(module => ({ default: module.PrivacyPolicy })));
+const ProhibitedActivities = lazy(() => import('./views/Legal').then(module => ({ default: module.ProhibitedActivities })));
+const License = lazy(() => import('./views/Legal').then(module => ({ default: module.License })));
+const CookieConsent = lazy(() => import('./components/common/CookieConsent/CookieConsent'));
 
 // Import hooks and utilities
 import { useDashboardMetrics } from './hooks/useDashboardMetrics';
@@ -44,7 +36,31 @@ import { logger } from './utils/logger';
 
 import './styles/index.css';
 
-// Chat AI Component
+// Loading Fallback Component
+const LoadingFallback = () => (
+  <div className="loading-container" style={{ 
+    display: 'flex', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    minHeight: '400px',
+    color: '#94a3b8'
+  }}>
+    <div style={{ textAlign: 'center' }}>
+      <div className="spinner" style={{
+        width: '40px',
+        height: '40px',
+        border: '4px solid #e2e8f0',
+        borderTop: '4px solid #667eea',
+        borderRadius: '50%',
+        animation: 'spin 1s linear infinite',
+        margin: '0 auto 1rem'
+      }}></div>
+      <p>Cargando...</p>
+    </div>
+  </div>
+);
+
+// Chat AI Component (Memoized to prevent unnecessary re-renders)
 const ChatAI = ({ isConnected, walletInfo }) => {
   const [messages, setMessages] = useState([
     {
@@ -157,12 +173,13 @@ const ChatAI = ({ isConnected, walletInfo }) => {
   );
 };
 
-// Main Content Component
-const MainContent = ({ currentView, walletInfo, isConnected, onViewChange }) => {
+// Main Content Component (Memoized to prevent unnecessary re-renders)
+const MainContent = React.memo(({ currentView, walletInfo, isConnected, onViewChange }) => {
   const { metrics, contracts, isLoading } = useDashboardMetrics();
   const [showJobsModal, setShowJobsModal] = useState(false);
 
   const renderView = () => {
+    // Wrap lazy-loaded views in Suspense
     switch (currentView) {
       case 'dashboard':
         return (
@@ -186,26 +203,50 @@ const MainContent = ({ currentView, walletInfo, isConnected, onViewChange }) => 
         return (
           <div className="analytics-view">
             <h2>Analíticas</h2>
-            <div className="charts-container">
-              <RevenueChart />
-              <ContractsChart />
-            </div>
           </div>
         );
       case 'templates':
-        return <TemplatesView />;
+        return (
+          <Suspense fallback={<LoadingFallback />}>
+            <TemplatesView />
+          </Suspense>
+        );
       case 'transactions':
-        return <TransactionsView />;
+        return (
+          <Suspense fallback={<LoadingFallback />}>
+            <TransactionsView />
+          </Suspense>
+        );
       case 'ai':
-        return <AIAgentsView />;
+        return (
+          <Suspense fallback={<LoadingFallback />}>
+            <AIAgentsView />
+          </Suspense>
+        );
       case 'wallets':
-        return <WalletsView />;
+        return (
+          <Suspense fallback={<LoadingFallback />}>
+            <WalletsView />
+          </Suspense>
+        );
       case 'payments':
-        return <PaymentsView />;
+        return (
+          <Suspense fallback={<LoadingFallback />}>
+            <PaymentsView />
+          </Suspense>
+        );
       case 'settings':
-        return <SettingsView />;
+        return (
+          <Suspense fallback={<LoadingFallback />}>
+            <SettingsView />
+          </Suspense>
+        );
       case 'help':
-        return <HelpView />;
+        return (
+          <Suspense fallback={<LoadingFallback />}>
+            <HelpView />
+          </Suspense>
+        );
       default:
         return (
           <DashboardView 
@@ -241,7 +282,9 @@ const MainContent = ({ currentView, walletInfo, isConnected, onViewChange }) => 
       )}
     </div>
   );
-};
+});
+
+MainContent.displayName = 'MainContent';
 
 // Internal App Component (uses Thirdweb hooks)
 const InternalApp = () => {
@@ -303,27 +346,43 @@ const InternalApp = () => {
     isSwitching
   };
 
-  // Render legal pages
+  // Render legal pages (lazy-loaded)
   if (currentView === 'terms') {
-    return <TermsOfService onClose={() => setCurrentView('home')} />;
+    return (
+      <Suspense fallback={<LoadingFallback />}>
+        <TermsOfService onClose={() => setCurrentView('home')} />
+      </Suspense>
+    );
   }
   if (currentView === 'privacy') {
-    return <PrivacyPolicy onClose={() => setCurrentView('home')} />;
+    return (
+      <Suspense fallback={<LoadingFallback />}>
+        <PrivacyPolicy onClose={() => setCurrentView('home')} />
+      </Suspense>
+    );
   }
   if (currentView === 'prohibited') {
-    return <ProhibitedActivities onClose={() => setCurrentView('home')} />;
+    return (
+      <Suspense fallback={<LoadingFallback />}>
+        <ProhibitedActivities onClose={() => setCurrentView('home')} />
+      </Suspense>
+    );
   }
   if (currentView === 'license') {
-    return <License onClose={() => setCurrentView('home')} />;
+    return (
+      <Suspense fallback={<LoadingFallback />}>
+        <License onClose={() => setCurrentView('home')} />
+      </Suspense>
+    );
   }
 
-  // Show home page if not connected
+  // Show home page if not connected (lazy-loaded)
   if (!isConnected && currentView === 'home') {
     return (
-      <>
+      <Suspense fallback={<LoadingFallback />}>
         <HomePage onGetStarted={handleGetStarted} onNavigate={handleViewChange} />
         {showCookieConsent && <CookieConsent onAccept={handleCookieAccept} />}
-      </>
+      </Suspense>
     );
   }
 
