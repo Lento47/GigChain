@@ -4,30 +4,28 @@ import { Mumbai } from '@thirdweb-dev/chains';
 import { MessageSquare, Eye, Send } from 'lucide-react';
 
 // Import components from new structure (non-lazy for layout)
-import { Sidebar } from './components/layout/Sidebar';
-import { Header } from './components/layout/Header';
-import { DashboardView } from './components/dashboard/DashboardView';
-import WalletConnection from './components/WalletConnection';
-import ContractStatus from './components/ContractStatus';
-import NotificationCenter, { NotificationProvider, useNotifications } from './components/NotificationCenter';
+import { Sidebar, Header } from './components/layout';
+import { DashboardView } from './views/Dashboard';
+import { WalletConnection, ContractStatus } from './components/features';
+import { NotificationCenter, NotificationProvider, useNotifications } from './components/common';
 import { useWallet } from './hooks/useWallet';
 
 // Lazy load views for code splitting (improves initial load time)
-const TemplatesView = lazy(() => import('./components/views/TemplatesView'));
-const TransactionsView = lazy(() => import('./components/views/TransactionsView'));
-const AIAgentsView = lazy(() => import('./components/views/AIAgentsView'));
-const WalletsView = lazy(() => import('./components/views/WalletsView'));
-const PaymentsView = lazy(() => import('./components/views/PaymentsView'));
-const SettingsView = lazy(() => import('./components/views/SettingsView'));
-const HelpView = lazy(() => import('./components/views/HelpView'));
+const TemplatesView = lazy(() => import('./views/Templates'));
+const TransactionsView = lazy(() => import('./views/Transactions'));
+const AIAgentsView = lazy(() => import('./views/AIAgents'));
+const WalletsView = lazy(() => import('./views/Wallets'));
+const PaymentsView = lazy(() => import('./views/Payments'));
+const SettingsView = lazy(() => import('./views/Settings'));
+const HelpView = lazy(() => import('./views/Help'));
 
-// Lazy load legal pages (rarely accessed)
-const HomePage = lazy(() => import('./components/HomePage'));
-const TermsOfService = lazy(() => import('./components/legal/TermsOfService'));
-const PrivacyPolicy = lazy(() => import('./components/legal/PrivacyPolicy'));
-const ProhibitedActivities = lazy(() => import('./components/legal/ProhibitedActivities'));
-const License = lazy(() => import('./components/legal/License'));
-const CookieConsent = lazy(() => import('./components/CookieConsent'));
+// Lazy load home and legal pages (rarely accessed)
+const HomePage = lazy(() => import('./views/Home'));
+const TermsOfService = lazy(() => import('./views/Legal').then(module => ({ default: module.TermsOfService })));
+const PrivacyPolicy = lazy(() => import('./views/Legal').then(module => ({ default: module.PrivacyPolicy })));
+const ProhibitedActivities = lazy(() => import('./views/Legal').then(module => ({ default: module.ProhibitedActivities })));
+const License = lazy(() => import('./views/Legal').then(module => ({ default: module.License })));
+const CookieConsent = lazy(() => import('./components/common/CookieConsent/CookieConsent'));
 
 // Import hooks and utilities
 import { useDashboardMetrics } from './hooks/useDashboardMetrics';

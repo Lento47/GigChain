@@ -4,7 +4,7 @@ import axios from 'axios';
 import { API_BASE_URL } from '../../constants/api';
 import { logger } from '../../utils/logger';
 import useDebounce from '../../hooks/useDebounce';
-import '../../styles/views/ai-agents.css';
+import './AIAgents.css';
 
 const AIAgentsView = React.memo(() => {
   const [searchTerm, setSearchTerm] = useState('');

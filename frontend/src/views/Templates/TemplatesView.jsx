@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { FileText, Copy, Plus, Search, Filter, Code } from 'lucide-react';
 import useDebounce from '../../hooks/useDebounce';
-import '../../styles/views/templates.css';
+import './Templates.css';
 
 const TemplatesView = React.memo(() => {
   const [searchTerm, setSearchTerm] = useState('');
