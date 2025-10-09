@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Shield, Menu, X } from 'lucide-react';
-import '../styles/components/home-navbar.css';
+import './home-navbar.css';
 
 const HomeNavbar = ({ onGetStarted }) => {
   const [isScrolled, setIsScrolled] = useState(false);

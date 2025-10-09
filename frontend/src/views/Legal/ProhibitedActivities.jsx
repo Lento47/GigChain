@@ -1,6 +1,6 @@
 import React from 'react';
 import { AlertTriangle, Ban, Shield, FileX } from 'lucide-react';
-import '../../styles/components/legal.css';
+import './Legal.css';
 
 const ProhibitedActivities = ({ onClose }) => {
   return (

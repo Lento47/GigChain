@@ -1,10 +1,10 @@
 import React, { useState, useCallback } from 'react';
 import { FileText, Zap } from 'lucide-react';
-import { useNotifications } from '../../components/NotificationCenter';
+import { useNotifications } from '../../components/common/NotificationCenter/NotificationCenter';
 import InteractiveChart from './InteractiveChart';
 import JobsModal from './JobsModal';
-import ContractSetup from '../ContractSetup';
-import { MetricSkeleton } from '../LoadingSpinner';
+import ContractSetup from '../../components/features/Contract/ContractSetup';
+import { MetricSkeleton } from '../../components/common/LoadingSpinner/LoadingSpinner';
 import { logger } from '../../utils/logger';
 
 const DashboardView = React.memo(({ metrics, isLoading = false }) => {

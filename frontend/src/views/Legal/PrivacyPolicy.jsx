@@ -1,6 +1,6 @@
 import React from 'react';
 import { Lock, Eye, Database, Shield, CheckCircle, AlertCircle } from 'lucide-react';
-import '../../styles/components/legal.css';
+import './Legal.css';
 
 const PrivacyPolicy = ({ onClose }) => {
   return (

@@ -282,7 +282,9 @@ const MainContent = React.memo(({ currentView, walletInfo, isConnected, onViewCh
       )}
     </div>
   );
-};
+});
+
+MainContent.displayName = 'MainContent';
 
 // Internal App Component (uses Thirdweb hooks)
 const InternalApp = () => {

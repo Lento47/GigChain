@@ -9,8 +9,8 @@
 import React, { useState } from 'react';
 import { useAddress, useDisconnect } from '@thirdweb-dev/react';
 import { Shield, Lock, Unlock, LogOut, CheckCircle, AlertCircle } from 'lucide-react';
-import { useWalletAuth } from '../hooks/useWalletAuth';
-import './WalletAuthButton.css';
+import { useWalletAuth } from '../../../hooks/useWalletAuth';
+import './Wallet.css';
 
 export const WalletAuthButton = ({ onAuthChange, className = '' }) => {
   const address = useAddress();

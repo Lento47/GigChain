@@ -1,29 +1,14 @@
 /* GigChain.io - Main Styles Entry Point */
 
-/* Import Component Styles - MUST BE FIRST */
-@import './layout/sidebar.css';
-@import './layout/header.css';
-@import './dashboard/dashboard.css';
-@import './dashboard/chart.css';
-@import './dashboard/modal.css';
-@import './components/wallet.css';
-@import './components/notifications.css';
+/* NOTE: Most styles are now co-located with components and imported directly */
+/* This file contains ONLY global styles, utilities, and shared components */
+
+/* Import Global Utility Styles */
 @import './components/buttons.css';
 @import './components/forms.css';
 @import './components/network-alert.css';
-@import './components/contract-setup.css';
-@import './components/loading.css';
 @import './utils/animations.css';
 @import './utils/responsive.css';
-
-/* Import view styles */
-@import './views/templates.css';
-@import './views/transactions.css';
-@import './views/ai-agents.css';
-@import './views/wallets.css';
-@import './views/payments.css';
-@import './views/settings.css';
-@import './views/help.css';
 
 /* CSS Variables and Global Styles */
 :root {

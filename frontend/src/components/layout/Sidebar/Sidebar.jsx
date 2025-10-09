@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAddress, useDisconnect } from '@thirdweb-dev/react';
 import { BarChart3, FileText, Code, Zap, MessageSquare, Settings, Wallet, ChevronLeft, ChevronRight, Home, TrendingUp, Users, CreditCard } from 'lucide-react';
-import { truncateWalletAddress } from '../../utils/walletUtils';
+import { truncateWalletAddress } from '../../../utils/walletUtils';
 
 const Sidebar = ({ currentView, onViewChange, walletInfo, isConnected }) => {
   const [isOpen, setIsOpen] = React.useState(true);

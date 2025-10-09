@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ConnectWallet, useAddress, useDisconnect } from '@thirdweb-dev/react';
 import { Wallet, AlertCircle, CheckCircle, ExternalLink, Copy, ChevronDown } from 'lucide-react';
-import { useWallet } from '../hooks/useWallet';
-import './WalletConnection.css';
+import { useWallet } from '../../../hooks/useWallet';
+import './Wallet.css';
 
 // Función para truncar direcciones de wallet
 const truncateWalletAddress = (address, startChars = 6, endChars = 4) => {

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Search, RefreshCw, Bell } from 'lucide-react';
-import WalletConnection from '../WalletConnection';
-import NotificationCenter from '../NotificationCenter';
+import WalletConnection from '../../features/Wallet/WalletConnection';
+import NotificationCenter from '../../common/NotificationCenter/NotificationCenter';
 
 const Header = ({ currentView, walletInfo, isConnected }) => {
   const getPageTitle = () => {

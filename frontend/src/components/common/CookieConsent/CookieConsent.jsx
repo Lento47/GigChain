@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Cookie, Shield, Settings, X, Check } from 'lucide-react';
-import { logger } from '../utils/logger';
-import '../styles/components/cookie-consent.css';
+import { logger } from '../../../utils/logger';
+import './CookieConsent.css';
 
 const CookieConsent = ({ onAccept }) => {
   const [isVisible, setIsVisible] = useState(false);

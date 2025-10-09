@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FileText, CheckCircle, Clock, AlertTriangle, DollarSign, Calendar, Users, Shield } from 'lucide-react';
-import { useContractManager } from '../hooks/useContract';
+import { useContractManager } from '../../../hooks/useContract';
 
 export const ContractStatus = ({ contractAddress, onAction }) => {
   const {

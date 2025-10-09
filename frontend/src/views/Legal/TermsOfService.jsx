@@ -1,6 +1,6 @@
 import React from 'react';
 import { FileText, Shield, AlertCircle, CheckCircle } from 'lucide-react';
-import '../../styles/components/legal.css';
+import './Legal.css';
 
 const TermsOfService = ({ onClose }) => {
   return (

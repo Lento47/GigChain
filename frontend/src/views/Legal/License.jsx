@@ -1,6 +1,6 @@
 import React from 'react';
 import { FileCode, Github, Shield, Code, AlertCircle } from 'lucide-react';
-import '../../styles/components/legal.css';
+import './Legal.css';
 
 const License = ({ onClose }) => {
   return (

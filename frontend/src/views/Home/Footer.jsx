@@ -1,7 +1,7 @@
 import React from 'react';
 import { Github, Twitter, MessageCircle, Mail, Shield, FileText, Lock, AlertTriangle, Code } from 'lucide-react';
-import { CookieSettingsButton } from './CookieConsent';
-import '../styles/components/footer.css';
+import { CookieSettingsButton } from '../../components/common/CookieConsent/CookieConsent';
+import './footer.css';
 
 const Footer = ({ onNavigate }) => {
   const currentYear = new Date().getFullYear();

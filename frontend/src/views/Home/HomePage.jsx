@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Shield, Zap, Lock, Users, FileCheck, TrendingUp, CheckCircle, Globe, Award, ChevronDown } from 'lucide-react';
 import HomeNavbar from './HomeNavbar';
 import Footer from './Footer';
-import '../styles/components/home-page.css';
+import './home-page.css';
 
 const HomePage = ({ onGetStarted, onNavigate }) => {
   const [scrollY, setScrollY] = useState(0);
