@@ -1,288 +1,167 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Wallet, Plus, Copy, ExternalLink, TrendingUp, TrendingDown, Eye, EyeOff, Search } from 'lucide-react';
+import useDebounce from '../../hooks/useDebounce';
 import { logger } from '../../utils/logger';
+import './Wallets.css';
 
-// Inline styles
-const styles = {
-  view: {
-    padding: '2rem',
-    background: '#f8fafc',
-    minHeight: '100vh'
-  },
-  title: {
-    fontSize: '1.75rem',
-    fontWeight: '700',
-    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-    backgroundClip: 'text',
-    margin: '0 0 0.5rem 0'
-  },
-  subtitle: {
-    fontSize: '1.1rem',
-    color: '#94a3b8',
-    margin: '0 0 2rem 0'
-  },
-  grid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
-    gap: '1.5rem'
-  },
-  card: {
-    background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
-    border: '1px solid #475569',
-    borderRadius: '16px',
-    padding: '1.5rem',
-    transition: 'all 0.3s ease'
-  },
-  cardHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '1rem',
-    marginBottom: '1rem'
-  },
-  walletIcon: {
-    width: '50px',
-    height: '50px',
-    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-    borderRadius: '12px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: 'white'
-  },
-  walletName: {
-    fontSize: '1.25rem',
-    fontWeight: '600',
-    color: '#e2e8f0',
-    margin: '0'
-  },
-  walletAddress: {
-    fontSize: '0.9rem',
-    color: '#94a3b8',
-    margin: '0.25rem 0 0 0'
-  },
-  balance: {
-    textAlign: 'center',
-    marginBottom: '1rem',
-    padding: '1rem',
-    background: 'rgba(15, 23, 42, 0.5)',
-    borderRadius: '12px'
-  },
-  balanceAmount: {
-    fontSize: '1.5rem',
-    fontWeight: '700',
-    color: '#e2e8f0'
-  },
-  balanceCurrency: {
-    fontSize: '1rem',
-    color: '#f59e0b',
-    fontWeight: '600'
-  },
-  stats: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    marginBottom: '1rem',
-    fontSize: '0.9rem'
-  },
-  statItem: {
-    textAlign: 'center',
-    flex: 1
-  },
-  statLabel: {
-    color: '#64748b',
-    fontSize: '0.8rem'
-  },
-  statValue: {
-    color: '#e2e8f0',
-    fontWeight: '600'
-  },
-  actions: {
-    display: 'flex',
-    gap: '0.5rem'
-  },
-  btn: {
-    flex: 1,
-    padding: '0.5rem',
-    border: 'none',
-    borderRadius: '8px',
-    fontSize: '0.85rem',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'all 0.3s ease'
-  },
-  btnPrimary: {
-    background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-    color: 'white'
-  },
-  btnSecondary: {
-    background: 'rgba(30, 41, 59, 0.8)',
-    color: '#94a3b8',
-    border: '1px solid #475569'
-  }
-};
-
-const WalletsView = () => {
+const WalletsView = React.memo(() => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [showPrivateKeys, setShowPrivateKeys] = useState(false);
+  const [showBalances, setShowBalances] = useState(true);
+  
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   const wallets = [
     {
       id: 1,
-      name: 'Wallet Principal',
-      address: '0x1234567890abcdef1234567890abcdef12345678',
-      balance: '2,450.75',
+      name: 'Main Wallet',
+      address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
+      balance: '15,432.50',
       currency: 'USDC',
-      network: 'Mumbai',
-      isActive: true,
-      lastActivity: 'Hace 2 horas',
-      transactions: 45,
-      totalReceived: '15,230.50',
-      totalSent: '12,779.75'
+      change: '+12.5',
+      network: 'Polygon',
+      isConnected: true
     },
     {
       id: 2,
-      name: 'Wallet de Ahorros',
-      address: '0x9876543210fedcba9876543210fedcba98765432',
-      balance: '5,200.00',
+      name: 'Business Wallet',
+      address: '0x3b48e45C12C4bb44c233D7a4893d2C5B6fa2f9E8',
+      balance: '8,720.00',
       currency: 'USDC',
-      network: 'Polygon',
-      isActive: false,
-      lastActivity: 'Hace 1 día',
-      transactions: 12,
-      totalReceived: '8,500.00',
-      totalSent: '3,300.00'
+      change: '+5.2',
+      network: 'Ethereum',
+      isConnected: true
     },
     {
       id: 3,
-      name: 'Wallet de Pruebas',
-      address: '0xabcdef1234567890abcdef1234567890abcdef12',
-      balance: '150.25',
-      currency: 'MATIC',
-      network: 'Mumbai',
-      isActive: true,
-      lastActivity: 'Hace 30 minutos',
-      transactions: 8,
-      totalReceived: '500.00',
-      totalSent: '349.75'
+      name: 'Savings Wallet',
+      address: '0x9fB29AAc15b9A4B7F17c3385939b007540F4d791',
+      balance: '24,156.75',
+      currency: 'USDC',
+      change: '-2.8',
+      network: 'Arbitrum',
+      isConnected: false
     }
   ];
 
-  const filteredWallets = wallets.filter(wallet => 
-    wallet.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    wallet.address.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredWallets = useMemo(() => {
+    return wallets.filter(wallet => 
+      wallet.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+      wallet.address.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+      wallet.network.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+    );
+  }, [wallets, debouncedSearchTerm]);
 
-  const handleCopyAddress = (address) => {
+  const handleCopyAddress = useCallback((address) => {
     navigator.clipboard.writeText(address);
-    logger.action('wallet_address_copied', { address: address.substring(0, 10) + '...' });
-  };
+    logger.action('copy_wallet_address', { address });
+    alert('Dirección copiada al portapapeles');
+  }, []);
 
-  const handleViewOnExplorer = (address, network) => {
-    const explorerUrl = network === 'Mumbai' 
-      ? `https://mumbai.polygonscan.com/address/${address}`
-      : `https://polygonscan.com/address/${address}`;
-    window.open(explorerUrl, '_blank');
-  };
-
-  const handleCreateWallet = () => {
-    try {
-      alert('Creación de wallet. Por favor, conecta tu wallet usando el botón de conexión en el header.');
-      // En producción, esto abriría un modal para conectar wallet
-    } catch (error) {
-      console.error('Error creating wallet:', error);
-      alert('Error al crear wallet. Por favor, intenta de nuevo.');
-    }
-  };
-
-  const handleToggleWallet = (wallet) => {
-    try {
-      // Toggle wallet active state (in production, this would update backend)
-      alert(`Wallet ${wallet.name} ${wallet.status === 'active' ? 'desactivada' : 'activada'} exitosamente.`);
-    } catch (error) {
-      console.error('Error toggling wallet:', error);
-      alert('Error al cambiar estado de la wallet. Por favor, intenta de nuevo.');
-    }
-  };
+  const handleAddWallet = useCallback(() => {
+    alert('Funcionalidad de agregar wallet. Esto abrirá un modal en producción.');
+    logger.action('add_wallet_clicked');
+  }, []);
 
   return (
-    <div style={styles.view}>
-      <h1 style={styles.title}>Gestión de Wallets</h1>
-      <p style={styles.subtitle}>Administra tus wallets y monitorea sus balances</p>
-
-      <div style={styles.grid}>
-        {filteredWallets.map(wallet => (
-          <div key={wallet.id} style={styles.card}>
-            <div style={styles.cardHeader}>
-              <div style={styles.walletIcon}>
-                <Wallet size={24} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <h3 style={styles.walletName}>{wallet.name}</h3>
-                <p style={styles.walletAddress}>
-                  {wallet.address.slice(0, 6)}...{wallet.address.slice(-4)}
-                </p>
-              </div>
-              <div style={{
-                padding: '0.25rem 0.75rem',
-                borderRadius: '20px',
-                fontSize: '0.8rem',
-                fontWeight: '600',
-                background: wallet.isActive ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'rgba(107, 114, 128, 0.2)',
-                color: wallet.isActive ? 'white' : '#9ca3af'
-              }}>
-                {wallet.isActive ? 'Activa' : 'Inactiva'}
-              </div>
-            </div>
-
-            <div style={styles.balance}>
-              <div style={styles.balanceAmount}>{wallet.balance}</div>
-              <div style={styles.balanceCurrency}>{wallet.currency}</div>
-              <div style={{ fontSize: '0.9rem', color: '#94a3b8', marginTop: '0.5rem' }}>
-                Red: {wallet.network}
-              </div>
-            </div>
-
-            <div style={styles.stats}>
-              <div style={styles.statItem}>
-                <div style={styles.statLabel}>Transacciones</div>
-                <div style={styles.statValue}>{wallet.transactions}</div>
-              </div>
-              <div style={styles.statItem}>
-                <div style={styles.statLabel}>Última actividad</div>
-                <div style={styles.statValue}>{wallet.lastActivity}</div>
-              </div>
-            </div>
-
-            <div style={styles.actions}>
-              <button 
-                style={{...styles.btn, ...styles.btnPrimary}}
-                onClick={() => handleViewOnExplorer(wallet.address, wallet.network)}
-              >
-                <ExternalLink size={16} />
-                Explorer
-              </button>
-              <button 
-                style={{...styles.btn, ...styles.btnSecondary}}
-                onClick={() => handleToggleWallet(wallet)}
-              >
-                {wallet.isActive ? 'Desactivar' : 'Activar'}
-              </button>
-            </div>
-          </div>
-        ))}
+    <div className="wallets-view">
+      <div className="view-header">
+        <div className="header-info">
+          <h1>Wallets</h1>
+          <p>Gestiona tus carteras de criptomonedas</p>
+        </div>
+        
+        <div className="header-actions">
+          <button 
+            className="toggle-balance-btn"
+            onClick={() => setShowBalances(!showBalances)}
+          >
+            {showBalances ? <EyeOff size={20} /> : <Eye size={20} />}
+            {showBalances ? 'Ocultar' : 'Mostrar'} Balances
+          </button>
+          
+          <button 
+            className="add-wallet-btn"
+            onClick={handleAddWallet}
+          >
+            <Plus size={20} />
+            Nueva Wallet
+          </button>
+        </div>
       </div>
 
-      {filteredWallets.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '4rem 2rem', color: '#64748b' }}>
-          <Wallet size={48} style={{ opacity: 0.5, marginBottom: '1rem' }} />
-          <h3 style={{ fontSize: '1.5rem', margin: '0 0 0.5rem 0', color: '#94a3b8' }}>No se encontraron wallets</h3>
-          <p style={{ margin: '0', fontSize: '1rem' }}>Intenta ajustar los filtros de búsqueda</p>
+      <div className="wallets-content">
+        <div className="search-container">
+          <Search size={20} className="search-icon" />
+          <input
+            type="text"
+            placeholder="Buscar wallets..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="search-input"
+          />
         </div>
-      )}
+
+        <div className="wallets-grid">
+          {filteredWallets.map(wallet => (
+            <div key={wallet.id} className="wallet-card">
+              <div className="wallet-header">
+                <div className="wallet-icon">
+                  <Wallet size={24} />
+                </div>
+                <div className="wallet-info">
+                  <h3 className="wallet-name">{wallet.name}</h3>
+                  <p className="wallet-network">{wallet.network}</p>
+                </div>
+                <div className={`connection-status ${wallet.isConnected ? 'connected' : 'disconnected'}`}>
+                  {wallet.isConnected ? 'Conectada' : 'Desconectada'}
+                </div>
+              </div>
+
+              <div className="wallet-address-section">
+                <p className="wallet-address">{wallet.address}</p>
+                <button 
+                  className="copy-btn"
+                  onClick={() => handleCopyAddress(wallet.address)}
+                >
+                  <Copy size={16} />
+                </button>
+              </div>
+
+              {showBalances && (
+                <div className="wallet-balance">
+                  <div className="balance-amount">
+                    {wallet.balance} <span className="currency">{wallet.currency}</span>
+                  </div>
+                  <div className={`balance-change ${parseFloat(wallet.change) >= 0 ? 'positive' : 'negative'}`}>
+                    {parseFloat(wallet.change) >= 0 ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+                    {wallet.change}%
+                  </div>
+                </div>
+              )}
+
+              <div className="wallet-actions">
+                <button className="view-btn">
+                  <ExternalLink size={16} />
+                  Ver en Explorer
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {filteredWallets.length === 0 && (
+          <div className="no-wallets">
+            <Wallet size={48} className="no-wallets-icon" />
+            <h3>No se encontraron wallets</h3>
+            <p>Intenta ajustar los filtros de búsqueda</p>
+          </div>
+        )}
+      </div>
     </div>
   );
-};
+});
+
+WalletsView.displayName = 'WalletsView';
 
 export { WalletsView };
 export default WalletsView;

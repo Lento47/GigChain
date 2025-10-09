@@ -1,281 +1,183 @@
-import React, { useState } from 'react';
-import { Settings, Globe, Bell, Shield, Wifi, Lock } from 'lucide-react';
+import React, { useState, useCallback } from 'react';
+import { Settings, User, Bell, Shield, Globe, Moon, Sun, Save } from 'lucide-react';
+import './Settings.css';
 
-// Inline styles
-const styles = {
-  view: {
-    padding: '2rem',
-    background: '#f8fafc',
-    minHeight: '100vh'
-  },
-  title: {
-    fontSize: '1.5rem',
-    fontWeight: '700',
-    background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-    backgroundClip: 'text',
-    margin: '0 0 0.5rem 0'
-  },
-  subtitle: {
-    fontSize: '1.1rem',
-    color: '#94a3b8',
-    margin: '0 0 2rem 0'
-  },
-  content: {
-    display: 'flex',
-    gap: '2rem',
-    background: 'rgba(15, 23, 42, 0.5)',
-    borderRadius: '20px',
-    padding: '2rem',
-    border: '1px solid #334155'
-  },
-  tabs: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.5rem',
-    minWidth: '250px'
-  },
-  tab: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.75rem',
-    padding: '1rem 1.5rem',
-    background: 'rgba(30, 41, 59, 0.8)',
-    border: '1px solid #475569',
-    borderRadius: '12px',
-    color: '#94a3b8',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'all 0.3s ease'
-  },
-  tabActive: {
-    background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-    borderColor: '#6366f1',
-    color: 'white'
-  },
-  panel: {
-    flex: 1,
-    background: 'rgba(15, 23, 42, 0.8)',
-    border: '1px solid #334155',
-    borderRadius: '16px',
-    padding: '2rem'
-  },
-  sectionTitle: {
-    fontSize: '1.25rem',
-    color: '#e2e8f0',
-    margin: '0 0 2rem 0',
-    fontWeight: '600'
-  },
-  formGroup: {
-    marginBottom: '1.5rem'
-  },
-  label: {
-    display: 'block',
-    color: '#e2e8f0',
-    fontWeight: '600',
-    marginBottom: '0.75rem'
-  },
-  input: {
-    width: '100%',
-    padding: '0.875rem 1rem',
-    background: 'rgba(30, 41, 59, 0.8)',
-    border: '2px solid #475569',
-    borderRadius: '10px',
-    color: '#e2e8f0',
-    fontSize: '1rem',
-    transition: 'all 0.3s ease'
-  },
-  checkboxLabel: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.75rem',
-    cursor: 'pointer',
-    padding: '1rem',
-    background: 'rgba(30, 41, 59, 0.5)',
-    border: '1px solid #475569',
-    borderRadius: '10px',
-    transition: 'all 0.3s ease'
-  }
-};
+const SettingsView = React.memo(() => {
+  const [settings, setSettings] = useState({
+    notifications: true,
+    emailAlerts: false,
+    darkMode: false,
+    language: 'es',
+    timezone: 'UTC-5',
+    twoFactor: false
+  });
 
-const SettingsView = () => {
-  const [activeTab, setActiveTab] = useState('general');
+  const handleToggle = useCallback((key) => {
+    setSettings(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  }, []);
 
-  const tabs = [
-    { id: 'general', label: 'General', icon: Globe },
-    { id: 'notifications', label: 'Notificaciones', icon: Bell },
-    { id: 'security', label: 'Seguridad', icon: Shield },
-    { id: 'network', label: 'Red', icon: Wifi },
-    { id: 'privacy', label: 'Privacidad', icon: Lock }
-  ];
+  const handleChange = useCallback((key, value) => {
+    setSettings(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  }, []);
 
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'general':
-        return (
-          <div>
-            <h3 style={styles.sectionTitle}>Configuración General</h3>
-            <div style={styles.formGroup}>
-              <label style={styles.label} htmlFor="language">Idioma:</label>
-              <select style={styles.input} id="language" name="language">
-                <option value="es">Español</option>
-                <option value="en">English</option>
-              </select>
-            </div>
-            <div style={styles.formGroup}>
-              <label style={styles.label} htmlFor="currency">Moneda:</label>
-              <select style={styles.input} id="currency" name="currency">
-                <option value="USDC">USDC</option>
-                <option value="MATIC">MATIC</option>
-              </select>
-            </div>
-            <div style={styles.formGroup}>
-              <label style={styles.label} htmlFor="theme">Tema:</label>
-              <select style={styles.input} id="theme" name="theme">
-                <option value="dark">Oscuro</option>
-                <option value="light">Claro</option>
-              </select>
-            </div>
-          </div>
-        );
-      case 'notifications':
-        return (
-          <div>
-            <h3 style={styles.sectionTitle}>Notificaciones</h3>
-            <div style={styles.formGroup}>
-              <label style={styles.checkboxLabel}>
-                <input type="checkbox" defaultChecked />
-                <span>Notificaciones por Email</span>
-              </label>
-            </div>
-            <div style={styles.formGroup}>
-              <label style={styles.checkboxLabel}>
-                <input type="checkbox" />
-                <span>Notificaciones Push</span>
-              </label>
-            </div>
-            <div style={styles.formGroup}>
-              <label style={styles.checkboxLabel}>
-                <input type="checkbox" defaultChecked />
-                <span>Actualizaciones de Contratos</span>
-              </label>
-            </div>
-          </div>
-        );
-      case 'security':
-        return (
-          <div>
-            <h3 style={styles.sectionTitle}>Seguridad</h3>
-            <div style={styles.formGroup}>
-              <label style={styles.checkboxLabel}>
-                <input type="checkbox" />
-                <span>Autenticación de Dos Factores (2FA)</span>
-              </label>
-            </div>
-            <div style={styles.formGroup}>
-              <label style={styles.label} htmlFor="sessionTimeout">Tiempo de Sesión:</label>
-              <select style={styles.input} id="sessionTimeout" name="sessionTimeout">
-                <option value="15min">15 minutos</option>
-                <option value="30min">30 minutos</option>
-                <option value="1hour">1 hora</option>
-              </select>
-            </div>
-          </div>
-        );
-      case 'network':
-        return (
-          <div>
-            <h3 style={styles.sectionTitle}>Configuración de Red</h3>
-            <div style={styles.formGroup}>
-              <p style={{ color: '#94a3b8', marginBottom: '1rem' }}>
-                Red Actual: <strong style={{ color: '#e2e8f0' }}>Mumbai Testnet</strong>
-              </p>
-              <p style={{ color: '#94a3b8', marginBottom: '1rem' }}>
-                Redes Soportadas: Polygon Mainnet, Mumbai Testnet
-              </p>
-              <button style={{
-                padding: '0.75rem 1.5rem',
-                background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                fontWeight: '600',
-                cursor: 'pointer'
-              }}>
-                Cambiar Red
-              </button>
-            </div>
-          </div>
-        );
-      case 'privacy':
-        return (
-          <div>
-            <h3 style={styles.sectionTitle}>Privacidad</h3>
-            <div style={styles.formGroup}>
-              <label style={styles.checkboxLabel}>
-                <input type="checkbox" defaultChecked />
-                <span>Compartir datos anónimos para mejoras</span>
-              </label>
-            </div>
-            <div style={styles.formGroup}>
-              <label style={styles.checkboxLabel}>
-                <input type="checkbox" />
-                <span>Recibir comunicaciones de marketing</span>
-              </label>
-            </div>
-            <div style={styles.formGroup}>
-              <button style={{
-                padding: '0.75rem 1.5rem',
-                background: 'rgba(30, 41, 59, 0.8)',
-                color: '#94a3b8',
-                border: '1px solid #475569',
-                borderRadius: '8px',
-                fontWeight: '600',
-                cursor: 'pointer'
-              }}>
-                Solicitar mis datos
-              </button>
-            </div>
-          </div>
-        );
-      default:
-        return null;
-    }
-  };
+  const handleSave = useCallback(() => {
+    alert('Configuración guardada exitosamente');
+    console.log('Settings saved:', settings);
+  }, [settings]);
 
   return (
-    <div style={styles.view}>
-      <h1 style={styles.title}>Configuración</h1>
-      <p style={styles.subtitle}>Personaliza tu experiencia en GigChain</p>
+    <div className="settings-view">
+      <div className="view-header">
+        <div className="header-info">
+          <h1>Configuración</h1>
+          <p>Personaliza tu experiencia en GigChain</p>
+        </div>
+        <button className="save-btn" onClick={handleSave}>
+          <Save size={20} />
+          Guardar Cambios
+        </button>
+      </div>
 
-      <div style={styles.content}>
-        <div style={styles.tabs}>
-          {tabs.map(tab => {
-            const IconComponent = tab.icon;
-            return (
-              <div
-                key={tab.id}
-                style={{
-                  ...styles.tab,
-                  ...(activeTab === tab.id ? styles.tabActive : {})
-                }}
-                onClick={() => setActiveTab(tab.id)}
-              >
-                <IconComponent size={18} />
-                {tab.label}
-              </div>
-            );
-          })}
+      <div className="settings-content">
+        <div className="settings-section">
+          <div className="section-header">
+            <User size={24} />
+            <h2>Perfil</h2>
+          </div>
+          <div className="setting-item">
+            <div className="setting-info">
+              <h4>Nombre de Usuario</h4>
+              <p>Tu identificador en la plataforma</p>
+            </div>
+            <input 
+              type="text" 
+              className="setting-input"
+              placeholder="usuario123"
+            />
+          </div>
+          <div className="setting-item">
+            <div className="setting-info">
+              <h4>Email</h4>
+              <p>Correo electrónico para notificaciones</p>
+            </div>
+            <input 
+              type="email" 
+              className="setting-input"
+              placeholder="correo@ejemplo.com"
+            />
+          </div>
         </div>
 
-        <div style={styles.panel}>
-          {renderTabContent()}
+        <div className="settings-section">
+          <div className="section-header">
+            <Bell size={24} />
+            <h2>Notificaciones</h2>
+          </div>
+          <div className="setting-item">
+            <div className="setting-info">
+              <h4>Notificaciones Push</h4>
+              <p>Recibe notificaciones en tiempo real</p>
+            </div>
+            <label className="toggle">
+              <input 
+                type="checkbox" 
+                checked={settings.notifications}
+                onChange={() => handleToggle('notifications')}
+              />
+              <span className="toggle-slider"></span>
+            </label>
+          </div>
+          <div className="setting-item">
+            <div className="setting-info">
+              <h4>Alertas por Email</h4>
+              <p>Recibe actualizaciones importantes por correo</p>
+            </div>
+            <label className="toggle">
+              <input 
+                type="checkbox" 
+                checked={settings.emailAlerts}
+                onChange={() => handleToggle('emailAlerts')}
+              />
+              <span className="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div className="settings-section">
+          <div className="section-header">
+            <Globe size={24} />
+            <h2>Preferencias</h2>
+          </div>
+          <div className="setting-item">
+            <div className="setting-info">
+              <h4>Idioma</h4>
+              <p>Selecciona tu idioma preferido</p>
+            </div>
+            <select 
+              className="setting-select"
+              value={settings.language}
+              onChange={(e) => handleChange('language', e.target.value)}
+            >
+              <option value="es">Español</option>
+              <option value="en">English</option>
+              <option value="pt">Português</option>
+            </select>
+          </div>
+          <div className="setting-item">
+            <div className="setting-info">
+              <h4>Modo Oscuro</h4>
+              <p>Activa el tema oscuro</p>
+            </div>
+            <label className="toggle">
+              <input 
+                type="checkbox" 
+                checked={settings.darkMode}
+                onChange={() => handleToggle('darkMode')}
+              />
+              <span className="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div className="settings-section">
+          <div className="section-header">
+            <Shield size={24} />
+            <h2>Seguridad</h2>
+          </div>
+          <div className="setting-item">
+            <div className="setting-info">
+              <h4>Autenticación de Dos Factores</h4>
+              <p>Protege tu cuenta con 2FA</p>
+            </div>
+            <label className="toggle">
+              <input 
+                type="checkbox" 
+                checked={settings.twoFactor}
+                onChange={() => handleToggle('twoFactor')}
+              />
+              <span className="toggle-slider"></span>
+            </label>
+          </div>
+          <div className="setting-item">
+            <div className="setting-info">
+              <h4>Cambiar Contraseña</h4>
+              <p>Actualiza tu contraseña de seguridad</p>
+            </div>
+            <button className="change-password-btn">Cambiar</button>
+          </div>
         </div>
       </div>
     </div>
   );
-};
+});
+
+SettingsView.displayName = 'SettingsView';
 
 export { SettingsView };
 export default SettingsView;

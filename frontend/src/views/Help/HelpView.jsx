@@ -1,200 +1,124 @@
-import React, { useState } from 'react';
-import { HelpCircle, BookOpen, MessageSquare, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useState, useMemo, useCallback } from 'react';
+import { HelpCircle, Search, Book, MessageSquare, Mail, ExternalLink } from 'lucide-react';
+import useDebounce from '../../hooks/useDebounce';
+import './Help.css';
 
-// Inline styles
-const styles = {
-  view: {
-    padding: '2rem',
-    background: '#f8fafc',
-    minHeight: '100vh'
-  },
-  title: {
-    fontSize: '1.5rem',
-    fontWeight: '700',
-    background: 'linear-gradient(135deg, #ec4899 0%, #be185d 100%)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-    backgroundClip: 'text',
-    margin: '0 0 0.5rem 0'
-  },
-  subtitle: {
-    fontSize: '1.1rem',
-    color: '#94a3b8',
-    margin: '0 0 2rem 0'
-  },
-  sections: {
-    display: 'grid',
-    gap: '2rem'
-  },
-  section: {
-    background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
-    border: '1px solid #475569',
-    borderRadius: '16px',
-    padding: '2rem',
-    boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)'
-  },
-  sectionTitle: {
-    fontSize: '1.25rem',
-    color: '#e2e8f0',
-    margin: '0 0 1.5rem 0',
-    fontWeight: '600'
-  },
-  quickLinks: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-    gap: '1rem'
-  },
-  quickLink: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '0.75rem',
-    padding: '1.5rem',
-    background: 'rgba(15, 23, 42, 0.5)',
-    border: '1px solid #334155',
-    borderRadius: '12px',
-    color: '#94a3b8',
-    cursor: 'pointer',
-    transition: 'all 0.3s ease',
-    textDecoration: 'none'
-  },
-  faqItem: {
-    background: 'rgba(15, 23, 42, 0.5)',
-    border: '1px solid #334155',
-    borderRadius: '12px',
-    overflow: 'hidden',
-    marginBottom: '1rem'
-  },
-  faqQuestion: {
-    width: '100%',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '1.5rem',
-    background: 'transparent',
-    border: 'none',
-    color: '#e2e8f0',
-    fontSize: '1rem',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'all 0.3s ease',
-    textAlign: 'left'
-  },
-  faqAnswer: {
-    padding: '0 1.5rem 1.5rem 1.5rem',
-    color: '#94a3b8',
-    lineHeight: '1.6'
-  },
-  contactBtn: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.5rem',
-    padding: '0.75rem 1.5rem',
-    background: 'linear-gradient(135deg, #ec4899 0%, #be185d 100%)',
-    color: 'white',
-    border: 'none',
-    borderRadius: '12px',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'all 0.3s ease',
-    boxShadow: '0 4px 20px rgba(236, 72, 153, 0.3)'
-  }
-};
+const HelpView = React.memo(() => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
-const HelpView = () => {
-  const [openFaq, setOpenFaq] = useState(null);
-
-  const faqItems = [
+  const faqs = [
     {
-      id: 'faq1',
-      question: '¿Cómo conecto mi wallet a GigChain?',
-      answer: 'Para conectar tu wallet, haz clic en el icono de wallet en la esquina superior derecha. Asegúrate de tener una extensión de wallet como MetaMask instalada y configurada en la red Mumbai Testnet.'
+      id: 1,
+      category: 'Getting Started',
+      question: '¿Cómo creo mi primer contrato?',
+      answer: 'Para crear tu primer contrato, ve a la sección "Plantillas", selecciona una plantilla adecuada y personaliza los términos según tus necesidades.'
     },
     {
-      id: 'faq2',
-      question: '¿Qué es un AI Agent y cómo lo uso?',
-      answer: 'Un AI Agent es una inteligencia artificial diseñada para automatizar tareas específicas, como negociar contratos o generar borradores. Puedes activarlos y configurarlos desde la sección "AI Agents" en el sidebar.'
+      id: 2,
+      category: 'Payments',
+      question: '¿Cómo funcionan los pagos en escrow?',
+      answer: 'Los fondos se bloquean en un smart contract hasta que ambas partes confirmen la finalización del trabajo, garantizando seguridad para todos.'
     },
     {
-      id: 'faq3',
-      question: '¿Cómo puedo crear un nuevo contrato?',
-      answer: 'Puedes crear un nuevo contrato desde la sección "Contratos" o utilizando una plantilla predefinida en la sección "Plantillas". Sigue los pasos para rellenar los detalles y desplegarlo en la blockchain.'
+      id: 3,
+      category: 'Security',
+      question: '¿Es segura la plataforma?',
+      answer: 'Sí, utilizamos smart contracts auditados, encriptación end-to-end y las mejores prácticas de seguridad blockchain.'
     },
     {
-      id: 'faq4',
-      question: '¿Qué redes blockchain soporta GigChain?',
-      answer: 'Actualmente, GigChain soporta la red Mumbai Testnet para desarrollo y pruebas, y la red principal de Polygon para operaciones en vivo.'
+      id: 4,
+      category: 'AI Agents',
+      question: '¿Qué son los AI Agents?',
+      answer: 'Los AI Agents son asistentes inteligentes que te ayudan a negociar términos, generar contratos y resolver disputas automáticamente.'
+    },
+    {
+      id: 5,
+      category: 'Wallets',
+      question: '¿Qué wallets son compatibles?',
+      answer: 'Soportamos MetaMask, WalletConnect y cualquier wallet compatible con Web3 para Polygon, Ethereum y Arbitrum.'
     }
   ];
 
-  const quickLinks = [
-    { icon: BookOpen, label: 'Guía de Inicio', href: '#' },
-    { icon: BookOpen, label: 'Contratos', href: '#' },
-    { icon: BookOpen, label: 'AI Agents', href: '#' },
-    { icon: BookOpen, label: 'Wallets', href: '#' },
-    { icon: BookOpen, label: 'Pagos', href: '#' },
-    { icon: BookOpen, label: 'Configuración', href: '#' }
+  const resources = [
+    { icon: <Book size={24} />, title: 'Documentación', description: 'Guías completas y tutoriales', link: '#' },
+    { icon: <MessageSquare size={24} />, title: 'Comunidad', description: 'Únete a nuestro Discord', link: '#' },
+    { icon: <Mail size={24} />, title: 'Soporte', description: 'Contacta a nuestro equipo', link: '#' }
   ];
 
-  const toggleFaq = (id) => {
-    setOpenFaq(openFaq === id ? null : id);
-  };
+  const filteredFaqs = useMemo(() => {
+    return faqs.filter(faq =>
+      faq.question.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+      faq.answer.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+      faq.category.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+    );
+  }, [faqs, debouncedSearchTerm]);
 
   return (
-    <div style={styles.view}>
-      <h1 style={styles.title}>Centro de Ayuda</h1>
-      <p style={styles.subtitle}>Encuentra respuestas a tus preguntas y recursos útiles</p>
+    <div className="help-view">
+      <div className="view-header">
+        <div className="header-info">
+          <h1>Centro de Ayuda</h1>
+          <p>Encuentra respuestas y recursos útiles</p>
+        </div>
+      </div>
 
-      <div style={styles.sections}>
-        <div style={styles.section}>
-          <h3 style={styles.sectionTitle}>Enlaces Rápidos</h3>
-          <div style={styles.quickLinks}>
-            {quickLinks.map((link, index) => {
-              const IconComponent = link.icon;
-              return (
-                <a key={index} href={link.href} style={styles.quickLink}>
-                  <IconComponent size={24} />
-                  <span>{link.label}</span>
-                </a>
-              );
-            })}
+      <div className="help-content">
+        <div className="search-section">
+          <div className="search-container">
+            <Search size={20} className="search-icon" />
+            <input
+              type="text"
+              placeholder="¿En qué podemos ayudarte?"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="search-input"
+            />
           </div>
         </div>
 
-        <div style={styles.section}>
-          <h3 style={styles.sectionTitle}>Preguntas Frecuentes</h3>
-          {faqItems.map(faq => (
-            <div key={faq.id} style={styles.faqItem}>
-              <button 
-                style={styles.faqQuestion}
-                onClick={() => toggleFaq(faq.id)}
-              >
-                {faq.question}
-                {openFaq === faq.id ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-              </button>
-              {openFaq === faq.id && (
-                <div style={styles.faqAnswer}>
-                  <p>{faq.answer}</p>
-                </div>
-              )}
-            </div>
+        <div className="resources-grid">
+          {resources.map((resource, index) => (
+            <a key={index} href={resource.link} className="resource-card">
+              <div className="resource-icon">{resource.icon}</div>
+              <h3>{resource.title}</h3>
+              <p>{resource.description}</p>
+              <ExternalLink size={16} className="external-icon" />
+            </a>
           ))}
         </div>
 
-        <div style={styles.section}>
-          <h3 style={styles.sectionTitle}>¿Necesitas más ayuda?</h3>
-          <p style={{ color: '#94a3b8', marginBottom: '1.5rem' }}>
-            Si no encuentras lo que buscas, nuestro equipo de soporte está aquí para ayudarte.
-          </p>
-          <button style={styles.contactBtn}>
-            <MessageSquare size={20} />
-            Contactar Soporte
-          </button>
+        <div className="faqs-section">
+          <h2>Preguntas Frecuentes</h2>
+          <div className="faqs-list">
+            {filteredFaqs.map(faq => (
+              <details key={faq.id} className="faq-item">
+                <summary className="faq-question">
+                  <HelpCircle size={20} />
+                  <span>{faq.question}</span>
+                </summary>
+                <div className="faq-answer">
+                  <span className="faq-category">{faq.category}</span>
+                  <p>{faq.answer}</p>
+                </div>
+              </details>
+            ))}
+          </div>
         </div>
+
+        {filteredFaqs.length === 0 && (
+          <div className="no-results">
+            <HelpCircle size={48} />
+            <h3>No se encontraron resultados</h3>
+            <p>Intenta con otros términos de búsqueda</p>
+          </div>
+        )}
       </div>
     </div>
   );
-};
+});
+
+HelpView.displayName = 'HelpView';
 
 export { HelpView };
 export default HelpView;
