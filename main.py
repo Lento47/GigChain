@@ -344,6 +344,17 @@ async def auth_challenge(request: Request, body: AuthChallengeRequest):
     Returns a unique challenge message to be signed.
     """
     try:
+        # Get or initialize authenticator (for test compatibility)
+        if not hasattr(request.app.state, 'authenticator'):
+            secret_key = os.getenv('W_CSAP_SECRET_KEY', os.urandom(32).hex())
+            request.app.state.authenticator = WCSAPAuthenticator(
+                secret_key=secret_key,
+                challenge_ttl=300,
+                session_ttl=86400,
+                refresh_ttl=604800
+            )
+            request.app.state.auth_db = get_database()
+        
         authenticator: WCSAPAuthenticator = request.app.state.authenticator
         db = request.app.state.auth_db
         
