@@ -65,6 +65,9 @@ from template_marketplace_api import router as marketplace_router
 # Import Admin System
 from admin_api import router as admin_router
 
+# Import Dispute Mediation System
+from dispute_mediation_api import router as mediation_router
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -125,6 +128,9 @@ app.include_router(marketplace_router)
 
 # Include admin router
 app.include_router(admin_router)
+
+# Include mediation router
+app.include_router(mediation_router)
 
 # CORS middleware - Production-ready configuration
 # Get allowed origins from environment or use defaults
