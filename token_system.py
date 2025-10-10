@@ -488,8 +488,8 @@ class TokenMarketplace:
 
 # Utility functions
 def format_gsl_amount(amount: float) -> str:
-    """Format GSL amount for display"""
-    return f"{amount:,.2f} GSL"
+    """Format GSL amount for display with infinity symbol"""
+    return f"{amount:,.2f}∞"
 
 
 def format_transaction_summary(transaction: TokenTransaction) -> str:

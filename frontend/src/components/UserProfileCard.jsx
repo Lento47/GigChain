@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Award, TrendingUp, Star, Shield, Zap } from 'lucide-react';
+import { Award, TrendingUp, Star, Shield, Zap, Coins } from 'lucide-react';
 import axios from 'axios';
 import { API_BASE_URL } from '../constants/api';
 
 const UserProfileCard = ({ userId, compact = false }) => {
   const [userStats, setUserStats] = useState(null);
+  const [walletBalance, setWalletBalance] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchUserStats();
+    fetchWalletBalance();
   }, [userId]);
 
   const fetchUserStats = async () => {
@@ -19,6 +21,15 @@ const UserProfileCard = ({ userId, compact = false }) => {
       console.error('Error fetching user stats:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchWalletBalance = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/tokens/wallet/${userId}`);
+      setWalletBalance(response.data);
+    } catch (error) {
+      console.error('Error fetching wallet balance:', error);
     }
   };
 
@@ -110,6 +121,13 @@ const UserProfileCard = ({ userId, compact = false }) => {
           <Star size={20} style={{ color: '#10b981' }} />
           <div style={styles.statValue}>{userStats.visibility_multiplier.toFixed(1)}x</div>
           <div style={styles.statLabel}>Visibility</div>
+        </div>
+        <div style={styles.statItem}>
+          <Coins size={20} style={{ color: '#3b82f6' }} />
+          <div style={styles.statValue}>
+            {walletBalance ? `${walletBalance.balance.toFixed(2)}∞` : '0.00∞'}
+          </div>
+          <div style={styles.statLabel}>Credits</div>
         </div>
       </div>
 
@@ -286,7 +304,7 @@ const styles = {
   },
   statsGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
+    gridTemplateColumns: 'repeat(4, 1fr)',
     gap: '1rem',
     marginBottom: '1.5rem'
   },

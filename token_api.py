@@ -411,7 +411,7 @@ async def sell_tokens(request: SellTokensRequest):
 async def get_marketplace_rates():
     """Get current marketplace exchange rates"""
     return {
-        "gsl_symbol": "GSL",
+        "gsl_symbol": "∞",
         "gsl_name": "GigSoul Token",
         "buy_rate": {
             "rate": TokenMarketplace.USD_TO_GSL_RATE,
