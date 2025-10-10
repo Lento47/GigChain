@@ -92,11 +92,115 @@ class GamificationDB:
     
     def __init__(self, db_path: str = "gigchain.db"):
         self.db_path = db_path
+        self.initialize_database()
     
     def get_connection(self):
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
         return conn
+    
+    def initialize_database(self):
+        """Initialize database tables if they don't exist"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        # Create user_stats table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS user_stats (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT UNIQUE NOT NULL,
+                wallet_address TEXT UNIQUE NOT NULL,
+                role TEXT NOT NULL CHECK(role IN ('freelancer', 'client', 'both')),
+                total_xp INTEGER DEFAULT 0,
+                level INTEGER DEFAULT 1,
+                xp_to_next_level INTEGER DEFAULT 1000,
+                total_contracts INTEGER DEFAULT 0,
+                completed_contracts INTEGER DEFAULT 0,
+                cancelled_contracts INTEGER DEFAULT 0,
+                disputed_contracts INTEGER DEFAULT 0,
+                total_earned REAL DEFAULT 0.0,
+                total_spent REAL DEFAULT 0.0,
+                average_contract_value REAL DEFAULT 0.0,
+                trust_score REAL DEFAULT 50.0 CHECK(trust_score >= 0 AND trust_score <= 100),
+                completion_rate REAL DEFAULT 0.0 CHECK(completion_rate >= 0 AND completion_rate <= 100),
+                on_time_delivery_rate REAL DEFAULT 0.0 CHECK(on_time_delivery_rate >= 0 AND on_time_delivery_rate <= 100),
+                average_rating REAL DEFAULT 0.0 CHECK(average_rating >= 0 AND average_rating <= 5),
+                total_reviews INTEGER DEFAULT 0,
+                response_time_hours REAL DEFAULT 0.0,
+                dispute_rate REAL DEFAULT 0.0,
+                payment_reliability REAL DEFAULT 100.0,
+                successful_negotiations INTEGER DEFAULT 0,
+                visibility_multiplier REAL DEFAULT 1.0,
+                is_boosted BOOLEAN DEFAULT 0,
+                boost_reason TEXT,
+                boost_expires_at DATETIME,
+                is_banned BOOLEAN DEFAULT 0,
+                ban_reason TEXT,
+                banned_at DATETIME,
+                warnings INTEGER DEFAULT 0,
+                last_contract_date DATETIME,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        # Create badges table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS badges (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                badge_type TEXT NOT NULL,
+                name TEXT NOT NULL,
+                description TEXT NOT NULL,
+                icon TEXT NOT NULL,
+                category TEXT NOT NULL CHECK(category IN ('milestone', 'trust', 'quality', 'speed', 'negotiation')),
+                xp_reward INTEGER DEFAULT 0,
+                rarity TEXT CHECK(rarity IN ('common', 'rare', 'epic', 'legendary')),
+                requirements_json TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        # Create user_badges table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS user_badges (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                badge_id INTEGER NOT NULL,
+                badge_type TEXT NOT NULL,
+                earned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                metadata_json TEXT,
+                FOREIGN KEY (user_id) REFERENCES user_stats(user_id) ON DELETE CASCADE,
+                FOREIGN KEY (badge_id) REFERENCES badges(id) ON DELETE CASCADE,
+                UNIQUE(user_id, badge_id)
+            )
+        """)
+        
+        # Insert initial badges if table is empty
+        cursor.execute("SELECT COUNT(*) FROM badges")
+        if cursor.fetchone()[0] == 0:
+            badges_data = [
+                ('first_contract', 'First Steps', 'Completed your first contract', '🎯', 'milestone', 100, 'common'),
+                ('ten_contracts', 'Rising Star', 'Completed 10 contracts', '⭐', 'milestone', 500, 'rare'),
+                ('fifty_contracts', 'Veteran', 'Completed 50 contracts', '🏆', 'milestone', 2000, 'epic'),
+                ('hundred_contracts', 'Century Club', 'Completed 100 contracts', '👑', 'milestone', 5000, 'legendary'),
+                ('reliable', 'Reliable Professional', 'Maintained 95%+ completion rate', '✅', 'trust', 1000, 'rare'),
+                ('trusted', 'Trusted Partner', '98%+ completion rate with 20+ contracts', '🛡️', 'trust', 2500, 'epic'),
+                ('legendary', 'Legendary', '99%+ completion rate with 100+ contracts', '💎', 'trust', 10000, 'legendary'),
+                ('high_quality', 'Quality Pro', 'Maintained 4.5+ average rating', '⚡', 'quality', 1500, 'rare'),
+                ('perfect_quality', 'Perfectionist', 'Perfect 5.0 rating with 10+ reviews', '✨', 'quality', 5000, 'legendary'),
+                ('fast_delivery', 'Fast Delivery', '5+ early deliveries', '🚀', 'speed', 750, 'rare'),
+                ('lightning_fast', 'Lightning Fast', '20+ early deliveries', '⚡', 'speed', 3000, 'epic'),
+                ('negotiator', 'Skilled Negotiator', 'Successfully negotiated 10+ contracts', '🤝', 'negotiation', 750, 'rare'),
+                ('master_negotiator', 'Master Negotiator', 'Successfully negotiated 50+ contracts', '💼', 'negotiation', 3000, 'epic')
+            ]
+            
+            cursor.executemany("""
+                INSERT INTO badges (badge_type, name, description, icon, category, xp_reward, rarity)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, badges_data)
+        
+        conn.commit()
+        conn.close()
     
     def get_user_stats(self, user_id: str) -> Optional[UserStats]:
         """Fetch user stats from database"""
