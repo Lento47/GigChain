@@ -119,6 +119,12 @@ const HomePage = ({ onGetStarted, onNavigate }) => {
           <div className="gradient-orb orb-1" style={{ transform: `translateY(${scrollY * 0.3}px)` }}></div>
           <div className="gradient-orb orb-2" style={{ transform: `translateY(${scrollY * 0.5}px)` }}></div>
           <div className="gradient-orb orb-3" style={{ transform: `translateY(${scrollY * 0.2}px)` }}></div>
+          <img 
+            src="/assets/blockchain-chain.jpg" 
+            alt="Blockchain Chain" 
+            className="hero-chain-image"
+            style={{ transform: `translateY(${scrollY * 0.4}px) rotate(${scrollY * 0.05}deg)` }}
+          />
         </div>
         
         <div className="hero-content">
@@ -363,6 +369,14 @@ const HomePage = ({ onGetStarted, onNavigate }) => {
         <div className="section-header animate-on-scroll">
           <h2 className="section-title">Cómo Funciona</h2>
           <p className="section-subtitle">Tres simples pasos para comenzar</p>
+        </div>
+
+        <div className="steps-background">
+          <img 
+            src="/assets/blockchain-chain.jpg" 
+            alt="Blockchain Process" 
+            className="steps-chain-image"
+          />
         </div>
 
         <div className="steps-container">

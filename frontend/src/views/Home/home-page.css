@@ -28,6 +28,34 @@
   z-index: 0;
 }
 
+.hero-chain-image {
+  position: absolute;
+  right: -10%;
+  top: 15%;
+  width: 600px;
+  height: auto;
+  opacity: 0.15;
+  filter: brightness(1.2) contrast(1.1);
+  mix-blend-mode: screen;
+  pointer-events: none;
+  animation: chain-float 8s ease-in-out infinite;
+}
+
+@keyframes chain-float {
+  0%, 100% { 
+    transform: translateY(0) rotate(0deg) scale(1); 
+  }
+  25% { 
+    transform: translateY(-20px) rotate(-2deg) scale(1.02); 
+  }
+  50% { 
+    transform: translateY(-40px) rotate(0deg) scale(1.05); 
+  }
+  75% { 
+    transform: translateY(-20px) rotate(2deg) scale(1.02); 
+  }
+}
+
 .gradient-orb {
   position: absolute;
   border-radius: 50%;
@@ -288,6 +316,8 @@
 .section-header {
   text-align: center;
   margin-bottom: 4rem;
+  position: relative;
+  z-index: 1;
 }
 
 .section-title {
@@ -704,6 +734,43 @@
   margin: 0 auto;
   background: rgba(79, 70, 229, 0.02);
   border-radius: 30px;
+  position: relative;
+  overflow: hidden;
+}
+
+.steps-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.steps-chain-image {
+  width: 100%;
+  height: auto;
+  max-width: 1000px;
+  opacity: 0.06;
+  filter: brightness(1.3) contrast(1.2) blur(1px);
+  mix-blend-mode: lighten;
+  transform: rotate(-10deg);
+  animation: steps-pulse 6s ease-in-out infinite;
+}
+
+@keyframes steps-pulse {
+  0%, 100% { 
+    opacity: 0.06;
+    transform: rotate(-10deg) scale(1);
+  }
+  50% { 
+    opacity: 0.1;
+    transform: rotate(-10deg) scale(1.05);
+  }
 }
 
 .steps-container {
@@ -712,6 +779,8 @@
   justify-content: space-between;
   gap: 2rem;
   flex-wrap: wrap;
+  position: relative;
+  z-index: 1;
 }
 
 .step {
@@ -833,6 +902,13 @@
   .hero-section {
     min-height: auto;
     padding: 4rem 1.5rem;
+  }
+  
+  .hero-chain-image {
+    width: 300px;
+    right: -20%;
+    top: 10%;
+    opacity: 0.08;
   }
   
   .features-section,
