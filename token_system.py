@@ -2,6 +2,11 @@
 GigSoul Token System (GSL)
 In-game token system for GigChain.io platform
 
+Token Info:
+- Name: GigSoul Token (GSL)
+- Symbol: ∞ (infinity symbol represents GSL)
+- Example: usuario x tiene 50∞ (50 GSL tokens)
+
 Features:
 - Token wallets for each user
 - Trading (buy/sell)
@@ -488,7 +493,12 @@ class TokenMarketplace:
 
 # Utility functions
 def format_gsl_amount(amount: float) -> str:
-    """Format GSL amount for display with infinity symbol"""
+    """
+    Format GSL amount for display with infinity symbol
+    
+    The infinity symbol (∞) represents GSL tokens.
+    Example: 50.00 GSL → 50.00∞
+    """
     return f"{amount:,.2f}∞"
 
 

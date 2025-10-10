@@ -127,7 +127,7 @@ const UserProfileCard = ({ userId, compact = false }) => {
           <div style={styles.statValue}>
             {walletBalance ? `${walletBalance.balance.toFixed(2)}∞` : '0.00∞'}
           </div>
-          <div style={styles.statLabel}>Credits</div>
+          <div style={styles.statLabel}>GSL Credits</div>
         </div>
       </div>
 

@@ -412,17 +412,18 @@ async def get_marketplace_rates():
     """Get current marketplace exchange rates"""
     return {
         "gsl_symbol": "∞",
-        "gsl_name": "GigSoul Token",
+        "gsl_name": "GigSoul Token (GSL)",
+        "symbol_info": "∞ represents GSL tokens",
         "buy_rate": {
             "rate": TokenMarketplace.USD_TO_GSL_RATE,
-            "description": f"$1 USD = {TokenMarketplace.USD_TO_GSL_RATE} GSL",
+            "description": f"$1 USD = {TokenMarketplace.USD_TO_GSL_RATE}∞ (GSL tokens)",
             "fee_percent": TokenMarketplace.BUY_FEE_PERCENT,
             "min_purchase_usd": TokenMarketplace.MIN_BUY_USD,
             "max_purchase_usd": TokenMarketplace.MAX_BUY_USD
         },
         "sell_rate": {
             "rate": TokenMarketplace.GSL_TO_USD_RATE,
-            "description": f"1 GSL = ${TokenMarketplace.GSL_TO_USD_RATE} USD",
+            "description": f"1∞ (GSL) = ${TokenMarketplace.GSL_TO_USD_RATE} USD",
             "fee_percent": TokenMarketplace.SELL_FEE_PERCENT,
             "min_sell_gsl": TokenMarketplace.MIN_SELL_GSL,
             "max_sell_gsl": TokenMarketplace.MAX_SELL_GSL
@@ -556,8 +557,10 @@ async def get_token_statistics():
     stats = token_db.get_token_statistics()
     
     return {
-        "token_name": "GigSoul",
-        "token_symbol": "GSL",
+        "token_name": "GigSoul (GSL)",
+        "token_symbol": "∞",
+        "token_full_name": "GigSoul Token",
+        "token_code": "GSL",
         "statistics": stats,
         "timestamp": datetime.now().isoformat()
     }
