@@ -185,6 +185,9 @@ export const NotificationCenter = ({ notifications = [], onMarkAsRead, onClearAl
   );
 };
 
+// Create NotificationContext before using it
+export const NotificationContext = React.createContext();
+
 export const NotificationProvider = ({ children, walletState }) => {
   const [notifications, setNotifications] = useState([]);
 
@@ -266,8 +269,6 @@ export const NotificationProvider = ({ children, walletState }) => {
     </NotificationContext.Provider>
   );
 };
-
-export const NotificationContext = React.createContext();
 
 export const useNotifications = () => {
   const context = React.useContext(NotificationContext);

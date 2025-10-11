@@ -1,26 +1,5 @@
 /* Dashboard Styles */
 
-.main-content {
-  flex: 1;
-  margin-left: 280px;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  background: var(--bg-secondary);
-  min-height: 100vh;
-  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.main-content.sidebar-closed {
-  margin-left: 80px;
-}
-
-.content-body {
-  flex: 1;
-  padding: 2rem;
-  min-width: 0;
-}
-
 /* Dashboard Grid */
 .dashboard {
   display: flex;

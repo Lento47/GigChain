@@ -1,36 +1,63 @@
 import React, { useState, useCallback } from 'react';
 import { FileText, Zap } from 'lucide-react';
 import { useNotifications } from '../../components/common/NotificationCenter/NotificationCenter';
+import { useWallet } from '../../hooks/useWallet';
+import { useDashboardMetrics } from '../../hooks/useDashboardMetrics';
+import { API_BASE_URL } from '../../constants/api';
 import InteractiveChart from './InteractiveChart';
+import ChartTypeSelector from './ChartTypeSelector';
 import JobsModal from './JobsModal';
 import ContractSetup from '../../components/features/Contract/ContractSetup';
 import { MetricSkeleton } from '../../components/common/LoadingSpinner/LoadingSpinner';
 import { logger } from '../../utils/logger';
+import './dashboard.css';
 
-const DashboardView = React.memo(({ metrics, isLoading = false }) => {
+const DashboardView = React.memo(() => {
   const { notifications, addNotification } = useNotifications();
+  const { address } = useWallet();
+  const { metrics, isLoading } = useDashboardMetrics(address);
   const [showJobsModal, setShowJobsModal] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState(null);
   const [userType, setUserType] = useState('freelancer'); // 'client' o 'freelancer'
-  
-  // Real data from metrics prop
-  const realMetrics = metrics || {
-    totalContracts: 0,
-    activeContracts: 0,
-    totalRevenue: 0,
-    averageRating: 0,
-    completedProjects: 0,
-    recentActivity: []
-  };
+  const [chartType, setChartType] = useState('line'); // 'line' o 'bar'
 
-  const handleDataPointClick = useCallback((data) => {
-    setSelectedPeriod(data);
-    setShowJobsModal(true);
+  const handleDataPointClick = useCallback(async (data) => {
+    console.log('Chart clicked:', data);
+    
+    // Fetch jobs for the selected time period
+    try {
+      // Get contracts that were active during this hour
+      const response = await fetch(
+        `${API_BASE_URL}/api/contracts?status=open&limit=10`
+      );
+      
+      if (response.ok) {
+        const jobs = await response.json();
+        
+        // Show modal with jobs for this period
+        setSelectedPeriod({
+          ...data,
+          jobs: jobs.slice(0, 5) // Show top 5 jobs
+        });
+        setShowJobsModal(true);
+        
+        console.log(`Jobs for ${data.hour}:`, jobs.slice(0, 5));
+      }
+    } catch (error) {
+      console.error('Error fetching jobs for period:', error);
+      // Still show modal with basic data
+      setSelectedPeriod(data);
+      setShowJobsModal(true);
+    }
   }, []);
 
   const handleCloseJobsModal = useCallback(() => {
     setShowJobsModal(false);
     setSelectedPeriod(null);
+  }, []);
+
+  const handleChartTypeChange = useCallback((newChartType) => {
+    setChartType(newChartType);
   }, []);
 
   const handleCreateContract = useCallback(() => {
@@ -87,7 +114,7 @@ const DashboardView = React.memo(({ metrics, isLoading = false }) => {
                 </div>
                 <div className="metric-content">
                   <p className="metric-label">Contratos Activos</p>
-                  <p className="metric-value">{realMetrics.activeContracts || 0}</p>
+                  <p className="metric-value">{metrics.activeContracts || 0}</p>
                   <div className="progress-bar-container">
                     <div className="progress-bar" style={{ width: '80%' }}></div>
                   </div>
@@ -105,7 +132,7 @@ const DashboardView = React.memo(({ metrics, isLoading = false }) => {
                 </div>
                 <div className="metric-content">
                   <p className="metric-label">Proyectos Completados</p>
-                  <p className="metric-value">{realMetrics.completedProjects || 0}</p>
+                  <p className="metric-value">{metrics.completedProjects || 0}</p>
                   <div className="progress-bar-container">
                     <div className="progress-bar" style={{ width: '50%' }}></div>
                   </div>
@@ -123,7 +150,7 @@ const DashboardView = React.memo(({ metrics, isLoading = false }) => {
                 </div>
                 <div className="metric-content">
                   <p className="metric-label">Ingresos Totales</p>
-                  <p className="metric-value">${realMetrics.totalEarnings || 0}</p>
+                  <p className="metric-value">${metrics.totalEarnings || 0}</p>
                   <div className="progress-bar-container">
                     <div className="progress-bar" style={{ width: '75%' }}></div>
                   </div>
@@ -178,7 +205,16 @@ const DashboardView = React.memo(({ metrics, isLoading = false }) => {
           </div>
         </div>
         <div className="chart-container">
-          <InteractiveChart onDataPointClick={handleDataPointClick} />
+          <ChartTypeSelector 
+            chartType={chartType}
+            onChartTypeChange={handleChartTypeChange}
+          />
+          <InteractiveChart 
+            onDataPointClick={handleDataPointClick} 
+            activityData={metrics.activityByHour}
+            userType={userType}
+            chartType={chartType}
+          />
           <div className="chart-footer">
             <p className="chart-instruction">
               💡 Haz click en cualquier punto del gráfico para ver trabajos disponibles en ese período

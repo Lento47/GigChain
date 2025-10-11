@@ -1,0 +1,90 @@
+.chart-type-selector {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 8px 0;
+}
+
+.selector-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.chart-type-buttons {
+  display: flex;
+  gap: 8px;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  padding: 4px;
+  border: 1px solid var(--border-color);
+}
+
+.chart-type-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.chart-type-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+.chart-type-btn.active {
+  background: linear-gradient(135deg, var(--accent-color), var(--primary-color));
+  color: white;
+  box-shadow: 0 2px 8px rgba(var(--accent-color-rgb), 0.3);
+  transform: translateY(-1px);
+}
+
+.chart-type-btn.active:hover {
+  background: linear-gradient(135deg, var(--accent-color), var(--primary-color));
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(var(--accent-color-rgb), 0.4);
+}
+
+.chart-type-btn svg {
+  transition: transform 0.2s ease;
+}
+
+.chart-type-btn:hover svg {
+  transform: scale(1.1);
+}
+
+.chart-type-btn.active svg {
+  transform: scale(1.1);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .chart-type-selector {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .chart-type-buttons {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .chart-type-btn {
+    flex: 1;
+    justify-content: center;
+  }
+}

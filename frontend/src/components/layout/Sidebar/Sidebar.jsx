@@ -1,16 +1,24 @@
 import React from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAddress, useDisconnect } from '@thirdweb-dev/react';
 import { BarChart3, FileText, Code, Zap, MessageSquare, Settings, Wallet, ChevronLeft, ChevronRight, Home, TrendingUp, Users, CreditCard } from 'lucide-react';
 import { truncateWalletAddress } from '../../../utils/walletUtils';
+import './Sidebar.css';
 
-const Sidebar = ({ currentView, onViewChange, walletInfo, isConnected }) => {
-  const [isOpen, setIsOpen] = React.useState(true);
+const Sidebar = ({ walletInfo, isConnected, isOpen = true, onToggle }) => {
   const address = useAddress();
   const disconnect = useDisconnect();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const toggleSidebar = () => {
-    setIsOpen(!isOpen);
+    if (onToggle) {
+      onToggle();
+    }
   };
+
+  // Get current view from pathname
+  const currentView = location.pathname.slice(1) || 'dashboard';
 
   const navSections = [
     {
@@ -77,7 +85,7 @@ const Sidebar = ({ currentView, onViewChange, walletInfo, isConnected }) => {
                   <button
                     key={item.id}
                     className={`nav-item ${currentView === item.id ? 'active' : ''}`}
-                    onClick={() => onViewChange(item.id)}
+                    onClick={() => navigate(`/${item.id}`)}
                     title={item.description}
                     aria-label={`${item.label} - ${item.description}`}
                   >
@@ -101,7 +109,7 @@ const Sidebar = ({ currentView, onViewChange, walletInfo, isConnected }) => {
                 <button
                   key={item.id}
                   className={`nav-item ${currentView === item.id ? 'active' : ''}`}
-                  onClick={() => onViewChange(item.id)}
+                  onClick={() => navigate(`/${item.id}`)}
                   title={item.description}
                   aria-label={`${item.label} - ${item.description}`}
                 >

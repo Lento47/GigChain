@@ -94,7 +94,7 @@
 
 .tooltip-contracts {
   font-size: 0.8rem;
-  color: #94a3b8;
+  color: var(--text-secondary);
 }
 
 /* Chart Legend */
@@ -252,4 +252,16 @@
   .stat-label {
     font-size: 0.7rem;
   }
+}
+
+/* Bar chart styles */
+.chart-bar {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.chart-bar:hover {
+  filter: drop-shadow(0 0 8px var(--accent-color));
+  transform: scaleY(1.05);
+  transform-origin: bottom;
 }

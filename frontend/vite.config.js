@@ -1,5 +1,9 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
   plugins: [react()],
@@ -42,7 +46,9 @@ export default defineConfig({
   },
   define: {
     global: 'globalThis',
-    'process.env': {}
+    'process.env': {},
+    'process.version': JSON.stringify(process.version || ''),
+    'process.browser': true
   },
   resolve: {
     alias: {
@@ -55,14 +61,8 @@ export default defineConfig({
       '@services': path.resolve(__dirname, './src/services'),
       '@constants': path.resolve(__dirname, './src/constants'),
       '@styles': path.resolve(__dirname, './src/styles'),
-      // Node polyfills
-      buffer: 'buffer',
-      process: 'process/browser',
-      stream: 'stream-browserify',
-      util: 'util',
-      crypto: 'crypto-browserify',
-      os: 'os-browserify/browser',
-      path: 'path-browserify',
+      // Node polyfills - removed to avoid browser compatibility issues
+      // These modules should not be imported in browser code
       fs: false,
       net: false,
       tls: false

@@ -1,21 +1,55 @@
 import { useAddress, useDisconnect, useConnect, useChainId, useSwitchChain } from '@thirdweb-dev/react';
-import { Polygon, Mumbai } from '@thirdweb-dev/chains';
+import { Polygon } from '@thirdweb-dev/chains';
 import { useState, useEffect } from 'react';
 
+// Amoy Testnet (Mumbai replacement)
+const Amoy = {
+  chainId: 80002,
+  name: 'Polygon Amoy Testnet',
+  chain: 'Polygon',
+  rpc: ['https://rpc-amoy.polygon.technology'],
+  nativeCurrency: {
+    name: 'MATIC',
+    symbol: 'MATIC',
+    decimals: 18,
+  },
+  shortName: 'amoy',
+  slug: 'polygon-amoy-testnet',
+  testnet: true,
+  explorers: [
+    {
+      name: 'PolygonScan',
+      url: 'https://amoy.polygonscan.com',
+      standard: 'EIP3091',
+    },
+  ],
+};
+
 export const useWallet = () => {
-  const address = useAddress();
-  const disconnect = useDisconnect();
-  const connect = useConnect();
-  const chainId = useChainId();
-  const switchChain = useSwitchChain();
+  // Safe hook calls with error handling
+  let address, disconnect, chainId, switchChain;
+  
+  try {
+    address = useAddress();
+    disconnect = useDisconnect();
+    chainId = useChainId();
+    switchChain = useSwitchChain();
+  } catch (error) {
+    console.warn('Thirdweb hooks not available, using fallback values:', error);
+    // Fallback values when Thirdweb context is not available
+    address = undefined;
+    disconnect = () => Promise.resolve();
+    chainId = undefined;
+    switchChain = async () => Promise.resolve();
+  }
   
   const [isConnecting, setIsConnecting] = useState(false);
   const [isSwitching, setIsSwitching] = useState(false);
   const [walletInfo, setWalletInfo] = useState(null);
 
   // Supported chains
-  const supportedChains = [Polygon, Mumbai];
-  const targetChain = Mumbai; // Default to Mumbai testnet
+  const supportedChains = [Polygon, Amoy];
+  const targetChain = Amoy; // Default to Amoy testnet (Mumbai replacement)
 
   // Check if wallet is connected to the correct chain
   const isCorrectChain = chainId ? chainId === targetChain.chainId : false;
@@ -37,30 +71,32 @@ export const useWallet = () => {
     }
   }, [address, chainId, isCorrectChain]);
 
-  // Connect wallet
-  const connectWallet = async () => {
-    try {
-      setIsConnecting(true);
-      await connect();
-    } catch (error) {
-      console.error('Error connecting wallet:', error);
-      throw error;
-    } finally {
-      setIsConnecting(false);
-    }
-  };
-
   // Switch to correct chain
   const switchToCorrectChain = async () => {
+    if (!switchChain) {
+      alert('Por favor, cambia manualmente a Mumbai en MetaMask');
+      return;
+    }
+    
     try {
       setIsSwitching(true);
       console.log('Switching to chain:', targetChain.chainId, targetChain.name);
       await switchChain(targetChain.chainId);
-      console.log('Successfully switched to Mumbai testnet');
+      console.log('Successfully switched to Polygon Amoy testnet');
     } catch (error) {
       console.error('Error switching chain:', error);
-      // Show user-friendly error message
-      alert(`Error al cambiar de red: ${error.message || 'Error desconocido'}`);
+      
+      // Show user-friendly error message with instructions
+      const errorMsg = error?.message || error?.reason || 'Error desconocido';
+      
+      if (errorMsg.includes('rejected') || errorMsg.includes('denied')) {
+        alert('Cambio de red cancelado. Por favor, acepta el cambio en MetaMask para continuar.');
+      } else if (errorMsg.includes('Unrecognized chain')) {
+        alert('Amoy no está agregada a MetaMask. Ve a https://chainlist.org/?search=amoy&testnets=true para agregarla.');
+      } else {
+        alert(`Error al cambiar de red: ${errorMsg}\n\nPuedes cambiar manualmente en MetaMask: Haz clic en el nombre de la red → Selecciona Polygon Amoy`);
+      }
+      
       throw error;
     } finally {
       setIsSwitching(false);
@@ -91,13 +127,11 @@ export const useWallet = () => {
     // State
     address,
     isConnected: !!address,
-    isConnecting,
     isSwitching,
     isCorrectChain,
     walletInfo,
     
     // Actions
-    connectWallet,
     disconnect,
     switchToCorrectChain,
     

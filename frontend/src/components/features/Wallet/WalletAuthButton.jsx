@@ -96,58 +96,52 @@ export const WalletAuthButton = ({ onAuthChange, className = '' }) => {
     );
   }
 
-  // Authenticated
+  // Authenticated - Compact modern design
   return (
-    <div className={`wallet-auth-button authenticated ${className}`}>
-      <div className="auth-status" onClick={() => setShowDetails(!showDetails)}>
-        <div className="status-indicator">
-          <CheckCircle size={16} className="status-icon success" />
-          <span className="status-text">Authenticated</span>
-        </div>
-        
-        <div className="wallet-address">
-          <Unlock size={14} />
-          <span>{address.substring(0, 6)}...{address.slice(-4)}</span>
-        </div>
-      </div>
+    <div className={`wallet-auth-button authenticated-compact ${className}`}>
+      <button 
+        className="auth-status-compact" 
+        onClick={() => setShowDetails(!showDetails)}
+        title="Session details"
+      >
+        <CheckCircle size={14} className="status-icon-success" />
+        <span className="address-compact">{address.substring(0, 4)}...{address.slice(-4)}</span>
+        <span className={`dropdown-arrow ${showDetails ? 'open' : ''}`}>▼</span>
+      </button>
 
       {showDetails && (
-        <div className="auth-details">
-          <div className="detail-section">
-            <h4>Session Information</h4>
-            <div className="detail-item">
-              <span className="label">Wallet:</span>
-              <span className="value">{address.substring(0, 10)}...{address.slice(-8)}</span>
+        <>
+          <div className="auth-dropdown-backdrop" onClick={() => setShowDetails(false)} />
+          <div className="auth-dropdown">
+            <div className="dropdown-header">
+              <Shield size={16} />
+              <span className="protocol-badge">W-CSAP</span>
             </div>
-            {sessionInfo?.expires_in && (
-              <div className="detail-item">
-                <span className="label">Expires in:</span>
-                <span className="value">{Math.floor(sessionInfo.expires_in / 3600)} hours</span>
-              </div>
-            )}
-            <div className="detail-item">
-              <span className="label">Protocol:</span>
-              <span className="value badge">W-CSAP</span>
-            </div>
-          </div>
-
-          <div className="auth-actions">
-            <button
-              onClick={handleLogout}
-              className="action-btn secondary"
-            >
-              <LogOut size={14} />
-              <span>Sign Out</span>
-            </button>
             
-            <button
-              onClick={handleDisconnectWallet}
-              className="action-btn danger"
-            >
-              <span>Disconnect Wallet</span>
-            </button>
+            <div className="dropdown-content">
+              <div className="info-row">
+                <span className="info-label">Wallet</span>
+                <span className="info-value">{address.substring(0, 8)}...{address.slice(-6)}</span>
+              </div>
+              {sessionInfo?.expires_in && (
+                <div className="info-row">
+                  <span className="info-label">Session</span>
+                  <span className="info-value">{Math.floor(sessionInfo.expires_in / 3600)}h remaining</span>
+                </div>
+              )}
+            </div>
+
+            <div className="dropdown-actions">
+              <button onClick={handleLogout} className="dropdown-btn secondary">
+                <LogOut size={14} />
+                Sign Out
+              </button>
+              <button onClick={handleDisconnectWallet} className="dropdown-btn danger">
+                Disconnect
+              </button>
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

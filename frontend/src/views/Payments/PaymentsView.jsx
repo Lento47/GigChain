@@ -57,25 +57,27 @@ const PaymentsView = React.memo(() => {
   return (
     <div className="payments-view">
       <div className="view-header">
-        <div className="header-info">
-          <h1>Pagos</h1>
-          <p>Gestiona tus pagos y cobros</p>
+        <div className="header-content">
+          <div className="header-info">
+            <h1>💰 Pagos y Transacciones</h1>
+            <p>Gestiona tus pagos, cobros y transacciones de forma segura</p>
+          </div>
+          <button className="new-payment-btn" onClick={handleNewPayment}>
+            <Plus size={20} />
+            <span>Nuevo Pago</span>
+          </button>
         </div>
-        <button className="new-payment-btn" onClick={handleNewPayment}>
-          <Plus size={20} />
-          Nuevo Pago
-        </button>
       </div>
 
       <div className="payments-stats">
         {stats.map((stat, index) => (
-          <div key={index} className="stat-card" style={{ borderTopColor: stat.color }}>
-            <div className="stat-icon" style={{ color: stat.color }}>
+          <div key={index} className="stat-card">
+            <div className="stat-icon" style={{ backgroundColor: `${stat.color}15`, color: stat.color }}>
               {stat.icon}
             </div>
             <div className="stat-info">
               <p className="stat-label">{stat.label}</p>
-              <p className="stat-value">{stat.value}</p>
+              <p className="stat-value" style={{ color: stat.color }}>{stat.value}</p>
             </div>
           </div>
         ))}
@@ -86,7 +88,7 @@ const PaymentsView = React.memo(() => {
           <Search size={20} className="search-icon" />
           <input
             type="text"
-            placeholder="Buscar pagos..."
+            placeholder="Buscar por descripción, destinatario o monto..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="search-input"
@@ -95,18 +97,28 @@ const PaymentsView = React.memo(() => {
 
         <div className="payments-list">
           {filteredPayments.map(payment => (
-            <div key={payment.id} className="payment-item">
-              <div className="payment-icon">
-                {payment.type === 'sent' ? <Send size={20} /> : <Download size={20} />}
+            <div key={payment.id} className={`payment-item ${payment.type}`}>
+              <div className={`payment-icon ${payment.type}`}>
+                {payment.type === 'sent' ? <Send size={22} /> : <Download size={22} />}
               </div>
               <div className="payment-details">
                 <h4>{payment.description}</h4>
-                <p>{payment.recipient}</p>
+                <div className="payment-meta">
+                  <span className="payment-recipient">{payment.recipient}</span>
+                  <span className="payment-date">{payment.date}</span>
+                </div>
               </div>
-              <div className="payment-amount">{payment.amount}</div>
-              <div className={`payment-status ${payment.status}`}>
-                {payment.status === 'completed' ? <CheckCircle size={16} /> : <Clock size={16} />}
-                {payment.status === 'completed' ? 'Completado' : 'Pendiente'}
+              <div className="payment-right">
+                <div className={`payment-amount ${payment.type}`}>
+                  {payment.type === 'sent' ? '-' : '+'}{payment.amount}
+                </div>
+                <div className={`payment-status ${payment.status}`}>
+                  {payment.status === 'completed' ? (
+                    <><CheckCircle size={16} /> Completado</>
+                  ) : (
+                    <><Clock size={16} /> Pendiente</>
+                  )}
+                </div>
               </div>
             </div>
           ))}
@@ -114,9 +126,9 @@ const PaymentsView = React.memo(() => {
 
         {filteredPayments.length === 0 && (
           <div className="no-payments">
-            <CreditCard size={48} />
+            <CreditCard size={64} className="no-payments-icon" />
             <h3>No se encontraron pagos</h3>
-            <p>Intenta ajustar los filtros de búsqueda</p>
+            <p>Intenta ajustar los filtros de búsqueda o crea un nuevo pago</p>
           </div>
         )}
       </div>

@@ -12,7 +12,7 @@ const truncateWalletAddress = (address, startChars = 6, endChars = 4) => {
   return `${address.slice(0, startChars)}...${address.slice(-endChars)}`;
 };
 
-export const WalletConnection = ({ onWalletChange, className = '' }) => {
+export const WalletConnection = ({ onWalletChange, className = '', showOptionalMessage = false }) => {
   const { 
     address, 
     isConnected, 
@@ -113,88 +113,83 @@ export const WalletConnection = ({ onWalletChange, className = '' }) => {
           privacyPolicyUrl=""
           onConnect={handleConnect}
         />
-        <div className="wallet-info">
-          <p className="wallet-note">
-            <AlertCircle size={14} />
-            La conexión de wallet es opcional para usar el chat
-          </p>
-        </div>
+        {showOptionalMessage && (
+          <div className="wallet-info">
+            <p className="wallet-note">
+              <AlertCircle size={14} />
+              La conexión de wallet es opcional para usar el chat
+            </p>
+          </div>
+        )}
       </div>
     );
   }
 
   return (
-    <div className={`wallet-connected ${className}`} ref={walletRef}>
-      <div className="wallet-status">
-        <div className="wallet-indicator">
-          <div className={`status-dot ${isCorrectChain ? 'connected' : 'warning'}`}></div>
-          <span className="status-text">
-            {isCorrectChain ? 'Conectado' : 'Red incorrecta'}
-          </span>
-        </div>
-        
-        <div className="wallet-address" onClick={() => setShowDetails(!showDetails)}>
-          <Wallet size={16} />
-          <span>{walletInfo?.shortAddress}</span>
-          <ChevronDown size={14} className={`chevron ${showDetails ? 'open' : ''}`} />
-        </div>
-      </div>
+    <div className={`wallet-connected-compact ${className}`} ref={walletRef}>
+      <button 
+        className={`wallet-button-compact ${isCorrectChain ? 'correct-chain' : 'wrong-chain'}`}
+        onClick={() => setShowDetails(!showDetails)}
+        title={isCorrectChain ? 'Wallet conectada' : 'Red incorrecta - Click para cambiar'}
+      >
+        <div className={`chain-indicator ${isCorrectChain ? 'success' : 'warning'}`} />
+        <Wallet size={14} />
+        <span className="address-compact">{truncateWalletAddress(address, 4, 4)}</span>
+        <span className={`dropdown-arrow ${showDetails ? 'open' : ''}`}>▼</span>
+      </button>
 
       {showDetails && (
-        <div className="wallet-details">
-          <div className="wallet-info-section">
-            <div className="info-item">
-              <span className="label">Dirección:</span>
-              <div className="address-container">
-                <span className="address">{truncateWalletAddress(address)}</span>
-                <button 
-                  className="copy-btn"
-                  onClick={copyAddress}
-                  title="Copiar dirección"
-                >
-                  <Copy size={14} />
-                  {copied ? 'Copiado!' : 'Copiar'}
-                </button>
-              </div>
+        <>
+          <div className="wallet-dropdown-backdrop" onClick={() => setShowDetails(false)} />
+          <div className="wallet-dropdown">
+            <div className="dropdown-header">
+              <Wallet size={16} />
+              <span className={`network-badge ${isCorrectChain ? 'success' : 'warning'}`}>
+                {isCorrectChain ? (
+                  <><CheckCircle size={12} /> {walletInfo?.network}</>
+                ) : (
+                  <><AlertCircle size={12} /> Red incorrecta</>
+                )}
+              </span>
             </div>
             
-            <div className="info-item">
-              <span className="label">Red:</span>
-              <div className="network-info">
-                <span className={`network-status ${isCorrectChain ? 'correct' : 'incorrect'}`}>
-                  {isCorrectChain ? (
-                    <>
-                      <CheckCircle size={14} />
-                      {walletInfo?.network}
-                    </>
-                  ) : (
-                    <>
-                      <AlertCircle size={14} />
-                      Red incorrecta
-                    </>
-                  )}
-                </span>
+            <div className="dropdown-content">
+              <div className="info-row">
+                <span className="info-label">Dirección</span>
+                <div className="info-value-with-action">
+                  <span className="info-value">{truncateWalletAddress(address, 6, 4)}</span>
+                  <button 
+                    className="icon-btn"
+                    onClick={copyAddress}
+                    title="Copiar"
+                  >
+                    {copied ? <CheckCircle size={14} /> : <Copy size={14} />}
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="wallet-actions">
-            <button 
-              className="action-btn secondary"
-              onClick={openInExplorer}
-              title="Ver en explorador"
-            >
-              <ExternalLink size={14} />
-              Explorador
-            </button>
-            <button 
-              className="action-btn danger"
-              onClick={handleDisconnect}
-            >
-              Desconectar
-            </button>
+            <div className="dropdown-actions">
+              <button onClick={openInExplorer} className="dropdown-btn secondary">
+                <ExternalLink size={14} />
+                Explorador
+              </button>
+              <button onClick={handleDisconnect} className="dropdown-btn danger">
+                Desconectar
+              </button>
+            </div>
+
+            {!isCorrectChain && (
+              <div className="chain-warning">
+                <AlertCircle size={14} />
+                <span>Red incorrecta detectada</span>
+                <button onClick={handleSwitchChain} className="switch-chain-btn" disabled={isSwitching}>
+                  {isSwitching ? 'Cambiando...' : 'Cambiar red'}
+                </button>
+              </div>
+            )}
           </div>
-        </div>
+        </>
       )}
     </div>
   );

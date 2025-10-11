@@ -464,6 +464,7 @@ class WCSAPConfig(BaseSettings):
         case_sensitive = False
         env_file = ".env"
         env_file_encoding = "utf-8"
+        extra = "ignore"  # Allow extra fields in .env that are not defined in this model
     
     def validate_production_settings(self) -> list[str]:
         """

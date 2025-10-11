@@ -1,171 +1,175 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 
-const InteractiveChart = ({ onDataPointClick }) => {
+const InteractiveChart = ({ onDataPointClick, activityData = [], userType = 'freelancer', chartType = 'line' }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [tooltipData, setTooltipData] = useState({ value: 0, time: '', contracts: 0 });
 
-  // Datos reales simulados para el gráfico (24 horas) - CORREGIDOS para alinearse con la curva
-  const chartData = [
-    { x: 0, y: 250, value: 12, time: '00:00', contracts: 5 },
-    { x: 100, y: 150, value: 28, time: '04:00', contracts: 12 },
-    { x: 200, y: 280, value: 8, time: '08:00', contracts: 3 },
-    { x: 300, y: 180, value: 22, time: '12:00', contracts: 9 },
-    { x: 400, y: 80, value: 45, time: '16:00', contracts: 18 },
-    { x: 500, y: 250, value: 15, time: '20:00', contracts: 6 },
-    { x: 600, y: 150, value: 32, time: '22:00', contracts: 13 },
-    { x: 700, y: 50, value: 58, time: '23:00', contracts: 23 },
-    { x: 800, y: 200, value: 18, time: '23:30', contracts: 7 },
-    { x: 900, y: 100, value: 38, time: '23:45', contracts: 15 },
-    { x: 1000, y: 150, value: 25, time: '24:00', contracts: 10 }
-  ];
-
-  // Función mejorada para calcular la posición Y en la curva de Bézier
-  const calculateYOnCurve = (x) => {
-    // Usar la misma curva que se define en el SVG para consistencia perfecta
-    // Curva: M 0 250 C 100 150, 200 280, 300 180 C 400 80, 500 250, 600 150 C 700 50, 800 200, 900 100 L 1000 150
-    
-    // Normalizar x a un rango de 0-1 para cada segmento
-    if (x <= 300) {
-      // Primera curva de Bézier: 0-300 (P0: 250, P1: 150, P2: 280, P3: 180)
-      const t = Math.max(0, Math.min(1, x / 300));
-      const y = Math.pow(1-t, 3) * 250 + 3 * Math.pow(1-t, 2) * t * 150 + 3 * (1-t) * Math.pow(t, 2) * 280 + Math.pow(t, 3) * 180;
-      return Math.round(y);
-    } else if (x <= 600) {
-      // Segunda curva de Bézier: 300-600 (P0: 180, P1: 80, P2: 250, P3: 150)
-      const t = Math.max(0, Math.min(1, (x - 300) / 300));
-      const y = Math.pow(1-t, 3) * 180 + 3 * Math.pow(1-t, 2) * t * 80 + 3 * (1-t) * Math.pow(t, 2) * 250 + Math.pow(t, 3) * 150;
-      return Math.round(y);
-    } else if (x <= 900) {
-      // Tercera curva de Bézier: 600-900 (P0: 150, P1: 50, P2: 200, P3: 100)
-      const t = Math.max(0, Math.min(1, (x - 600) / 300));
-      const y = Math.pow(1-t, 3) * 150 + 3 * Math.pow(1-t, 2) * t * 50 + 3 * (1-t) * Math.pow(t, 2) * 200 + Math.pow(t, 3) * 100;
-      return Math.round(y);
-    } else {
-      // Línea recta: 900-1000 (de 100 a 150)
-      const t = Math.max(0, Math.min(1, (x - 900) / 100));
-      const y = 100 + t * (150 - 100);
-      return Math.round(y);
+  // Convert backend activity data to chart format
+  const chartData = useMemo(() => {
+    if (!activityData || activityData.length === 0) {
+      // Fallback to mock data
+      return [
+        { x: 0, y: 250, value: 12, time: '00:00', openContracts: 5, acceptedContracts: 3 },
+        { x: 100, y: 150, value: 28, time: '04:00', openContracts: 12, acceptedContracts: 8 },
+        { x: 200, y: 280, value: 8, time: '08:00', openContracts: 3, acceptedContracts: 2 },
+        { x: 300, y: 180, value: 22, time: '12:00', openContracts: 9, acceptedContracts: 6 },
+        { x: 400, y: 80, value: 45, time: '16:00', openContracts: 18, acceptedContracts: 12 },
+        { x: 500, y: 250, value: 15, time: '20:00', openContracts: 6, acceptedContracts: 4 },
+        { x: 600, y: 150, value: 32, time: '22:00', openContracts: 13, acceptedContracts: 9 },
+        { x: 700, y: 50, value: 58, time: '23:00', openContracts: 23, acceptedContracts: 15 },
+        { x: 800, y: 200, value: 18, time: '23:30', openContracts: 7, acceptedContracts: 5 },
+        { x: 900, y: 100, value: 38, time: '23:45', openContracts: 15, acceptedContracts: 10 },
+        { x: 1000, y: 150, value: 25, time: '24:00', openContracts: 10, acceptedContracts: 7 }
+      ];
     }
-  };
 
-  // Función mejorada para encontrar el punto más cercano
-  const findNearestDataPoint = (x) => {
-    let nearestPoint = chartData[0];
-    let minDistance = Math.abs(x - nearestPoint.x);
+    // Convert backend data (24 hours) to chart points
+    const maxOpenContracts = Math.max(...activityData.map(d => d.open_contracts || 0), 1);
+    
+    return activityData.map((activity, index) => {
+      const openContracts = activity.open_contracts || 0;
+      const acceptedContracts = activity.accepted_contracts || 0;
+      
+      // Map open contracts count to Y position (inverted: more contracts = lower Y)
+      const yPosition = 280 - (openContracts / maxOpenContracts) * 230;
+      
+      return {
+        x: (index / (activityData.length - 1)) * 1000,
+        y: Math.max(50, Math.min(280, yPosition)),
+        value: activity.value || openContracts * 5,
+        time: activity.hour,
+        openContracts: openContracts,
+        acceptedContracts: acceptedContracts,
+        contracts: activity.contracts // Total activity
+      };
+    });
+  }, [activityData]);
+
+  // Simplified and stable interpolation function
+  const interpolateData = useCallback((x) => {
+    const clampedX = Math.max(0, Math.min(1000, x));
+    
+    // Find the closest data point
+    let closestPoint = chartData[0];
+    let minDistance = Math.abs(clampedX - closestPoint.x);
     
     for (const point of chartData) {
-      const distance = Math.abs(x - point.x);
+      const distance = Math.abs(clampedX - point.x);
       if (distance < minDistance) {
         minDistance = distance;
-        nearestPoint = point;
+        closestPoint = point;
       }
     }
     
-    return nearestPoint;
-  };
-
-  // Función mejorada para interpolar datos entre puntos
-  const interpolateData = (x) => {
-    // Manejar casos fuera del rango normal
-    if (x < 0) {
-      const firstPoint = chartData[0];
-      return {
-        x: 0,
-        y: firstPoint.y,
-        value: firstPoint.value,
-        time: firstPoint.time,
-        contracts: firstPoint.contracts
-      };
-    }
-    
-    if (x > 1000) {
-      const lastPoint = chartData[chartData.length - 1];
-      return {
-        x: 1000,
-        y: lastPoint.y,
-        value: lastPoint.value,
-        time: lastPoint.time,
-        contracts: lastPoint.contracts
-      };
-    }
-    
-    // Si estamos muy cerca de un punto de datos, usar ese punto exacto
-    const nearestPoint = findNearestDataPoint(x);
-    if (Math.abs(x - nearestPoint.x) < 30) {
-      return nearestPoint;
-    }
-    
-    // Encontrar los dos puntos más cercanos para interpolación
-    let beforePoint = null;
-    let afterPoint = null;
-    
-    for (let i = 0; i < chartData.length; i++) {
-      if (chartData[i].x <= x) {
-        beforePoint = chartData[i];
-      }
-      if (chartData[i].x >= x && !afterPoint) {
-        afterPoint = chartData[i];
-        break;
-      }
-    }
-    
-    if (!beforePoint) return chartData[0];
-    if (!afterPoint) return chartData[chartData.length - 1];
-    
-    // Interpolar entre los dos puntos
-    const t = (x - beforePoint.x) / (afterPoint.x - beforePoint.x);
     return {
-      x: x,
-      y: calculateYOnCurve(x),
-      value: Math.round(beforePoint.value + t * (afterPoint.value - beforePoint.value)),
-      time: t < 0.5 ? beforePoint.time : afterPoint.time,
-      contracts: Math.round(beforePoint.contracts + t * (afterPoint.contracts - beforePoint.contracts))
+      ...closestPoint,
+      x: clampedX,
+      openContracts: closestPoint.openContracts || 0,
+      acceptedContracts: closestPoint.acceptedContracts || 0
     };
-  };
+  }, [chartData]);
 
-  const handleMouseMove = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    // Expandir el área de seguimiento para mejor respuesta
-    const x = Math.max(-50, Math.min(1050, ((e.clientX - rect.left) / rect.width) * 1000));
-    const y = calculateYOnCurve(x);
-    const data = interpolateData(x);
-    
-    setMousePosition({ x, y });
-    setTooltipData(data);
-  };
-
-  const handleMouseEnter = () => {
-    setIsHovered(true);
-  };
-
-  const handleMouseLeave = () => {
-    setIsHovered(false);
-  };
-
-  const handleChartClick = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 1000;
-    const data = interpolateData(x);
-    
-    // Encontrar el período de tiempo más cercano
-    const timeIndex = Math.floor(x / 100);
-    const selectedPeriod = chartData[Math.min(timeIndex, chartData.length - 1)];
-    
-    if (onDataPointClick) {
-      onDataPointClick({
-        period: selectedPeriod.time,
-        contracts: selectedPeriod.contracts,
-        value: selectedPeriod.value,
-        x: x,
-        y: calculateYOnCurve(x)
+  // Stable mouse move handler
+  const handleMouseMove = useCallback((e) => {
+    try {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const relativeX = (e.clientX - rect.left) / rect.width;
+      const x = Math.max(0, Math.min(1000, relativeX * 1000));
+      
+      // Find closest point for Y position
+      const data = interpolateData(x);
+      
+      setMousePosition({ 
+        x: x, 
+        y: data.y
       });
+      setTooltipData(data);
+    } catch (error) {
+      console.error('Error in handleMouseMove:', error);
     }
+  }, [interpolateData]);
+
+  const handleMouseEnter = useCallback(() => {
+    setIsHovered(true);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    setIsHovered(false);
+  }, []);
+
+  const handleChartClick = useCallback((e) => {
+    try {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 1000;
+      const data = interpolateData(x);
+      
+      if (onDataPointClick) {
+        onDataPointClick({
+          period: data.time,
+          openContracts: data.openContracts || 0,
+          acceptedContracts: data.acceptedContracts || 0,
+          contracts: data.contracts,
+          value: data.value,
+          x: x,
+          y: data.y,
+          hour: data.time
+        });
+      }
+    } catch (error) {
+      console.error('Error in handleChartClick:', error);
+    }
+  }, [interpolateData, onDataPointClick]);
+
+  // Generate path for line chart
+  const generateLinePath = () => {
+    if (chartData.length === 0) return "";
+    
+    let path = `M ${chartData[0].x} ${chartData[0].y}`;
+    for (let i = 1; i < chartData.length; i++) {
+      path += ` L ${chartData[i].x} ${chartData[i].y}`;
+    }
+    return path;
   };
 
-  // Generar la línea de gradiente que sigue la curva
-  const generateGradientPath = () => {
-    return "M 0 250 C 100 150, 200 280, 300 180 C 400 80, 500 250, 600 150 C 700 50, 800 200, 900 100 L 1000 150";
+  // Generate bars for bar chart
+  const generateBars = () => {
+    if (chartData.length === 0) return [];
+    
+    return chartData.map((point, index) => {
+      const barHeight = 280 - point.y;
+      return (
+        <rect
+          key={index}
+          x={point.x - 15}
+          y={point.y}
+          width="30"
+          height={barHeight}
+          fill="var(--accent-color)"
+          opacity={isHovered && Math.abs(mousePosition.x - point.x) < 30 ? 0.8 : 0.6}
+          className="chart-bar"
+        />
+      );
+    });
+  };
+
+  // Generate accepted contracts line for both chart types
+  const generateAcceptedContractsLine = () => {
+    if (chartData.length === 0) return "";
+    
+    const maxAcceptedContracts = Math.max(...chartData.map(d => d.acceptedContracts || 0), 1);
+    
+    let path = `M ${chartData[0].x} ${280 - ((chartData[0].acceptedContracts || 0) / maxAcceptedContracts) * 100}`;
+    
+    for (let i = 1; i < chartData.length; i++) {
+      const currentY = 280 - ((chartData[i].acceptedContracts || 0) / maxAcceptedContracts) * 100;
+      path += ` L ${chartData[i].x} ${currentY}`;
+    }
+    
+    return path;
   };
 
   return (
@@ -179,7 +183,7 @@ const InteractiveChart = ({ onDataPointClick }) => {
         onClick={handleChartClick}
         style={{ cursor: 'pointer' }}
       >
-        {/* Definir gradiente */}
+        {/* Define gradients */}
         <defs>
           <linearGradient id="chartGradient" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="var(--accent-color)" stopOpacity="0.3" />
@@ -188,42 +192,50 @@ const InteractiveChart = ({ onDataPointClick }) => {
           </linearGradient>
         </defs>
 
-        {/* Eje X */}
+        {/* X-axis */}
         <line x1="0" y1="280" x2="1000" y2="280" stroke="var(--border-color)" strokeWidth="2" />
         
-        {/* Línea secundaria */}
+        {/* Accepted contracts line (dashed) */}
         <path 
           className="chart-line-secondary"
-          d="M 0 280 C 100 220, 250 200, 450 250 C 650 280, 800 230, 1000 260"
+          d={generateAcceptedContractsLine()}
           fill="none" 
           stroke="var(--text-secondary)" 
           strokeWidth="2" 
           strokeDasharray="5,5"
-          opacity="0.5"
+          opacity="0.7"
         />
         
-        {/* Área de gradiente bajo la curva */}
-        <path 
-          d={`${generateGradientPath()} L 1000 280 L 0 280 Z`}
-          fill="url(#chartGradient)"
-          opacity={isHovered ? 0.8 : 0.4}
-          className="chart-area"
-        />
+        {/* Chart content based on type */}
+        {chartType === 'line' ? (
+          <>
+            {/* Area under curve */}
+            <path 
+              d={`${generateLinePath()} L 1000 280 L 0 280 Z`}
+              fill="url(#chartGradient)"
+              opacity={isHovered ? 0.6 : 0.3}
+              className="chart-area"
+            />
+            
+            {/* Main line */}
+            <path 
+              className={`chart-line-main ${isHovered ? 'hovered' : ''}`}
+              d={generateLinePath()}
+              fill="none" 
+              stroke="var(--accent-color)" 
+              strokeWidth="4" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+            />
+          </>
+        ) : (
+          <>
+            {/* Bar chart */}
+            {generateBars()}
+          </>
+        )}
         
-        {/* Línea principal de datos */}
-        <path 
-          className={`chart-line-main ${isHovered ? 'hovered' : ''}`}
-          d={generateGradientPath()}
-          fill="none" 
-          stroke="var(--accent-color)" 
-          strokeWidth="4" 
-          strokeLinecap="round" 
-          strokeLinejoin="round"
-        />
-        
-        {/* Puntos de datos removidos para una visualización más limpia */}
-        
-        {/* Línea vertical de seguimiento */}
+        {/* Mouse tracking line */}
         {isHovered && (
           <line 
             x1={mousePosition.x} 
@@ -238,7 +250,7 @@ const InteractiveChart = ({ onDataPointClick }) => {
           />
         )}
         
-        {/* Círculo de seguimiento en la curva */}
+        {/* Hover circle */}
         {isHovered && (
           <circle 
             cx={mousePosition.x} 
@@ -252,21 +264,24 @@ const InteractiveChart = ({ onDataPointClick }) => {
         )}
       </svg>
       
-      {/* Tooltip con datos reales - POSICIONAMIENTO MEJORADO */}
+      {/* Tooltip */}
       {isHovered && (
         <div 
           className="chart-tooltip"
           style={{
             left: `${Math.max(0, Math.min(100, (mousePosition.x / 1000) * 100))}%`,
-            top: '10px', // Posición fija arriba del gráfico
+            top: '10px',
             transform: 'translate(-50%, 0)',
             position: 'absolute'
           }}
         >
           <div className="tooltip-content">
             <div className="tooltip-time">{tooltipData.time}</div>
-            <div className="tooltip-value">{tooltipData.value} contratos</div>
-            <div className="tooltip-contracts">+{tooltipData.contracts} nuevos</div>
+            <div className="tooltip-value">{tooltipData.openContracts || 0} contratos abiertos</div>
+            <div className="tooltip-contracts">{tooltipData.acceptedContracts || 0} contratos aceptados</div>
+            {tooltipData.contracts > 0 && (
+              <div className="tooltip-activity">+{tooltipData.contracts} actividades</div>
+            )}
           </div>
         </div>
       )}

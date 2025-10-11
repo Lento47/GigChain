@@ -1,11 +1,12 @@
 import React from 'react';
-import { X, ExternalLink } from 'lucide-react';
+import { X, ExternalLink, TrendingUp, Clock, DollarSign, Building2, Sparkles, Briefcase } from 'lucide-react';
+import './modal.css';
 
 const JobsModal = ({ isOpen, onClose, selectedPeriod, userType }) => {
   if (!isOpen) return null;
 
-  // Datos de ejemplo para trabajos disponibles
-  const sampleJobs = [
+  // Use jobs from selectedPeriod if available, otherwise fallback to sample data
+  const jobs = selectedPeriod?.jobs || [
     {
       id: 1,
       title: "Desarrollo de E-commerce",
@@ -14,7 +15,9 @@ const JobsModal = ({ isOpen, onClose, selectedPeriod, userType }) => {
       budget: "$4,500",
       tags: ["React", "Node.js", "MongoDB"],
       description: "Desarrollo completo de plataforma de comercio electrónico con sistema de pagos integrado",
-      type: "Desarrollo Web"
+      type: "Desarrollo Web",
+      level: "Intermedio",
+      rating: 4.8
     },
     {
       id: 2,
@@ -24,7 +27,9 @@ const JobsModal = ({ isOpen, onClose, selectedPeriod, userType }) => {
       budget: "$3,500",
       tags: ["Arquitectura", "Cloud", "Security"],
       description: "Auditoría de seguridad y optimización de sistemas en la nube",
-      type: "Consultoría"
+      type: "Consultoría",
+      level: "Senior",
+      rating: 4.9
     },
     {
       id: 3,
@@ -34,7 +39,9 @@ const JobsModal = ({ isOpen, onClose, selectedPeriod, userType }) => {
       budget: "$2,000",
       tags: ["After Effects", "Premiere", "Motion Graphics"],
       description: "Videos promocionales para redes sociales con animaciones personalizadas",
-      type: "Marketing"
+      type: "Marketing",
+      level: "Intermedio",
+      rating: 4.7
     }
   ];
 
@@ -42,9 +49,20 @@ const JobsModal = ({ isOpen, onClose, selectedPeriod, userType }) => {
     <div className="modal-overlay" onClick={onClose}>
       <div className="jobs-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>
-            {selectedPeriod ? `Trabajos Disponibles - ${selectedPeriod.period}` : 'Trabajos Disponibles'}
-          </h3>
+          <div className="header-content">
+            <Briefcase size={28} className="header-icon" />
+            <div>
+              <h3 className="modal-title">
+                {selectedPeriod?.hour ? `Trabajos Disponibles - ${selectedPeriod.hour}` : 'Trabajos Disponibles'}
+              </h3>
+              <p className="modal-subtitle">
+                {selectedPeriod?.hour 
+                  ? `${selectedPeriod.openContracts || 0} contratos abiertos, ${selectedPeriod.acceptedContracts || 0} aceptados`
+                  : 'Encuentra tu próxima oportunidad'
+                }
+              </p>
+            </div>
+          </div>
           <button className="modal-close" onClick={onClose}>
             <X size={20} />
           </button>
@@ -53,23 +71,32 @@ const JobsModal = ({ isOpen, onClose, selectedPeriod, userType }) => {
         <div className="modal-content">
           <div className="jobs-summary">
             <div className="summary-card">
-              <h4>NUEVOS CONTRATOS</h4>
-              <div className="summary-number">+18</div>
-              <p>Oportunidades disponibles en este período</p>
+              <div className="summary-icon">
+                <Sparkles size={32} />
+              </div>
+              <div className="summary-content">
+                <h4>NUEVOS CONTRATOS</h4>
+                <div className="summary-number">
+                  <TrendingUp size={24} className="trend-icon" />
+                  <span>+18</span>
+                </div>
+                <p>Oportunidades disponibles en este período</p>
+              </div>
             </div>
           </div>
 
           <div className="jobs-grid">
-            {sampleJobs.map((job) => (
+            {jobs.map((job) => (
               <div key={job.id} className="job-card">
+                <div className="job-level-badge">{job.level}</div>
+                
                 <div className="job-header">
-                  <div className="job-title">
-                    <h4>{job.title}</h4>
-                    <span className="job-company">{job.company}</span>
-                  </div>
-                  <div className="job-meta">
-                    <span className="job-duration">{job.duration}</span>
-                    <span className="job-budget">{job.budget}</span>
+                  <div className="job-title-section">
+                    <h4 className="job-title">{job.title}</h4>
+                    <div className="job-company">
+                      <Building2 size={14} />
+                      <span>{job.company}</span>
+                    </div>
                   </div>
                 </div>
 
@@ -83,11 +110,22 @@ const JobsModal = ({ isOpen, onClose, selectedPeriod, userType }) => {
                   <p>{job.description}</p>
                 </div>
 
+                <div className="job-meta-row">
+                  <div className="job-meta-item">
+                    <Clock size={16} />
+                    <span>{job.duration}</span>
+                  </div>
+                  <div className="job-meta-item budget">
+                    <DollarSign size={16} />
+                    <span>{job.budget}</span>
+                  </div>
+                </div>
+
                 <div className="job-footer">
-                  <span className="job-type">{job.type}</span>
+                  <div className="job-type-badge">{job.type}</div>
                   <button className="apply-btn">
-                    Aplicar
-                    <ExternalLink size={14} />
+                    <span>Aplicar</span>
+                    <ExternalLink size={16} />
                   </button>
                 </div>
               </div>

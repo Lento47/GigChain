@@ -57,9 +57,21 @@ const HelpView = React.memo(() => {
   return (
     <div className="help-view">
       <div className="view-header">
-        <div className="header-info">
-          <h1>Centro de Ayuda</h1>
-          <p>Encuentra respuestas y recursos útiles</p>
+        <div className="header-content">
+          <div className="header-info">
+            <h1>🆘 Centro de Ayuda</h1>
+            <p>Encuentra respuestas rápidas y recursos útiles para usar GigChain</p>
+          </div>
+          <div className="header-stats">
+            <div className="stat-item">
+              <span className="stat-number">5</span>
+              <span className="stat-label">FAQs</span>
+            </div>
+            <div className="stat-item">
+              <span className="stat-number">3</span>
+              <span className="stat-label">Recursos</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -69,7 +81,7 @@ const HelpView = React.memo(() => {
             <Search size={20} className="search-icon" />
             <input
               type="text"
-              placeholder="¿En qué podemos ayudarte?"
+              placeholder="¿En qué podemos ayudarte? Busca por preguntas, categorías..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="search-input"
@@ -77,28 +89,43 @@ const HelpView = React.memo(() => {
           </div>
         </div>
 
-        <div className="resources-grid">
-          {resources.map((resource, index) => (
-            <a key={index} href={resource.link} className="resource-card">
-              <div className="resource-icon">{resource.icon}</div>
-              <h3>{resource.title}</h3>
-              <p>{resource.description}</p>
-              <ExternalLink size={16} className="external-icon" />
-            </a>
-          ))}
+        <div className="resources-section">
+          <div className="section-header">
+            <h2>📚 Recursos Útiles</h2>
+            <p>Accede a documentación, comunidad y soporte</p>
+          </div>
+          <div className="resources-grid">
+            {resources.map((resource, index) => (
+              <a key={index} href={resource.link} className="resource-card">
+                <div className="resource-icon">{resource.icon}</div>
+                <div className="resource-content">
+                  <h3>{resource.title}</h3>
+                  <p>{resource.description}</p>
+                </div>
+                <ExternalLink size={18} className="external-icon" />
+              </a>
+            ))}
+          </div>
         </div>
 
         <div className="faqs-section">
-          <h2>Preguntas Frecuentes</h2>
+          <div className="section-header">
+            <h2>❓ Preguntas Frecuentes</h2>
+            <p>Respuestas rápidas a las dudas más comunes</p>
+          </div>
           <div className="faqs-list">
             {filteredFaqs.map(faq => (
               <details key={faq.id} className="faq-item">
                 <summary className="faq-question">
-                  <HelpCircle size={20} />
-                  <span>{faq.question}</span>
+                  <div className="faq-icon">
+                    <HelpCircle size={20} />
+                  </div>
+                  <div className="faq-content">
+                    <h4>{faq.question}</h4>
+                    <span className="faq-category">{faq.category}</span>
+                  </div>
                 </summary>
                 <div className="faq-answer">
-                  <span className="faq-category">{faq.category}</span>
                   <p>{faq.answer}</p>
                 </div>
               </details>
@@ -108,9 +135,9 @@ const HelpView = React.memo(() => {
 
         {filteredFaqs.length === 0 && (
           <div className="no-results">
-            <HelpCircle size={48} />
+            <HelpCircle size={64} className="no-results-icon" />
             <h3>No se encontraron resultados</h3>
-            <p>Intenta con otros términos de búsqueda</p>
+            <p>Intenta con otros términos de búsqueda o explora nuestras categorías</p>
           </div>
         )}
       </div>

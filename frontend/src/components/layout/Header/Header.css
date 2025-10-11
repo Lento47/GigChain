@@ -1,8 +1,8 @@
 /* Header Layout Styles */
 
 .content-header {
-  background: var(--bg-primary);
-  border-bottom: 1px solid var(--border-color);
+  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-accent) 100%);
+  border-bottom: 2px solid var(--border-accent);
   padding: 1rem 2rem;
   display: flex;
   align-items: flex-start;
@@ -15,6 +15,7 @@
   min-width: 0;
   z-index: 10;
   backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-md);
 }
 
 .header-left {
@@ -87,7 +88,7 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  background: var(--primary-color);
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
   color: white;
   border: none;
   border-radius: var(--radius-lg);
@@ -95,12 +96,13 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
+  box-shadow: var(--shadow-sm);
 }
 
 .refresh-btn:hover {
-  background: var(--primary-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  background: linear-gradient(135deg, var(--primary-hover) 0%, #5a67d8 100%);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
 }
 
 .refresh-btn:active {
@@ -116,18 +118,20 @@
 .search-bar input {
   width: 100%;
   padding: 0.75rem 1rem 0.75rem 3rem;
-  border: 1px solid var(--border-color);
+  border: 2px solid var(--border-color);
   border-radius: var(--radius-lg);
   background: var(--bg-primary);
   color: var(--text-primary);
   font-size: 0.875rem;
   transition: all 0.3s ease;
+  box-shadow: var(--shadow-sm);
 }
 
 .search-bar input:focus {
   outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: var(--border-accent);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1), var(--shadow-md);
+  transform: translateY(-1px);
 }
 
 .search-bar svg {
@@ -234,145 +238,151 @@
   }
 }
 
-/* New Header Styles */
+/* ===== Modern Header Styles ===== */
 .app-header {
   background: var(--bg-primary);
   border-bottom: 1px solid var(--border-color);
-  padding: 1rem 2rem;
+  padding: 0.875rem 1.5rem;
   z-index: 10;
   position: sticky;
   top: 0;
   backdrop-filter: blur(10px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .header-content {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 2rem;
-  flex-wrap: wrap;
-  min-width: 0;
-  max-width: 1400px;
+  gap: 1.5rem;
+  max-width: 100%;
   margin: 0 auto;
 }
 
 .header-info {
-  flex: 1;
+  flex: 0 1 auto;
   min-width: 0;
+}
+
+.header-info h1 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 0.125rem 0;
+  line-height: 1.3;
+}
+
+.header-info p {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.3;
 }
 
 .header-actions {
   display: flex;
   align-items: center;
   gap: 1rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
 }
 
-.date-info {
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-
-.refresh-button {
+.theme-toggle-container,
+.wallet-container,
+.auth-container {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  background: var(--primary-color);
-  color: white;
-  border: none;
-  border-radius: var(--radius-lg);
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
+  flex-shrink: 0;
 }
 
-.refresh-button:hover {
-  background: var(--primary-hover);
-  transform: translateY(-1px);
+/* Divider between sections */
+.wallet-container::before,
+.auth-container::before {
+  content: '';
+  width: 1px;
+  height: 24px;
+  background: var(--border-color);
+  margin-right: 0.75rem;
 }
 
-.search-container {
-  position: relative;
-  display: flex;
-  align-items: center;
+/* ===== Responsive Header ===== */
+
+/* Tablets and smaller desktops (1024px and below) */
+@media (max-width: 1024px) {
+  .app-header {
+    padding: 0.875rem 1rem;
+  }
+
+  .header-actions {
+    gap: 0.75rem;
+  }
 }
 
-.search-input {
-  padding: 0.5rem 0.75rem 0.5rem 2.5rem;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  font-size: 0.875rem;
-  width: 200px;
-  transition: all 0.3s ease;
-}
-
-.search-input:focus {
-  outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-}
-
-.search-container svg {
-  position: absolute;
-  left: 0.75rem;
-  color: var(--text-secondary);
-  pointer-events: none;
-}
-
-.notifications-container,
-.wallet-container {
-  display: flex;
-  align-items: center;
-}
-
-.header-wallet {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: 0.5rem 1rem;
-}
-
-/* Responsive New Header */
+/* Mobile tablets (768px and below) */
 @media (max-width: 768px) {
   .app-header {
-    padding: 1rem;
+    padding: 0.75rem 1rem;
   }
 
   .header-content {
-    flex-direction: column;
-    align-items: flex-start;
     gap: 1rem;
   }
 
-  .header-actions {
-    width: 100%;
-    justify-content: space-between;
-    flex-wrap: wrap;
+  .header-info h1 {
+    font-size: 1.125rem;
   }
 
-  .search-input {
-    width: 150px;
+  .header-info p {
+    font-size: 0.75rem;
+  }
+
+  .header-actions {
+    gap: 0.625rem;
+  }
+
+  .wallet-container::before,
+  .auth-container::before {
+    height: 20px;
   }
 }
 
+/* Mobile (480px and below) */
 @media (max-width: 480px) {
+  .app-header {
+    padding: 0.75rem;
+  }
+
+  .header-content {
+    gap: 0.875rem;
+  }
+
+  .header-info h1 {
+    font-size: 1rem;
+  }
+
+  .header-info p {
+    font-size: 0.7rem;
+  }
+
   .header-actions {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.75rem;
+    gap: 0.5rem;
   }
 
-  .search-input {
-    width: 100%;
+  .wallet-container::before,
+  .auth-container::before {
+    display: none;
+  }
+}
+
+/* Extra small devices (360px and below) */
+@media (max-width: 360px) {
+  .header-actions {
+    gap: 0.375rem;
   }
 
-  .refresh-button {
-    width: 100%;
-    justify-content: center;
+  .wallet-button-compact,
+  .auth-status-compact {
+    padding: 0.375rem 0.625rem;
+    font-size: 0.75rem;
   }
 }

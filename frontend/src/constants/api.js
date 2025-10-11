@@ -3,6 +3,7 @@ export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:50
 
 // API Endpoints
 export const API_ENDPOINTS = {
+  BASE: API_BASE_URL,
   VALIDATE_WALLET: '/api/validate_wallet',
   GENERATE_CONTRACT: '/api/generate_contract',
   DEPLOY_CONTRACT: '/api/deploy_contract',

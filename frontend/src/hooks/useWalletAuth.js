@@ -17,45 +17,13 @@ export const useWalletAuth = () => {
   const address = useAddress();
   const signer = useSigner();
   
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    // Initialize with optimistic auth if token exists
+    return !!localStorage.getItem(AUTH_STORAGE_KEY);
+  });
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [authError, setAuthError] = useState(null);
   const [sessionInfo, setSessionInfo] = useState(null);
-
-  /**
-   * Load session from localStorage on mount
-   */
-  useEffect(() => {
-    const loadSession = async () => {
-      const sessionToken = localStorage.getItem(AUTH_STORAGE_KEY);
-      
-      if (sessionToken) {
-        try {
-          // Verify session with backend
-          const response = await fetch(`${API_ENDPOINTS.BASE}/auth/status`, {
-            headers: {
-              'Authorization': `Bearer ${sessionToken}`
-            }
-          });
-          
-          const data = await response.json();
-          
-          if (data.authenticated) {
-            setIsAuthenticated(true);
-            setSessionInfo(data.session_info);
-          } else {
-            // Session invalid, try to refresh
-            await tryRefreshSession();
-          }
-        } catch (error) {
-          console.error('Session verification error:', error);
-          clearSession();
-        }
-      }
-    };
-    
-    loadSession();
-  }, []);
 
   /**
    * Clear local session data
@@ -80,7 +48,7 @@ export const useWalletAuth = () => {
     }
     
     try {
-      const response = await fetch(`${API_ENDPOINTS.BASE}/auth/refresh`, {
+      const response = await fetch(`${API_ENDPOINTS.BASE}/api/auth/refresh`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -113,10 +81,50 @@ export const useWalletAuth = () => {
   }, [clearSession]);
 
   /**
+   * Load and verify session from localStorage on mount
+   */
+  useEffect(() => {
+    const verifySession = async () => {
+      const sessionToken = localStorage.getItem(AUTH_STORAGE_KEY);
+      
+      if (sessionToken) {
+        try {
+          // Verify session with backend
+          const response = await fetch(`${API_ENDPOINTS.BASE}/api/auth/status`, {
+            headers: {
+              'Authorization': `Bearer ${sessionToken}`
+            }
+          });
+          
+          const data = await response.json();
+          
+          if (data.authenticated) {
+            setSessionInfo(data.session_info);
+            console.log('✅ Session restored successfully');
+          } else {
+            // Session invalid, try to refresh
+            console.log('⚠️ Session invalid, attempting refresh...');
+            const refreshed = await tryRefreshSession();
+            if (!refreshed) {
+              console.log('❌ Refresh failed, session cleared');
+            }
+          }
+        } catch (error) {
+          console.error('Session verification error:', error);
+          // Keep optimistic auth, backend might be down
+          console.log('⚠️ Backend unavailable, using cached session');
+        }
+      }
+    };
+    
+    verifySession();
+  }, [tryRefreshSession]);
+
+  /**
    * Step 1: Request authentication challenge from server
    */
   const requestChallenge = useCallback(async (walletAddress) => {
-    const response = await fetch(`${API_ENDPOINTS.BASE}/auth/challenge`, {
+    const response = await fetch(`${API_ENDPOINTS.BASE}/api/auth/challenge`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -155,7 +163,7 @@ export const useWalletAuth = () => {
    * Step 3: Verify signature and create session
    */
   const verifyAndCreateSession = useCallback(async (challengeId, signature, walletAddress) => {
-    const response = await fetch(`${API_ENDPOINTS.BASE}/auth/verify`, {
+    const response = await fetch(`${API_ENDPOINTS.BASE}/api/auth/verify`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -250,7 +258,7 @@ export const useWalletAuth = () => {
     if (sessionToken) {
       try {
         // Notify server to invalidate session
-        await fetch(`${API_ENDPOINTS.BASE}/auth/logout`, {
+        await fetch(`${API_ENDPOINTS.BASE}/api/auth/logout`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${sessionToken}`

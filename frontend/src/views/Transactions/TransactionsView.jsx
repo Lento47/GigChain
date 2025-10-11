@@ -72,10 +72,10 @@ const TransactionsView = React.memo(() => {
   }, []);
 
   const getTypeIcon = useCallback((type) => {
-    switch (status) {
-      case 'payment': return <ArrowUpRight size={16} className="type-icon payment" />;
-      case 'receipt': return <ArrowDownLeft size={16} className="type-icon receipt" />;
-      default: return <CreditCard size={16} className="type-icon" />;
+    switch (type) {
+      case 'payment': return <ArrowUpRight size={16} />;
+      case 'receipt': return <ArrowDownLeft size={16} />;
+      default: return <CreditCard size={16} />;
     }
   }, []);
 
@@ -188,12 +188,14 @@ const TransactionsView = React.memo(() => {
 
           {filteredTransactions.map((transaction, index) => (
             <div key={index} className="table-row">
-              <div className="transaction-type">
-                {getTypeIcon(transaction.type)}
-                <span>{transaction.type === 'payment' ? 'Pago' : 'Recibo'}</span>
+              <div className="table-cell type-info">
+                <div className={`type-icon ${transaction.type}`}>
+                  {getTypeIcon(transaction.type)}
+                </div>
+                <span className="type-text">{transaction.type === 'payment' ? 'Pago' : 'Recibo'}</span>
               </div>
               
-              <div className="transaction-status">
+              <div className="table-cell status-info">
                 {getStatusIcon(transaction.status)}
                 <span className={`status-text ${transaction.status}`}>
                   {transaction.status === 'completed' ? 'Completada' : 
@@ -201,19 +203,19 @@ const TransactionsView = React.memo(() => {
                 </span>
               </div>
               
-              <div className="transaction-amount">
-                <span>{transaction.amount}</span>
+              <div className="table-cell">
+                <span className="amount">{transaction.amount}</span>
               </div>
               
-              <div className="transaction-description">
-                <span>{transaction.description}</span>
+              <div className="table-cell">
+                <span className="description">{transaction.description}</span>
               </div>
               
-              <div className="transaction-date">
-                <span>{transaction.timestamp}</span>
+              <div className="table-cell">
+                <span className="timestamp">{transaction.timestamp}</span>
               </div>
               
-              <div className="transaction-actions">
+              <div className="table-cell">
                 <button 
                   className="view-details-btn"
                   onClick={() => handleViewDetails(transaction)}

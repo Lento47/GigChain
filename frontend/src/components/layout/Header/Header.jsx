@@ -1,9 +1,16 @@
 import React from 'react';
-import { Search, RefreshCw, Bell } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import WalletConnection from '../../features/Wallet/WalletConnection';
-import NotificationCenter from '../../common/NotificationCenter/NotificationCenter';
+import { WalletAuthButton } from '../../features';
+import ThemeToggle from '../../common/ThemeToggle/ThemeToggle';
+import './Header.css';
 
-const Header = ({ currentView, walletInfo, isConnected }) => {
+const Header = ({ walletInfo, isConnected }) => {
+  const location = useLocation();
+  
+  // Get current view from pathname
+  const currentView = location.pathname.slice(1) || 'dashboard';
+  
   const getPageTitle = () => {
     switch (currentView) {
       case 'dashboard':
@@ -21,15 +28,50 @@ const Header = ({ currentView, walletInfo, isConnected }) => {
           title: 'Contratos',
           subtitle: 'Gestiona tus contratos inteligentes'
         };
+      case 'templates':
+        return {
+          title: 'Plantillas',
+          subtitle: 'Plantillas de contratos inteligentes'
+        };
+      case 'transactions':
+        return {
+          title: 'Transacciones',
+          subtitle: 'Historial de pagos y transacciones'
+        };
+      case 'ai':
+        return {
+          title: 'AI Agents',
+          subtitle: 'Agentes inteligentes de GigChain'
+        };
       case 'chat':
         return {
           title: 'Chat AI',
           subtitle: 'Asistente virtual de GigChain'
         };
+      case 'wallets':
+        return {
+          title: 'Wallets',
+          subtitle: 'Gestión de wallets y direcciones'
+        };
+      case 'payments':
+        return {
+          title: 'Pagos',
+          subtitle: 'Sistema de pagos y transferencias'
+        };
+      case 'settings':
+        return {
+          title: 'Configuración',
+          subtitle: 'Configuración general de la aplicación'
+        };
+      case 'help':
+        return {
+          title: 'Centro de Ayuda',
+          subtitle: 'Encuentra respuestas y recursos útiles'
+        };
       default:
         return {
-          title: 'Dashboard',
-          subtitle: 'Resumen general de tu actividad en GigChain'
+          title: 'GigChain',
+          subtitle: 'Plataforma descentralizada de freelancers'
         };
     }
   };
@@ -45,37 +87,20 @@ const Header = ({ currentView, walletInfo, isConnected }) => {
         </div>
         
         <div className="header-actions">
-          <div className="date-info">
-            <span>Hoy: {new Date().toLocaleDateString('es-ES', { 
-              day: 'numeric', 
-              month: 'short', 
-              year: 'numeric' 
-            })}</span>
-          </div>
-          
-          <button className="refresh-button" title="Actualizar datos">
-            <RefreshCw size={18} />
-            <span>Actualizar</span>
-          </button>
-          
-          <div className="search-container">
-            <Search size={18} />
-            <input 
-              type="text" 
-              placeholder="Buscar..." 
-              className="search-input"
-            />
-          </div>
-          
-          <div className="notifications-container">
-            <NotificationCenter />
+          <div className="theme-toggle-container">
+            <ThemeToggle size="small" />
           </div>
           
           <div className="wallet-container">
             <WalletConnection 
               onWalletChange={() => {}}
               className="header-wallet"
+              showOptionalMessage={currentView === 'chat'}
             />
+          </div>
+          
+          <div className="auth-container">
+            <WalletAuthButton />
           </div>
         </div>
       </div>

@@ -1,156 +1,86 @@
 import { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../constants/api';
 
-// Dashboard Metrics Hook
-const useDashboardMetrics = () => {
+// Dashboard Metrics Hook - Real-time data from backend
+const useDashboardMetrics = (walletAddress = null) => {
   const [metrics, setMetrics] = useState({
     activeContracts: 0,
     totalEarnings: 0,
+    totalSpent: 0,
     averageRating: 0,
     completedProjects: 0,
+    activityByHour: [],
     recentActivity: []
   });
 
   const [contracts, setContracts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Load contracts from localStorage or API
+  // Fetch dashboard stats from backend
   useEffect(() => {
-    const loadContracts = () => {
+    const fetchDashboardStats = async () => {
       try {
-        const savedContracts = localStorage.getItem('gigchain-contracts');
-        const contractsData = savedContracts ? JSON.parse(savedContracts) : [];
-        setContracts(contractsData);
-        
-        // Calculate metrics based on contracts
-        const activeContracts = contractsData.filter(c => c.status === 'active' || c.status === 'in-progress').length;
-        const completedProjects = contractsData.filter(c => c.status === 'completed').length;
-        
-        // Calculate total earnings from completed contracts
-        const totalEarnings = contractsData
-          .filter(c => c.status === 'completed' && c.paidAmount)
-          .reduce((sum, c) => sum + (c.paidAmount || 0), 0);
-        
-        // Calculate average rating
-        const ratings = contractsData
-          .filter(c => c.rating && c.rating > 0)
-          .map(c => c.rating);
-        const averageRating = ratings.length > 0 ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length : 0;
-        
-        // Get recent activity (last 10 contracts)
-        const recentActivity = contractsData
-          .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))
-          .slice(0, 10);
+        setIsLoading(true);
+        setError(null);
+
+        // Build URL with optional wallet parameter
+        let url = `${API_BASE_URL}/api/contracts/stats/dashboard?hours=24`;
+        if (walletAddress) {
+          url += `&wallet_address=${walletAddress}`;
+        }
+
+        // Fetch stats from backend
+        const response = await fetch(url);
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch dashboard stats');
+        }
+
+        const data = await response.json();
         
         setMetrics({
-          activeContracts,
-          totalEarnings,
-          averageRating: Math.round(averageRating * 10) / 10,
-          completedProjects,
-          recentActivity
+          activeContracts: data.active_contracts || 0,
+          totalEarnings: data.total_earned || 0,
+          totalSpent: data.total_spent || 0,
+          averageRating: 4.8, // TODO: Implement rating system
+          completedProjects: data.completed_contracts || 0,
+          activityByHour: data.activity_by_hour || [],
+          recentActivity: []
         });
-      } catch (error) {
-        console.error('Error loading contracts:', error);
+
+      } catch (err) {
+        console.error('Error fetching dashboard stats:', err);
+        setError(err.message);
+        
+        // Fallback to mock data
+        setMetrics({
+          activeContracts: 0,
+          totalEarnings: 0,
+          totalSpent: 0,
+          averageRating: 0,
+          completedProjects: 0,
+          activityByHour: [],
+          recentActivity: []
+        });
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    loadContracts();
+    fetchDashboardStats();
     
-    // Listen for storage changes (when contracts are updated in other tabs)
-    const handleStorageChange = (e) => {
-      if (e.key === 'gigchain-contracts') {
-        loadContracts();
-      }
-    };
+    // Refresh every 30 seconds for real-time updates
+    const interval = setInterval(fetchDashboardStats, 30000);
     
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
-
-  // Add new contract
-  const addContract = (contract) => {
-    const newContract = {
-      ...contract,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      status: 'draft'
-    };
-    
-    const updatedContracts = [...contracts, newContract];
-    setContracts(updatedContracts);
-    localStorage.setItem('gigchain-contracts', JSON.stringify(updatedContracts));
-    
-    // Recalculate metrics
-    const activeContracts = updatedContracts.filter(c => c.status === 'active' || c.status === 'in-progress').length;
-    const completedProjects = updatedContracts.filter(c => c.status === 'completed').length;
-    const totalEarnings = updatedContracts
-      .filter(c => c.status === 'completed' && c.paidAmount)
-      .reduce((sum, c) => sum + (c.paidAmount || 0), 0);
-    
-    const ratings = updatedContracts
-      .filter(c => c.rating && c.rating > 0)
-      .map(c => c.rating);
-    const averageRating = ratings.length > 0 ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length : 0;
-    
-    const recentActivity = updatedContracts
-      .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))
-      .slice(0, 10);
-    
-    setMetrics({
-      activeContracts,
-      totalEarnings,
-      averageRating: Math.round(averageRating * 10) / 10,
-      completedProjects,
-      recentActivity
-    });
-  };
-
-  // Update contract status
-  const updateContractStatus = (contractId, status, additionalData = {}) => {
-    const updatedContracts = contracts.map(contract => {
-      if (contract.id === contractId) {
-        return {
-          ...contract,
-          status,
-          updatedAt: new Date().toISOString(),
-          ...additionalData
-        };
-      }
-      return contract;
-    });
-    
-    setContracts(updatedContracts);
-    localStorage.setItem('gigchain-contracts', JSON.stringify(updatedContracts));
-    
-    // Recalculate metrics
-    const activeContracts = updatedContracts.filter(c => c.status === 'active' || c.status === 'in-progress').length;
-    const completedProjects = updatedContracts.filter(c => c.status === 'completed').length;
-    const totalEarnings = updatedContracts
-      .filter(c => c.status === 'completed' && c.paidAmount)
-      .reduce((sum, c) => sum + (c.paidAmount || 0), 0);
-    
-    const ratings = updatedContracts
-      .filter(c => c.rating && c.rating > 0)
-      .map(c => c.rating);
-    const averageRating = ratings.length > 0 ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length : 0;
-    
-    const recentActivity = updatedContracts
-      .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))
-      .slice(0, 10);
-    
-    setMetrics({
-      activeContracts,
-      totalEarnings,
-      averageRating: Math.round(averageRating * 10) / 10,
-      completedProjects,
-      recentActivity
-    });
-  };
+    return () => clearInterval(interval);
+  }, [walletAddress]);
 
   return {
     metrics,
     contracts,
-    addContract,
-    updateContractStatus
+    isLoading,
+    error
   };
 };
 
