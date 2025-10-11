@@ -2,11 +2,18 @@
 
 Welcome to the GigChain.io comprehensive documentation. This guide will help you navigate through all available documentation.
 
+> **📖 [Ver el Índice Completo de Documentación →](../DOCUMENTATION_INDEX.md)**  
+> El índice principal contiene **140+ documentos** organizados en **11 categorías**.
+
 ---
 
 ## 🚀 Getting Started
 
 - [README.md](../README.md) - Main project overview and quick start guide
+- [Quick Start Guide](getting-started/QUICK_START_GUIDE.md) - Guía de inicio rápido
+- [Project Overview](getting-started/PROJECT_OVERVIEW.md) - Descripción general del proyecto
+- [Quick Reference](getting-started/QUICK_REFERENCE.md) - Referencia rápida
+- [Verification Checklist](getting-started/VERIFICATION_CHECKLIST.md) - Lista de verificación
 - [LICENSE](../LICENSE) - MIT License
 
 ---
@@ -51,6 +58,41 @@ Welcome to the GigChain.io comprehensive documentation. This guide will help you
 - [**FILE_REVIEW_REPORT.md**](api/FILE_REVIEW_REPORT.md) - Code review report
 - [**FINAL_CI_STATUS.md**](api/FINAL_CI_STATUS.md) - Final CI/CD status
 - [**REPOSITORY_REVIEW_IMPROVEMENTS.md**](api/REPOSITORY_REVIEW_IMPROVEMENTS.md) - Repository improvements
+
+### ⚡ Features Documentation
+
+- [**GigChain Complete Platform**](features/GIGCHAIN_COMPLETE_PLATFORM.md) - Plataforma completa
+- [**GigSoul Token Guide**](features/GIGSOUL_TOKEN_GUIDE.md) - Guía del token
+- [**Wallet Implementation**](features/WALLET_IMPLEMENTATION.md) - Implementación de wallets
+- [**IPFS Integration**](features/IPFS_INTEGRATION_GUIDE.md) - Integración con IPFS
+- [**Gamification System**](features/GAMIFICATION_SYSTEM_GUIDE.md) - Sistema de gamificación
+- [**Dispute Mediation**](features/DISPUTE_MEDIATION_GUIDE.md) - Mediación de disputas
+- [**Scalability Guide**](features/SCALABILITY_GUIDE.md) - Guía de escalabilidad
+- [Ver todas las features →](features/)
+
+### 📊 Reports & Summaries
+
+- [**Complete Project Summary**](reports/COMPLETE_PROJECT_SUMMARY.md) - Resumen del proyecto
+- [**Implementation Complete**](reports/IMPLEMENTATION_COMPLETE.md) - Implementación completa
+- [**Phase 3 Executive Summary**](reports/PHASE3_EXECUTIVE_SUMMARY.md) - Resumen ejecutivo
+- [**Bug Fixes Summary**](reports/BUG_FIXES_SUMMARY.md) - Resumen de correcciones
+- [**Frontend Complete Transformation**](reports/FRONTEND_COMPLETE_TRANSFORMATION.md) - Transformación frontend
+- [**WCSAP Complete Journey**](reports/WCSAP_COMPLETE_JOURNEY.md) - Viaje completo WCSAP
+- [Ver todos los reportes →](reports/) (70+ reportes disponibles)
+
+### 📝 Changelogs
+
+- [**CHANGELOG.md**](changelogs/CHANGELOG.md) - Registro completo de cambios del proyecto
+
+### 💼 Wallets
+
+- [**Wallet System Guide**](wallets/WALLET_SYSTEM_GUIDE.md) - Guía completa del sistema de wallets
+
+### 📜 Standards & RFCs
+
+- [**W-CSAP RFC Summary**](standards/W_CSAP_RFC_SUMMARY.md) - Resumen del RFC
+- [**RFC Submission Guide**](standards/RFC_SUBMISSION_GUIDE.md) - Guía de envío de RFC
+- [**draft-wcsap-auth-protocol-00.txt**](standards/draft-wcsap-auth-protocol-00.txt) - Borrador del protocolo
 
 ---
 
@@ -110,9 +152,19 @@ All environment variables are documented in `env.example` and [DEPLOYMENT.md](de
 
 ---
 
+## 📊 Documentation Statistics
+
+- **Total Documents**: 140+ archivos markdown
+- **Categories**: 11 categorías principales
+- **Security Docs**: 25+ documentos de seguridad
+- **Reports**: 70+ reportes de desarrollo
+- **Guides**: 10+ guías de desarrollo
+
 ## 📅 Documentation Updates
 
-This documentation is regularly updated. Last major update: **2025-10-07**
+This documentation is regularly updated. Last major update: **2025-10-11**
+
+**Major Reorganization**: All documentation has been organized into logical folders with a comprehensive index.
 
 **Current Development Approach**: Local development only (No Docker until all features complete)
 
