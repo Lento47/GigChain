@@ -2,25 +2,13 @@
 W-CSAP Global Rate Limiter - HIGH SECURITY FIX
 ===============================================
 
-Implements global rate limiting per wallet address to prevent distributed
-brute-force attacks using IP rotation (botnets, VPNs, cloud proxies).
-
-This fixes HIGH-004: No Global Rate Limiting Per Wallet
-
-SECURITY FEATURES:
-- Sliding window rate limiting (more accurate than fixed window)
-- Global enforcement across all IPs
-- Per-wallet and per-action granular limits
-- Progressive penalties for repeated violations
-- Distributed rate limiting via Redis
-- Automatic cleanup of expired entries
-- Comprehensive audit logging
+Global rate limiting per wallet address to prevent distributed brute-force attacks.
+Fixes HIGH-004: No Global Rate Limiting Per Wallet
 """
 
 import time
 import logging
 from typing import Tuple, Optional, Dict, Any
-from dataclasses import dataclass
 from enum import Enum
 import redis
 from redis.exceptions import RedisError
@@ -37,53 +25,45 @@ class RateLimitAction(str, Enum):
     LOGIN_SUCCESS = "login_success"
 
 
-@dataclass
 class RateLimitConfig:
     """Configuration for rate limiting."""
-    # Per-hour limits
-    challenge_per_hour: int = 50
-    verify_per_hour: int = 50
-    refresh_per_hour: int = 100
-    failed_auth_per_hour: int = 10
-    
-    # Per-day limits
-    challenge_per_day: int = 200
-    verify_per_day: int = 200
-    refresh_per_day: int = 500
-    failed_auth_per_day: int = 30
-    
-    # Lockout settings
-    max_failed_before_lockout: int = 5
-    lockout_duration: int = 900  # 15 minutes
-    progressive_lockout_multiplier: float = 2.0  # Double lockout time each violation
+    def __init__(
+        self,
+        challenge_per_hour: int = 50,
+        verify_per_hour: int = 50,
+        refresh_per_hour: int = 100,
+        failed_auth_per_hour: int = 10,
+        challenge_per_day: int = 200,
+        verify_per_day: int = 200,
+        refresh_per_day: int = 500,
+        failed_auth_per_day: int = 30,
+        max_failed_before_lockout: int = 5,
+        lockout_duration: int = 900
+    ):
+        self.challenge_per_hour = challenge_per_hour
+        self.verify_per_hour = verify_per_hour
+        self.refresh_per_hour = refresh_per_hour
+        self.failed_auth_per_hour = failed_auth_per_hour
+        self.challenge_per_day = challenge_per_day
+        self.verify_per_day = verify_per_day
+        self.refresh_per_day = refresh_per_day
+        self.failed_auth_per_day = failed_auth_per_day
+        self.max_failed_before_lockout = max_failed_before_lockout
+        self.lockout_duration = lockout_duration
+        self.progressive_lockout_multiplier = 2.0
 
 
 class GlobalRateLimiter:
     """
-    Global rate limiter using Redis for distributed tracking.
-    
-    Implements sliding window algorithm for accurate rate limiting:
-    - Each request is timestamped
-    - Old requests outside the window are automatically removed
-    - Counts requests within the sliding window
+    Global rate limiter using Redis with sliding window algorithm.
     """
     
     PREFIX_RATE_LIMIT = "wcsap:ratelimit:"
     PREFIX_LOCKOUT = "wcsap:lockout:"
     PREFIX_VIOLATION = "wcsap:violation:"
     
-    def __init__(
-        self,
-        redis_url: str,
-        config: Optional[RateLimitConfig] = None
-    ):
-        """
-        Initialize global rate limiter.
-        
-        Args:
-            redis_url: Redis connection URL
-            config: Rate limit configuration
-        """
+    def __init__(self, redis_url: str, config: Optional[RateLimitConfig] = None):
+        """Initialize global rate limiter."""
         self.config = config or RateLimitConfig()
         
         try:
@@ -94,4 +74,282 @@ class GlobalRateLimiter:
                 socket_connect_timeout=2
             )
             self.redis.ping()
-            logger.info(f\"\u2705 Global rate limiter connected to Redis\")\n        except RedisError as e:\n            logger.critical(f\"\u274c Failed to connect to Redis for rate limiting: {str(e)}\")\n            raise RuntimeError(f\"Rate limiter initialization failed: {str(e)}\")\n    \n    def check_rate_limit(\n        self,\n        wallet_address: str,\n        action: RateLimitAction,\n        ip_address: Optional[str] = None\n    ) -> Tuple[bool, int, str]:\n        \"\"\"\n        Check if rate limit is exceeded for a wallet.\n        \n        Args:\n            wallet_address: Wallet address to check\n            action: Action type being performed\n            ip_address: Optional IP address for additional tracking\n            \n        Returns:\n            Tuple of (is_allowed, attempts_remaining, reason)\n        \"\"\"\n        try:\n            # Normalize wallet address\n            wallet_address = wallet_address.lower()\n            \n            # Check if wallet is locked out\n            if self._is_locked_out(wallet_address):\n                lockout_remaining = self._get_lockout_remaining(wallet_address)\n                logger.warning(\n                    f\"\ud83d\udeab Rate limit: Wallet locked out: {wallet_address[:10]}...\",\n                    extra={\n                        \"wallet_address\": wallet_address,\n                        \"lockout_remaining\": lockout_remaining\n                    }\n                )\n                return False, 0, f\"Account locked due to repeated violations. Try again in {lockout_remaining}s\"\n            \n            # Get limits for this action\n            hourly_limit, daily_limit = self._get_limits_for_action(action)\n            \n            # Check hourly limit\n            hourly_key = f\"{self.PREFIX_RATE_LIMIT}{wallet_address}:{action.value}:hour\"\n            hourly_count = self._count_requests_in_window(hourly_key, 3600)\n            \n            if hourly_count >= hourly_limit:\n                logger.warning(\n                    f\"\ud83d\udeab Rate limit: Hourly limit exceeded: {wallet_address[:10]}... \"\n                    f\"({hourly_count}/{hourly_limit})\",\n                    extra={\n                        \"wallet_address\": wallet_address,\n                        \"action\": action.value,\n                        \"count\": hourly_count,\n                        \"limit\": hourly_limit\n                    }\n                )\n                # Record violation\n                self._record_violation(wallet_address, \"hourly_limit_exceeded\")\n                return False, 0, f\"Hourly rate limit exceeded ({hourly_limit} requests/hour)\"\n            \n            # Check daily limit\n            daily_key = f\"{self.PREFIX_RATE_LIMIT}{wallet_address}:{action.value}:day\"\n            daily_count = self._count_requests_in_window(daily_key, 86400)\n            \n            if daily_count >= daily_limit:\n                logger.warning(\n                    f\"\ud83d\udeab Rate limit: Daily limit exceeded: {wallet_address[:10]}... \"\n                    f\"({daily_count}/{daily_limit})\",\n                    extra={\n                        \"wallet_address\": wallet_address,\n                        \"action\": action.value,\n                        \"count\": daily_count,\n                        \"limit\": daily_limit\n                    }\n                )\n                # Record violation (more severe)\n                self._record_violation(wallet_address, \"daily_limit_exceeded\")\n                return False, 0, f\"Daily rate limit exceeded ({daily_limit} requests/day)\"\n            \n            # All checks passed - allow request\n            attempts_remaining = min(\n                hourly_limit - hourly_count - 1,\n                daily_limit - daily_count - 1\n            )\n            \n            logger.debug(\n                f\"\u2705 Rate limit OK: {wallet_address[:10]}... \"\n                f\"({hourly_count + 1}/{hourly_limit} hourly, {daily_count + 1}/{daily_limit} daily)\"\n            )\n            \n            return True, attempts_remaining, \"OK\"\n            \n        except Exception as e:\n            logger.error(f\"Rate limit check error: {str(e)}\")\n            # FAIL OPEN for rate limiting (don't block users if Redis is down)\n            # But log the error for monitoring\n            return True, 999, \"Rate limit check unavailable\"\n    \n    def record_request(\n        self,\n        wallet_address: str,\n        action: RateLimitAction,\n        ip_address: Optional[str] = None,\n        success: bool = True\n    ) -> bool:\n        \"\"\"\n        Record a request for rate limiting.\n        \n        Args:\n            wallet_address: Wallet address\n            action: Action type\n            ip_address: Optional IP address\n            success: Whether the request was successful\n            \n        Returns:\n            True if recorded successfully\n        \"\"\"\n        try:\n            wallet_address = wallet_address.lower()\n            current_time = time.time()\n            \n            # Record in hourly window\n            hourly_key = f\"{self.PREFIX_RATE_LIMIT}{wallet_address}:{action.value}:hour\"\n            self.redis.zadd(hourly_key, {str(current_time): current_time})\n            self.redis.expire(hourly_key, 3600)\n            \n            # Record in daily window\n            daily_key = f\"{self.PREFIX_RATE_LIMIT}{wallet_address}:{action.value}:day\"\n            self.redis.zadd(daily_key, {str(current_time): current_time})\n            self.redis.expire(daily_key, 86400)\n            \n            # If failed auth, check if we need to lock out\n            if action == RateLimitAction.FAILED_AUTH and not success:\n                self._check_and_apply_lockout(wallet_address)\n            \n            return True\n            \n        except Exception as e:\n            logger.error(f\"Failed to record request: {str(e)}\")\n            return False\n    \n    def _count_requests_in_window(self, key: str, window_seconds: int) -> int:\n        \"\"\"\n        Count requests in sliding time window.\n        \n        Args:\n            key: Redis key\n            window_seconds: Window size in seconds\n            \n        Returns:\n            Number of requests in window\n        \"\"\"\n        try:\n            current_time = time.time()\n            window_start = current_time - window_seconds\n            \n            # Remove old entries outside the window\n            self.redis.zremrangebyscore(key, 0, window_start)\n            \n            # Count remaining entries\n            count = self.redis.zcard(key)\n            \n            return count\n            \n        except Exception as e:\n            logger.error(f\"Failed to count requests: {str(e)}\")\n            return 0\n    \n    def _get_limits_for_action(self, action: RateLimitAction) -> Tuple[int, int]:\n        \"\"\"\n        Get hourly and daily limits for an action.\n        \n        Args:\n            action: Action type\n            \n        Returns:\n            Tuple of (hourly_limit, daily_limit)\n        \"\"\"\n        if action == RateLimitAction.CHALLENGE_REQUEST:\n            return self.config.challenge_per_hour, self.config.challenge_per_day\n        elif action == RateLimitAction.VERIFY_ATTEMPT:\n            return self.config.verify_per_hour, self.config.verify_per_day\n        elif action == RateLimitAction.REFRESH_REQUEST:\n            return self.config.refresh_per_hour, self.config.refresh_per_day\n        elif action == RateLimitAction.FAILED_AUTH:\n            return self.config.failed_auth_per_hour, self.config.failed_auth_per_day\n        else:\n            return 100, 1000  # Default limits\n    \n    def _is_locked_out(self, wallet_address: str) -> bool:\n        \"\"\"\n        Check if wallet is currently locked out.\n        \n        Args:\n            wallet_address: Wallet address\n            \n        Returns:\n            True if locked out\n        \"\"\"\n        try:\n            lockout_key = f\"{self.PREFIX_LOCKOUT}{wallet_address}\"\n            return bool(self.redis.exists(lockout_key))\n        except Exception as e:\n            logger.error(f\"Failed to check lockout: {str(e)}\")\n            return False\n    \n    def _get_lockout_remaining(self, wallet_address: str) -> int:\n        \"\"\"\n        Get remaining lockout time in seconds.\n        \n        Args:\n            wallet_address: Wallet address\n            \n        Returns:\n            Seconds remaining in lockout\n        \"\"\"\n        try:\n            lockout_key = f\"{self.PREFIX_LOCKOUT}{wallet_address}\"\n            ttl = self.redis.ttl(lockout_key)\n            return max(0, ttl)\n        except Exception as e:\n            logger.error(f\"Failed to get lockout remaining: {str(e)}\")\n            return 0\n    \n    def _check_and_apply_lockout(self, wallet_address: str):\n        \"\"\"\n        Check failed auth attempts and apply lockout if threshold exceeded.\n        \n        Args:\n            wallet_address: Wallet address\n        \"\"\"\n        try:\n            # Count recent failed auth attempts (last hour)\n            failed_key = f\"{self.PREFIX_RATE_LIMIT}{wallet_address}:{RateLimitAction.FAILED_AUTH.value}:hour\"\n            failed_count = self._count_requests_in_window(failed_key, 3600)\n            \n            if failed_count >= self.config.max_failed_before_lockout:\n                # Get violation count for progressive lockout\n                violation_count = self._get_violation_count(wallet_address)\n                \n                # Calculate lockout duration (progressive)\n                lockout_duration = int(\n                    self.config.lockout_duration *\n                    (self.config.progressive_lockout_multiplier ** violation_count)\n                )\n                \n                # Cap maximum lockout at 24 hours\n                lockout_duration = min(lockout_duration, 86400)\n                \n                # Apply lockout\n                lockout_key = f\"{self.PREFIX_LOCKOUT}{wallet_address}\"\n                self.redis.setex(lockout_key, lockout_duration, \"1\")\n                \n                logger.critical(\n                    f\"\ud83d\udea8 SECURITY: Wallet locked out due to {failed_count} failed auth attempts: \"\n                    f\"{wallet_address[:10]}... (duration: {lockout_duration}s)\",\n                    extra={\n                        \"wallet_address\": wallet_address,\n                        \"failed_count\": failed_count,\n                        \"lockout_duration\": lockout_duration,\n                        \"violation_count\": violation_count\n                    }\n                )\n                \n                # Record violation\n                self._record_violation(wallet_address, \"lockout_applied\")\n                \n        except Exception as e:\n            logger.error(f\"Failed to check/apply lockout: {str(e)}\")\n    \n    def _record_violation(self, wallet_address: str, violation_type: str):\n        \"\"\"\n        Record a rate limit violation.\n        \n        Args:\n            wallet_address: Wallet address\n            violation_type: Type of violation\n        \"\"\"\n        try:\n            violation_key = f\"{self.PREFIX_VIOLATION}{wallet_address}\"\n            current_time = time.time()\n            \n            # Add violation to sorted set (timestamp as score)\n            self.redis.zadd(violation_key, {f\"{violation_type}:{current_time}\": current_time})\n            \n            # Keep violations for 7 days\n            self.redis.expire(violation_key, 604800)\n            \n            # Clean up old violations (older than 7 days)\n            week_ago = current_time - 604800\n            self.redis.zremrangebyscore(violation_key, 0, week_ago)\n            \n        except Exception as e:\n            logger.error(f\"Failed to record violation: {str(e)}\")\n    \n    def _get_violation_count(self, wallet_address: str) -> int:\n        \"\"\"\n        Get violation count for a wallet (last 7 days).\n        \n        Args:\n            wallet_address: Wallet address\n            \n        Returns:\n            Violation count\n        \"\"\"\n        try:\n            violation_key = f\"{self.PREFIX_VIOLATION}{wallet_address}\"\n            return self.redis.zcard(violation_key)\n        except Exception as e:\n            logger.error(f\"Failed to get violation count: {str(e)}\")\n            return 0\n    \n    def reset_wallet_limits(self, wallet_address: str) -> bool:\n        \"\"\"\n        Reset rate limits and lockout for a wallet (admin function).\n        \n        Args:\n            wallet_address: Wallet address\n            \n        Returns:\n            True if successful\n        \"\"\"\n        try:\n            wallet_address = wallet_address.lower()\n            \n            # Delete all rate limit keys\n            pattern = f\"{self.PREFIX_RATE_LIMIT}{wallet_address}:*\"\n            for key in self.redis.scan_iter(match=pattern):\n                self.redis.delete(key)\n            \n            # Delete lockout\n            lockout_key = f\"{self.PREFIX_LOCKOUT}{wallet_address}\"\n            self.redis.delete(lockout_key)\n            \n            logger.info(f\"Rate limits reset for wallet: {wallet_address[:10]}...\")\n            return True\n            \n        except Exception as e:\n            logger.error(f\"Failed to reset wallet limits: {str(e)}\")\n            return False\n    \n    def get_wallet_status(self, wallet_address: str) -> Dict[str, Any]:\n        \"\"\"\n        Get rate limit status for a wallet.\n        \n        Args:\n            wallet_address: Wallet address\n            \n        Returns:\n            Dictionary with rate limit status\n        \"\"\"\n        try:\n            wallet_address = wallet_address.lower()\n            \n            status = {\n                \"wallet_address\": wallet_address,\n                \"is_locked_out\": self._is_locked_out(wallet_address),\n                \"lockout_remaining\": self._get_lockout_remaining(wallet_address),\n                \"violation_count\": self._get_violation_count(wallet_address),\n                \"current_counts\": {}\n            }\n            \n            # Get counts for each action\n            for action in RateLimitAction:\n                hourly_key = f\"{self.PREFIX_RATE_LIMIT}{wallet_address}:{action.value}:hour\"\n                daily_key = f\"{self.PREFIX_RATE_LIMIT}{wallet_address}:{action.value}:day\"\n                \n                hourly_count = self._count_requests_in_window(hourly_key, 3600)\n                daily_count = self._count_requests_in_window(daily_key, 86400)\n                \n                hourly_limit, daily_limit = self._get_limits_for_action(action)\n                \n                status[\"current_counts\"][action.value] = {\n                    \"hourly\": {\"count\": hourly_count, \"limit\": hourly_limit},\n                    \"daily\": {\"count\": daily_count, \"limit\": daily_limit}\n                }\n            \n            return status\n            \n        except Exception as e:\n            logger.error(f\"Failed to get wallet status: {str(e)}\")\n            return {\"error\": str(e)}\n\n\n# Singleton instance\n_rate_limiter_instance: Optional[GlobalRateLimiter] = None\n\n\ndef get_rate_limiter(\n    redis_url: str = \"redis://localhost:6379/0\",\n    config: Optional[RateLimitConfig] = None\n) -> GlobalRateLimiter:\n    \"\"\"\n    Get or create global rate limiter singleton.\n    \n    Args:\n        redis_url: Redis connection URL\n        config: Rate limit configuration\n        \n    Returns:\n        GlobalRateLimiter instance\n    \"\"\"\n    global _rate_limiter_instance\n    \n    if _rate_limiter_instance is None:\n        _rate_limiter_instance = GlobalRateLimiter(redis_url, config)\n    \n    return _rate_limiter_instance\n\n\ndef reset_rate_limiter():\n    \"\"\"Reset rate limiter singleton (useful for testing).\"\"\"\n    global _rate_limiter_instance\n    _rate_limiter_instance = None\n\n\n__all__ = [\n    'GlobalRateLimiter',\n    'RateLimitAction',\n    'RateLimitConfig',\n    'get_rate_limiter',\n    'reset_rate_limiter'\n]\n
+            logger.info("Global rate limiter connected to Redis")
+        except RedisError as e:
+            logger.critical(f"Failed to connect to Redis for rate limiting: {str(e)}")
+            raise RuntimeError(f"Rate limiter initialization failed: {str(e)}")
+    
+    def check_rate_limit(
+        self,
+        wallet_address: str,
+        action: RateLimitAction,
+        ip_address: Optional[str] = None
+    ) -> Tuple[bool, int, str]:
+        """
+        Check if rate limit is exceeded for a wallet.
+        
+        Returns:
+            Tuple of (is_allowed, attempts_remaining, reason)
+        """
+        try:
+            wallet_address = wallet_address.lower()
+            
+            # Check if wallet is locked out
+            if self._is_locked_out(wallet_address):
+                lockout_remaining = self._get_lockout_remaining(wallet_address)
+                logger.warning(f"Rate limit: Wallet locked out: {wallet_address[:10]}...")
+                return False, 0, f"Account locked. Try again in {lockout_remaining}s"
+            
+            # Get limits for this action
+            hourly_limit, daily_limit = self._get_limits_for_action(action)
+            
+            # Check hourly limit
+            hourly_key = f"{self.PREFIX_RATE_LIMIT}{wallet_address}:{action.value}:hour"
+            hourly_count = self._count_requests_in_window(hourly_key, 3600)
+            
+            if hourly_count >= hourly_limit:
+                logger.warning(f"Rate limit: Hourly limit exceeded for {wallet_address[:10]}...")
+                self._record_violation(wallet_address, "hourly_limit_exceeded")
+                return False, 0, f"Hourly rate limit exceeded ({hourly_limit} requests/hour)"
+            
+            # Check daily limit
+            daily_key = f"{self.PREFIX_RATE_LIMIT}{wallet_address}:{action.value}:day"
+            daily_count = self._count_requests_in_window(daily_key, 86400)
+            
+            if daily_count >= daily_limit:
+                logger.warning(f"Rate limit: Daily limit exceeded for {wallet_address[:10]}...")
+                self._record_violation(wallet_address, "daily_limit_exceeded")
+                return False, 0, f"Daily rate limit exceeded ({daily_limit} requests/day)"
+            
+            # All checks passed
+            attempts_remaining = min(
+                hourly_limit - hourly_count - 1,
+                daily_limit - daily_count - 1
+            )
+            
+            return True, attempts_remaining, "OK"
+            
+        except Exception as e:
+            logger.error(f"Rate limit check error: {str(e)}")
+            # FAIL OPEN for rate limiting (don't block if Redis is down)
+            return True, 999, "Rate limit check unavailable"
+    
+    def record_request(
+        self,
+        wallet_address: str,
+        action: RateLimitAction,
+        ip_address: Optional[str] = None,
+        success: bool = True
+    ) -> bool:
+        """Record a request for rate limiting."""
+        try:
+            wallet_address = wallet_address.lower()
+            current_time = time.time()
+            
+            # Record in hourly window
+            hourly_key = f"{self.PREFIX_RATE_LIMIT}{wallet_address}:{action.value}:hour"
+            self.redis.zadd(hourly_key, {str(current_time): current_time})
+            self.redis.expire(hourly_key, 3600)
+            
+            # Record in daily window
+            daily_key = f"{self.PREFIX_RATE_LIMIT}{wallet_address}:{action.value}:day"
+            self.redis.zadd(daily_key, {str(current_time): current_time})
+            self.redis.expire(daily_key, 86400)
+            
+            # Check for lockout on failed auth
+            if action == RateLimitAction.FAILED_AUTH and not success:
+                self._check_and_apply_lockout(wallet_address)
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to record request: {str(e)}")
+            return False
+    
+    def _count_requests_in_window(self, key: str, window_seconds: int) -> int:
+        """Count requests in sliding time window."""
+        try:
+            current_time = time.time()
+            window_start = current_time - window_seconds
+            
+            # Remove old entries
+            self.redis.zremrangebyscore(key, 0, window_start)
+            
+            # Count remaining entries
+            count = self.redis.zcard(key)
+            return count
+            
+        except Exception as e:
+            logger.error(f"Failed to count requests: {str(e)}")
+            return 0
+    
+    def _get_limits_for_action(self, action: RateLimitAction) -> Tuple[int, int]:
+        """Get hourly and daily limits for an action."""
+        if action == RateLimitAction.CHALLENGE_REQUEST:
+            return self.config.challenge_per_hour, self.config.challenge_per_day
+        elif action == RateLimitAction.VERIFY_ATTEMPT:
+            return self.config.verify_per_hour, self.config.verify_per_day
+        elif action == RateLimitAction.REFRESH_REQUEST:
+            return self.config.refresh_per_hour, self.config.refresh_per_day
+        elif action == RateLimitAction.FAILED_AUTH:
+            return self.config.failed_auth_per_hour, self.config.failed_auth_per_day
+        else:
+            return 100, 1000  # Default
+    
+    def _is_locked_out(self, wallet_address: str) -> bool:
+        """Check if wallet is locked out."""
+        try:
+            lockout_key = f"{self.PREFIX_LOCKOUT}{wallet_address}"
+            return bool(self.redis.exists(lockout_key))
+        except Exception:
+            return False
+    
+    def _get_lockout_remaining(self, wallet_address: str) -> int:
+        """Get remaining lockout time."""
+        try:
+            lockout_key = f"{self.PREFIX_LOCKOUT}{wallet_address}"
+            ttl = self.redis.ttl(lockout_key)
+            return max(0, ttl)
+        except Exception:
+            return 0
+    
+    def _check_and_apply_lockout(self, wallet_address: str):
+        """Check failed attempts and apply lockout."""
+        try:
+            failed_key = f"{self.PREFIX_RATE_LIMIT}{wallet_address}:{RateLimitAction.FAILED_AUTH.value}:hour"
+            failed_count = self._count_requests_in_window(failed_key, 3600)
+            
+            if failed_count >= self.config.max_failed_before_lockout:
+                violation_count = self._get_violation_count(wallet_address)
+                
+                # Progressive lockout
+                lockout_duration = int(
+                    self.config.lockout_duration *
+                    (self.config.progressive_lockout_multiplier ** violation_count)
+                )
+                lockout_duration = min(lockout_duration, 86400)  # Max 24h
+                
+                # Apply lockout
+                lockout_key = f"{self.PREFIX_LOCKOUT}{wallet_address}"
+                self.redis.setex(lockout_key, lockout_duration, "1")
+                
+                logger.critical(
+                    f"SECURITY: Wallet locked out: {wallet_address[:10]}... "
+                    f"(duration: {lockout_duration}s, violations: {violation_count})"
+                )
+                
+                self._record_violation(wallet_address, "lockout_applied")
+                
+        except Exception as e:
+            logger.error(f"Failed to check/apply lockout: {str(e)}")
+    
+    def _record_violation(self, wallet_address: str, violation_type: str):
+        """Record a rate limit violation."""
+        try:
+            violation_key = f"{self.PREFIX_VIOLATION}{wallet_address}"
+            current_time = time.time()
+            
+            self.redis.zadd(violation_key, {f"{violation_type}:{current_time}": current_time})
+            self.redis.expire(violation_key, 604800)  # 7 days
+            
+            # Cleanup old violations
+            week_ago = current_time - 604800
+            self.redis.zremrangebyscore(violation_key, 0, week_ago)
+            
+        except Exception as e:
+            logger.error(f"Failed to record violation: {str(e)}")
+    
+    def _get_violation_count(self, wallet_address: str) -> int:
+        """Get violation count for wallet."""
+        try:
+            violation_key = f"{self.PREFIX_VIOLATION}{wallet_address}"
+            return self.redis.zcard(violation_key)
+        except Exception:
+            return 0
+    
+    def get_wallet_status(self, wallet_address: str) -> Dict[str, Any]:
+        """Get rate limit status for wallet."""
+        try:
+            wallet_address = wallet_address.lower()
+            
+            status = {
+                "wallet_address": wallet_address,
+                "is_locked_out": self._is_locked_out(wallet_address),
+                "lockout_remaining": self._get_lockout_remaining(wallet_address),
+                "violation_count": self._get_violation_count(wallet_address),
+                "current_counts": {}
+            }
+            
+            # Get counts for each action
+            for action in RateLimitAction:
+                hourly_key = f"{self.PREFIX_RATE_LIMIT}{wallet_address}:{action.value}:hour"
+                daily_key = f"{self.PREFIX_RATE_LIMIT}{wallet_address}:{action.value}:day"
+                
+                hourly_count = self._count_requests_in_window(hourly_key, 3600)
+                daily_count = self._count_requests_in_window(daily_key, 86400)
+                
+                hourly_limit, daily_limit = self._get_limits_for_action(action)
+                
+                status["current_counts"][action.value] = {
+                    "hourly": {"count": hourly_count, "limit": hourly_limit},
+                    "daily": {"count": daily_count, "limit": daily_limit}
+                }
+            
+            return status
+            
+        except Exception as e:
+            logger.error(f"Failed to get wallet status: {str(e)}")
+            return {"error": str(e)}
+    
+    def reset_wallet_limits(self, wallet_address: str) -> bool:
+        """Reset rate limits for wallet (admin function)."""
+        try:
+            wallet_address = wallet_address.lower()
+            
+            # Delete rate limit keys
+            pattern = f"{self.PREFIX_RATE_LIMIT}{wallet_address}:*"
+            for key in self.redis.scan_iter(match=pattern):
+                self.redis.delete(key)
+            
+            # Delete lockout
+            lockout_key = f"{self.PREFIX_LOCKOUT}{wallet_address}"
+            self.redis.delete(lockout_key)
+            
+            logger.info(f"Rate limits reset for wallet: {wallet_address[:10]}...")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to reset wallet limits: {str(e)}")
+            return False
+
+
+# Singleton
+_rate_limiter_instance: Optional[GlobalRateLimiter] = None
+
+
+def get_rate_limiter(
+    redis_url: str = "redis://localhost:6379/0",
+    config: Optional[RateLimitConfig] = None
+) -> GlobalRateLimiter:
+    """Get or create global rate limiter singleton."""
+    global _rate_limiter_instance
+    
+    if _rate_limiter_instance is None:
+        _rate_limiter_instance = GlobalRateLimiter(redis_url, config)
+    
+    return _rate_limiter_instance
+
+
+def reset_rate_limiter():
+    """Reset rate limiter singleton."""
+    global _rate_limiter_instance
+    _rate_limiter_instance = None
+
+
+__all__ = [
+    'GlobalRateLimiter',
+    'RateLimitAction',
+    'RateLimitConfig',
+    'get_rate_limiter',
+    'reset_rate_limiter'
+]

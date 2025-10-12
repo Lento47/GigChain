@@ -2,15 +2,7 @@
 W-CSAP Security Initialization Module
 ======================================
 
-This module handles secure initialization of all W-CSAP security components
-with comprehensive validation and monitoring.
-
-SECURITY FEATURES:
-- Mandatory secret key validation
-- Encrypted Redis session storage
-- Global rate limiting
-- Security headers and CSRF protection
-- Comprehensive audit logging
+Secure initialization of all W-CSAP security components.
 """
 
 import os
@@ -23,16 +15,226 @@ logger = logging.getLogger(__name__)
 
 
 def validate_production_environment() -> bool:
-    \"\"\"\n    Validate that all required security settings are configured for production.\n    \n    Returns:\n        True if all checks pass, False otherwise\n    \"\"\"\n    errors = []\n    warnings = []\n    \n    # ===== CRITICAL: Secret Key =====\n    secret_key = os.getenv('W_CSAP_SECRET_KEY')\n    if not secret_key:\n        errors.append(\n            \"\\u274c CRITICAL: W_CSAP_SECRET_KEY environment variable is NOT set!\\n\"\n            \"   This is MANDATORY for production. Generate with:\\n\"\n            \"   python -c 'import secrets; print(secrets.token_hex(32))'\"\n        )\n    elif len(secret_key) < 32:\n        errors.append(\n            f\"\\u274c CRITICAL: W_CSAP_SECRET_KEY is too short ({len(secret_key)} chars).\\n\"\n            \"   Must be at least 32 characters (128 bits).\"\n        )\n    \n    # ===== CRITICAL: Redis Configuration =====\n    redis_url = os.getenv('W_CSAP_REDIS_URL')\n    if not redis_url:\n        errors.append(\n            \"\\u274c CRITICAL: W_CSAP_REDIS_URL environment variable is NOT set!\\n\"\n            \"   Encrypted session storage requires Redis. Set to:\\n\"\n            \"   redis://localhost:6379/0 (or your Redis server)\"\n        )\n    \n    # ===== HIGH: HTTPS Enforcement =====\n    require_https = os.getenv('W_CSAP_REQUIRE_HTTPS', 'false').lower()\n    if require_https != 'true':\n        warnings.append(\n            \"\\u26a0\\ufe0f WARNING: HTTPS is not enforced (W_CSAP_REQUIRE_HTTPS=false).\\n\"\n            \"   Set W_CSAP_REQUIRE_HTTPS=true in production!\"\n        )\n    \n    # ===== HIGH: DPoP Protection =====\n    dpop_enabled = os.getenv('W_CSAP_DPOP_ENABLED', 'false').lower()\n    if dpop_enabled != 'true':\n        warnings.append(\n            \"\\u26a0\\ufe0f WARNING: DPoP is disabled (W_CSAP_DPOP_ENABLED=false).\\n\"\n            \"   Enable DPoP for maximum security against token theft!\"\n        )\n    \n    # ===== MEDIUM: Rate Limiting =====\n    global_rate_limit = os.getenv('W_CSAP_GLOBAL_RATE_LIMIT_ENABLED', 'true').lower()\n    if global_rate_limit != 'true':\n        warnings.append(\n            \"\\u26a0\\ufe0f WARNING: Global rate limiting is disabled.\\n\"\n            \"   Enable to prevent distributed brute-force attacks!\"\n        )\n    \n    # ===== Print Results =====\n    \n    if errors:\n        logger.critical(\"\\n\" + \"=\"*70)\n        logger.critical(\"SECURITY VALIDATION FAILED - CANNOT START\")\n        logger.critical(\"=\"*70)\n        for error in errors:\n            logger.critical(error)\n        logger.critical(\"=\"*70)\n        return False\n    \n    if warnings:\n        logger.warning(\"\\n\" + \"=\"*70)\n        logger.warning(\"SECURITY WARNINGS - Review before production deployment\")\n        logger.warning(\"=\"*70)\n        for warning in warnings:\n            logger.warning(warning)\n        logger.warning(\"=\"*70)\n    \n    return True
+    """
+    Validate required security settings for production.
+    
+    Returns:
+        True if all checks pass
+    """
+    errors = []
+    warnings = []
+    
+    # Check secret key
+    secret_key = os.getenv('W_CSAP_SECRET_KEY')
+    if not secret_key:
+        errors.append(
+            "CRITICAL: W_CSAP_SECRET_KEY is NOT set! "
+            "Generate with: python -c 'import secrets; print(secrets.token_hex(32))'"
+        )
+    elif len(secret_key) < 32:
+        errors.append(
+            f"CRITICAL: W_CSAP_SECRET_KEY is too short ({len(secret_key)} chars). "
+            "Must be at least 32 characters."
+        )
+    
+    # Check Redis
+    redis_url = os.getenv('W_CSAP_REDIS_URL')
+    if not redis_url:
+        errors.append(
+            "CRITICAL: W_CSAP_REDIS_URL is NOT set! "
+            "Set to: redis://localhost:6379/0"
+        )
+    
+    # Check HTTPS
+    require_https = os.getenv('W_CSAP_REQUIRE_HTTPS', 'false').lower()
+    if require_https != 'true':
+        warnings.append(
+            "WARNING: HTTPS not enforced. Set W_CSAP_REQUIRE_HTTPS=true in production"
+        )
+    
+    # Check DPoP
+    dpop_enabled = os.getenv('W_CSAP_DPOP_ENABLED', 'false').lower()
+    if dpop_enabled != 'true':
+        warnings.append(
+            "WARNING: DPoP disabled. Enable for maximum security: W_CSAP_DPOP_ENABLED=true"
+        )
+    
+    # Print results
+    if errors:
+        logger.critical("=" * 70)
+        logger.critical("SECURITY VALIDATION FAILED")
+        logger.critical("=" * 70)
+        for error in errors:
+            logger.critical(error)
+        logger.critical("=" * 70)
+        return False
+    
+    if warnings:
+        logger.warning("=" * 70)
+        logger.warning("SECURITY WARNINGS")
+        logger.warning("=" * 70)
+        for warning in warnings:
+            logger.warning(warning)
+        logger.warning("=" * 70)
+    
+    return True
 
 
-def initialize_secure_session_storage(secret_key: str, redis_url: str):\n    \"\"\"\n    Initialize encrypted Redis session storage.\n    \n    Args:\n        secret_key: Master secret key for encryption\n        redis_url: Redis connection URL\n        \n    Returns:\n        EncryptedSessionStore instance\n    \"\"\"\n    try:\n        from auth.secure_session_store import get_session_store\n        \n        logger.info(\"Initializing encrypted session storage...\")\n        session_store = get_session_store(redis_url, secret_key)\n        \n        # Test connection\n        health = session_store.health_check()\n        if health[\"status\"] != \"healthy\":\n            raise RuntimeError(f\"Session store unhealthy: {health}\")\n        \n        logger.info(\n            f\"\\u2705 Encrypted session storage initialized:\\n\"\n            f\"   - Encryption: {health['encryption']}\\n\"\n            f\"   - Key Derivation: {health['key_derivation']}\\n\"\n            f\"   - Redis Version: {health.get('redis_version', 'unknown')}\"\n        )\n        \n        return session_store\n        \n    except Exception as e:\n        logger.critical(f\"\\u274c Failed to initialize session storage: {str(e)}\")\n        raise
+def initialize_secure_session_storage(secret_key: str, redis_url: str):
+    """Initialize encrypted Redis session storage."""
+    try:
+        from auth.secure_session_store import get_session_store
+        
+        logger.info("Initializing encrypted session storage...")
+        session_store = get_session_store(redis_url, secret_key)
+        
+        # Test connection
+        health = session_store.health_check()
+        if health["status"] != "healthy":
+            raise RuntimeError(f"Session store unhealthy: {health}")
+        
+        logger.info(
+            f"Encrypted session storage initialized: "
+            f"{health['encryption']}, {health['key_derivation']}"
+        )
+        
+        return session_store
+        
+    except Exception as e:
+        logger.critical(f"Failed to initialize session storage: {str(e)}")
+        raise
 
 
-def initialize_global_rate_limiter(redis_url: str):\n    \"\"\"\n    Initialize global rate limiter.\n    \n    Args:\n        redis_url: Redis connection URL\n        \n    Returns:\n        GlobalRateLimiter instance\n    \"\"\"\n    try:\n        from auth.global_rate_limiter import get_rate_limiter, RateLimitConfig\n        \n        logger.info(\"Initializing global rate limiter...\")\n        \n        config = RateLimitConfig(\n            challenge_per_hour=int(os.getenv('W_CSAP_RATE_LIMIT_CHALLENGE_PER_HOUR', '50')),\n            verify_per_hour=int(os.getenv('W_CSAP_RATE_LIMIT_VERIFY_PER_HOUR', '50')),\n            refresh_per_hour=int(os.getenv('W_CSAP_RATE_LIMIT_REFRESH_PER_HOUR', '100')),\n            failed_auth_per_hour=int(os.getenv('W_CSAP_RATE_LIMIT_FAILED_PER_HOUR', '10')),\n            max_failed_before_lockout=int(os.getenv('W_CSAP_MAX_FAILED_ATTEMPTS', '5')),\n            lockout_duration=int(os.getenv('W_CSAP_LOCKOUT_DURATION', '900'))\n        )\n        \n        rate_limiter = get_rate_limiter(redis_url, config)\n        \n        logger.info(\n            f\"\\u2705 Global rate limiter initialized:\\n\"\n            f\"   - Challenge: {config.challenge_per_hour}/hour\\n\"\n            f\"   - Verify: {config.verify_per_hour}/hour\\n\"\n            f\"   - Max Failed: {config.max_failed_before_lockout}\\n\"\n            f\"   - Lockout: {config.lockout_duration}s\"\n        )\n        \n        return rate_limiter\n        \n    except Exception as e:\n        logger.critical(f\"\\u274c Failed to initialize rate limiter: {str(e)}\")\n        raise
+def initialize_global_rate_limiter(redis_url: str):
+    """Initialize global rate limiter."""
+    try:
+        from auth.global_rate_limiter import get_rate_limiter, RateLimitConfig
+        
+        logger.info("Initializing global rate limiter...")
+        
+        config = RateLimitConfig(
+            challenge_per_hour=int(os.getenv('W_CSAP_RATE_LIMIT_CHALLENGE_PER_HOUR', '50')),
+            verify_per_hour=int(os.getenv('W_CSAP_RATE_LIMIT_VERIFY_PER_HOUR', '50')),
+            refresh_per_hour=int(os.getenv('W_CSAP_RATE_LIMIT_REFRESH_PER_HOUR', '100')),
+            max_failed_before_lockout=int(os.getenv('W_CSAP_MAX_FAILED_ATTEMPTS', '5')),
+            lockout_duration=int(os.getenv('W_CSAP_LOCKOUT_DURATION', '900'))
+        )
+        
+        rate_limiter = get_rate_limiter(redis_url, config)
+        
+        logger.info(
+            f"Global rate limiter initialized: "
+            f"challenge={config.challenge_per_hour}/hour, "
+            f"verify={config.verify_per_hour}/hour, "
+            f"lockout={config.lockout_duration}s"
+        )
+        
+        return rate_limiter
+        
+    except Exception as e:
+        logger.critical(f"Failed to initialize rate limiter: {str(e)}")
+        raise
 
 
-def apply_security_middleware(app: FastAPI, secret_key: str, environment: str = \"production\"):\n    \"\"\"\n    Apply all security middleware to FastAPI app.\n    \n    Args:\n        app: FastAPI application\n        secret_key: Secret key for CSRF tokens\n        environment: Environment (production/development)\n    \"\"\"\n    try:\n        from auth.security_middleware import (\n            SecurityHeadersMiddleware,\n            CSRFProtectionMiddleware,\n            ProductionErrorSanitizerMiddleware,\n            RequestValidationMiddleware\n        )\n        \n        logger.info(\"Applying security middleware...\")\n        \n        # Apply middleware in order (last added = first executed)\n        app.add_middleware(RequestValidationMiddleware)\n        app.add_middleware(ProductionErrorSanitizerMiddleware, environment=environment)\n        app.add_middleware(\n            CSRFProtectionMiddleware,\n            secret_key=secret_key,\n            cookie_secure=(environment == \"production\")\n        )\n        app.add_middleware(SecurityHeadersMiddleware, environment=environment)\n        \n        logger.info(\n            f\"\\u2705 Security middleware applied:\\n\"\n            f\"   - Security Headers (OWASP)\\n\"\n            f\"   - CSRF Protection\\n\"\n            f\"   - Error Sanitization\\n\"\n            f\"   - Request Validation\"\n        )\n        \n    except Exception as e:\n        logger.critical(f\"\\u274c Failed to apply security middleware: {str(e)}\")\n        raise
+def apply_security_middleware(app: FastAPI, secret_key: str, environment: str = "production"):
+    """Apply all security middleware to FastAPI app."""
+    try:
+        from auth.security_middleware import (
+            SecurityHeadersMiddleware,
+            CSRFProtectionMiddleware,
+            ProductionErrorSanitizerMiddleware,
+            RequestValidationMiddleware
+        )
+        
+        logger.info("Applying security middleware...")
+        
+        # Apply in order (last added = first executed)
+        app.add_middleware(RequestValidationMiddleware)
+        app.add_middleware(ProductionErrorSanitizerMiddleware, environment=environment)
+        app.add_middleware(
+            CSRFProtectionMiddleware,
+            secret_key=secret_key,
+            cookie_secure=(environment == "production")
+        )
+        app.add_middleware(SecurityHeadersMiddleware, environment=environment)
+        
+        logger.info("Security middleware applied: Headers, CSRF, Error Sanitization, Validation")
+        
+    except Exception as e:
+        logger.critical(f"Failed to apply security middleware: {str(e)}")
+        raise
 
 
-def initialize_w_csap_security(app: FastAPI, environment: str = \"production\") -> dict:\n    \"\"\"\n    Initialize all W-CSAP security components.\n    \n    This is the main entry point for setting up the complete security stack.\n    \n    Args:\n        app: FastAPI application\n        environment: Environment (production/development)\n        \n    Returns:\n        Dictionary with initialized security components\n    \"\"\"\n    logger.info(\"\\n\" + \"=\"*70)\n    logger.info(\"W-CSAP SECURITY INITIALIZATION\")\n    logger.info(\"=\"*70)\n    \n    # ===== Step 1: Validate Environment =====\n    logger.info(\"Step 1/5: Validating security configuration...\")\n    if environment == \"production\":\n        if not validate_production_environment():\n            logger.critical(\"\\u274c Security validation failed. Cannot start in production mode.\")\n            sys.exit(1)\n    \n    # ===== Step 2: Get Configuration =====\n    logger.info(\"Step 2/5: Loading configuration...\")\n    secret_key = os.getenv('W_CSAP_SECRET_KEY')\n    redis_url = os.getenv('W_CSAP_REDIS_URL', 'redis://localhost:6379/0')\n    \n    if not secret_key:\n        logger.critical(\"\\u274c W_CSAP_SECRET_KEY is required!\")\n        sys.exit(1)\n    \n    # ===== Step 3: Initialize Session Storage =====\n    logger.info(\"Step 3/5: Initializing encrypted session storage...\")\n    session_store = initialize_secure_session_storage(secret_key, redis_url)\n    \n    # ===== Step 4: Initialize Rate Limiter =====\n    logger.info(\"Step 4/5: Initializing global rate limiter...\")\n    rate_limiter = initialize_global_rate_limiter(redis_url)\n    \n    # ===== Step 5: Apply Security Middleware =====\n    logger.info(\"Step 5/5: Applying security middleware...\")\n    apply_security_middleware(app, secret_key, environment)\n    \n    # ===== Store in App State =====\n    app.state.session_store = session_store\n    app.state.rate_limiter = rate_limiter\n    \n    logger.info(\"=\"*70)\n    logger.info(\"\\u2705 W-CSAP SECURITY INITIALIZATION COMPLETE\")\n    logger.info(\"=\"*70)\n    logger.info(\"Security Status:\")\n    logger.info(f\"  - Encrypted Sessions: \\u2705 Active\")\n    logger.info(f\"  - Global Rate Limiting: \\u2705 Active\")\n    logger.info(f\"  - Security Headers: \\u2705 Active\")\n    logger.info(f\"  - CSRF Protection: \\u2705 Active\")\n    logger.info(f\"  - Error Sanitization: \\u2705 Active\")\n    logger.info(f\"  - Request Validation: \\u2705 Active\")\n    logger.info(\"=\"*70 + \"\\n\")\n    \n    return {\n        \"session_store\": session_store,\n        \"rate_limiter\": rate_limiter,\n        \"environment\": environment\n    }\n\n\n__all__ = [\n    'initialize_w_csap_security',\n    'validate_production_environment',\n    'initialize_secure_session_storage',\n    'initialize_global_rate_limiter',\n    'apply_security_middleware'\n]\n
+def initialize_w_csap_security(app: FastAPI, environment: str = "production") -> dict:
+    """
+    Initialize all W-CSAP security components.
+    
+    Args:
+        app: FastAPI application
+        environment: Environment (production/development)
+        
+    Returns:
+        Dictionary with initialized security components
+    """
+    logger.info("=" * 70)
+    logger.info("W-CSAP SECURITY INITIALIZATION")
+    logger.info("=" * 70)
+    
+    # Step 1: Validate
+    logger.info("Step 1/5: Validating security configuration...")
+    if environment == "production":
+        if not validate_production_environment():
+            logger.critical("Security validation failed. Cannot start.")
+            sys.exit(1)
+    
+    # Step 2: Get config
+    logger.info("Step 2/5: Loading configuration...")
+    secret_key = os.getenv('W_CSAP_SECRET_KEY')
+    redis_url = os.getenv('W_CSAP_REDIS_URL', 'redis://localhost:6379/0')
+    
+    if not secret_key:
+        logger.critical("W_CSAP_SECRET_KEY is required!")
+        sys.exit(1)
+    
+    # Step 3: Initialize session storage
+    logger.info("Step 3/5: Initializing encrypted session storage...")
+    session_store = initialize_secure_session_storage(secret_key, redis_url)
+    
+    # Step 4: Initialize rate limiter
+    logger.info("Step 4/5: Initializing global rate limiter...")
+    rate_limiter = initialize_global_rate_limiter(redis_url)
+    
+    # Step 5: Apply middleware
+    logger.info("Step 5/5: Applying security middleware...")
+    apply_security_middleware(app, secret_key, environment)
+    
+    # Store in app state
+    app.state.session_store = session_store
+    app.state.rate_limiter = rate_limiter
+    
+    logger.info("=" * 70)
+    logger.info("W-CSAP SECURITY INITIALIZATION COMPLETE")
+    logger.info("=" * 70)
+    logger.info("Security Status:")
+    logger.info("  - Encrypted Sessions: Active")
+    logger.info("  - Global Rate Limiting: Active")
+    logger.info("  - Security Headers: Active")
+    logger.info("  - CSRF Protection: Active")
+    logger.info("  - Error Sanitization: Active")
+    logger.info("  - Request Validation: Active")
+    logger.info("=" * 70)
+    
+    return {
+        "session_store": session_store,
+        "rate_limiter": rate_limiter,
+        "environment": environment
+    }
+
+
+__all__ = [
+    'initialize_w_csap_security',
+    'validate_production_environment',
+    'initialize_secure_session_storage',
+    'initialize_global_rate_limiter',
+    'apply_security_middleware'
+]
