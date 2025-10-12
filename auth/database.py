@@ -31,9 +31,35 @@ class WCSAPDatabase:
         logger.info(f"📦 W-CSAP Database initialized at {db_path}")
     
     def _ensure_directory(self):
-        """Ensure database directory exists (skip for in-memory databases)."""
+        """Ensure database directory exists with secure permissions (FIX MEDIUM-001)."""
         if self.db_path != ":memory:":
-            Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
+            import os
+            import stat
+            
+            # Create directory with secure permissions (owner only)
+            db_dir = Path(self.db_path).parent
+            db_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+            
+            # If database file exists, enforce permissions
+            if Path(self.db_path).exists():
+                # Set restrictive permissions: owner read/write only (0o600)
+                os.chmod(self.db_path, stat.S_IRUSR | stat.S_IWUSR)
+                
+                # Verify permissions
+                file_stat = os.stat(self.db_path)
+                file_mode = file_stat.st_mode
+                
+                # Check for group or world read permissions
+                if file_mode & (stat.S_IRGRP | stat.S_IROTH | stat.S_IWGRP | stat.S_IWOTH):
+                    logger.critical(
+                        f"🚨 SECURITY: Database file has insecure permissions: "
+                        f"{oct(file_mode)} at {self.db_path}"
+                    )
+                    # Try to fix it
+                    os.chmod(self.db_path, stat.S_IRUSR | stat.S_IWUSR)
+                    logger.warning("Corrected database file permissions to 0o600")
+                else:
+                    logger.info(f"✅ Database file has secure permissions: {oct(file_mode)}")
     
     @contextmanager
     def get_connection(self):

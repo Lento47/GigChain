@@ -47,6 +47,7 @@ mnemonic==0.21  # BIP39 mnemonic for wallet recovery
 cryptography==43.0.3
 pycryptodome==3.21.0
 PyJWT[crypto]==2.9.0  # JWT tokens with cryptographic signing
+ecdsa==0.19.0  # ECDSA signature verification for DPoP (ES256K)
 
 # MFA & TOTP (Multi-Factor Authentication)
 pyotp==2.9.0  # Time-based One-Time Passwords

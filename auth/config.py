@@ -27,16 +27,67 @@ class WCSAPConfig(BaseSettings):
     
     # ==================== Security Settings ====================
     
+    # CRITICAL SECURITY FIX: Enforce mandatory secret key
     secret_key: str = Field(
-        default_factory=lambda: secrets.token_hex(32),
-        description="Secret key for HMAC signing (REQUIRED in production)"
+        description="Secret key for HMAC signing (MANDATORY - must be set via W_CSAP_SECRET_KEY)"
     )
     
-    @validator('secret_key')
+    @validator('secret_key', pre=True, always=True)
     def validate_secret_key(cls, v):
-        """Ensure secret key is strong enough."""
+        """Ensure secret key is strong enough and explicitly set."""
+        # SECURITY: Reject if not set (no default allowed in production)
+        if v is None or v == '':
+            raise ValueError(
+                "\n\n"
+                "\u274c CRITICAL SECURITY ERROR: W_CSAP_SECRET_KEY is MANDATORY\n"
+                "\n"
+                "The W_CSAP_SECRET_KEY environment variable MUST be set for security.\n"
+                "This key is used for:\n"
+                "  - HMAC signing of session tokens\n"
+                "  - Encryption of session data in Redis\n"
+                "  - Key derivation for cryptographic operations\n"
+                "\n"
+                "To generate a secure key, run:\n"
+                "  python -c 'import secrets; print(secrets.token_hex(32))'\n"
+                "\n"
+                "Then set it as an environment variable:\n"
+                "  export W_CSAP_SECRET_KEY='<your_generated_key>'\n"
+                "\n"
+                "NEVER commit this key to version control!\n"
+                "\n"
+            )
+        
+        # Validate minimum length (32 chars = 128 bits)
         if len(v) < 32:
-            logger.warning("⚠️ Secret key is too short! Use at least 32 characters.")
+            raise ValueError(
+                f"W_CSAP_SECRET_KEY is too short ({len(v)} characters). "
+                f"Must be at least 32 characters (128 bits) for security. "
+                f"Generate a secure key with: python -c 'import secrets; print(secrets.token_hex(32))'"
+            )
+        
+        # Warn if using a weak key
+        if v in ['test', 'dev', 'secret', 'password', '12345', 'changeme']:
+            raise ValueError(
+                f"W_CSAP_SECRET_KEY contains a weak/common value. "
+                f"Generate a cryptographically secure random key."
+            )
+        
+        # Validate hex format (recommended)
+        try:
+            int(v, 16)
+            if len(v) < 64:
+                logger.warning(
+                    f"⚠️ Secret key is only {len(v)} characters. "
+                    f"Recommended: 64 characters (256 bits)"
+                )
+        except ValueError:
+            # Not hex, check if it's at least random-looking
+            if v.lower() == v or v.upper() == v:
+                logger.warning(
+                    "⚠️ Secret key appears to lack entropy (all same case). "
+                    "Consider generating a more random key."
+                )
+        
         return v
     
     # ==================== Time-to-Live Settings ====================
