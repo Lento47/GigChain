@@ -266,6 +266,11 @@ class DPoPValidator:
         """
         Verify the signature of a DPoP JWT using the provided JWK.
         
+        SECURITY FIX (HIGH-003): Complete ECDSA signature verification for Ethereum wallets.
+        
+        This implements RFC 9449 compliant signature verification for ES256K (secp256k1)
+        which is used by Ethereum wallets.
+        
         Args:
             dpop_jwt: The complete JWT string
             jwk: The JWK (public key) from the JWT header
@@ -274,45 +279,136 @@ class DPoPValidator:
             True if signature is valid
         """
         try:
-            # Use web3 for Ethereum signature verification
-            from web3 import Web3
-            from eth_account.messages import encode_defunct
+            from ecdsa import VerifyingKey, SECP256k1, BadSignatureError
+            from ecdsa.util import sigdecode_der, sigdecode_string
+            import base64
             
-            # For ES256K (Ethereum), the JWK contains the public key
-            # We need to verify the JWT signature
+            # ===== VALIDATE INPUT =====
             
-            # Split JWT
+            if not dpop_jwt or not jwk:
+                logger.error("DPoP signature verification: Missing JWT or JWK")
+                return False
+            
+            # ===== PARSE JWT =====
+            
             parts = dpop_jwt.split('.')
             if len(parts) != 3:
+                logger.error("DPoP signature verification: Invalid JWT format")
                 return False
             
             header_b64, payload_b64, signature_b64 = parts
             
-            # Message to sign (header.payload)
-            message = f"{header_b64}.{payload_b64}"
+            # ===== RECONSTRUCT MESSAGE TO VERIFY =====
             
-            # Decode signature
-            signature_bytes = base64.urlsafe_b64decode(
-                signature_b64 + '=' * (4 - len(signature_b64) % 4)
+            # The message that was signed is: header.payload (UTF-8 encoded)
+            message = f"{header_b64}.{payload_b64}".encode('utf-8')
+            
+            # ===== DECODE SIGNATURE =====
+            
+            try:
+                # Add padding if needed
+                padding = '=' * (4 - len(signature_b64) % 4)
+                signature = base64.urlsafe_b64decode(signature_b64 + padding)
+            except Exception as e:
+                logger.error(f"DPoP signature verification: Failed to decode signature: {str(e)}")
+                return False
+            
+            # ===== RECONSTRUCT PUBLIC KEY FROM JWK =====
+            
+            try:
+                # Validate JWK structure
+                if "kty" not in jwk or jwk["kty"] != "EC":
+                    logger.error(f"DPoP signature verification: Invalid key type: {jwk.get('kty')}")
+                    return False
+                
+                if "crv" not in jwk or jwk["crv"] not in ["secp256k1", "P-256K"]:
+                    logger.error(f"DPoP signature verification: Invalid curve: {jwk.get('crv')}")
+                    return False
+                
+                if "x" not in jwk:
+                    logger.error("DPoP signature verification: Missing x coordinate in JWK")
+                    return False
+                
+                # Decode x coordinate (required)
+                x_padding = '=' * (4 - len(jwk["x"]) % 4)
+                x = base64.urlsafe_b64decode(jwk["x"] + x_padding)
+                
+                # Decode y coordinate (may be missing in some formats)
+                if "y" in jwk and jwk["y"]:
+                    y_padding = '=' * (4 - len(jwk["y"]) % 4)
+                    y = base64.urlsafe_b64decode(jwk["y"] + y_padding)
+                else:
+                    # For Ethereum, y can be derived from x (compressed format)
+                    # For now, if y is missing, we cannot verify
+                    logger.error("DPoP signature verification: Missing y coordinate in JWK")
+                    return False
+                
+                # Construct public key in uncompressed format
+                # Format: 0x04 || x || y (65 bytes total for secp256k1)
+                public_key_bytes = b'\x04' + x + y
+                
+                if len(public_key_bytes) != 65:
+                    logger.error(
+                        f"DPoP signature verification: Invalid public key length: {len(public_key_bytes)} "
+                        f"(expected 65 bytes)"
+                    )
+                    return False
+                
+                # Create verifying key
+                verifying_key = VerifyingKey.from_string(
+                    public_key_bytes[1:],  # Skip 0x04 prefix
+                    curve=SECP256k1
+                )
+                
+            except Exception as e:
+                logger.error(f"DPoP signature verification: Failed to reconstruct public key: {str(e)}")
+                return False
+            
+            # ===== VERIFY SIGNATURE =====
+            
+            try:
+                # Try DER encoding first (standard for ES256K)
+                try:
+                    verifying_key.verify(
+                        signature,
+                        message,
+                        hashfunc=hashlib.sha256,
+                        sigdecode=sigdecode_der
+                    )
+                    logger.info("✅ DPoP signature verified (DER encoding)")
+                    return True
+                except BadSignatureError:
+                    # Try raw encoding (r || s concatenation)
+                    try:
+                        verifying_key.verify(
+                            signature,
+                            message,
+                            hashfunc=hashlib.sha256,
+                            sigdecode=sigdecode_string
+                        )
+                        logger.info("✅ DPoP signature verified (raw encoding)")
+                        return True
+                    except BadSignatureError:
+                        logger.warning("❌ DPoP signature verification failed (bad signature)")
+                        return False
+            
+            except Exception as e:
+                logger.error(f"DPoP signature verification: Verification failed: {str(e)}")
+                return False
+        
+        except ImportError:
+            logger.critical(
+                "DPoP signature verification: 'ecdsa' library not installed. "
+                "Install with: pip install ecdsa"
             )
-            
-            # For Ethereum wallets, we need to recover the address from signature
-            # and compare with the expected address derived from the JWK
-            
-            # This is a simplified check - in production, implement full
-            # ES256K signature verification using the JWK coordinates
-            
-            # For now, we'll mark as valid if JWK is properly formatted
-            # TODO: Implement full cryptographic verification
-            
-            if "x" in jwk and "kty" in jwk:
-                logger.debug("DPoP signature verification (simplified)")
-                return True
-            
             return False
-            
+        
         except Exception as e:
-            logger.error(f"DPoP signature verification error: {str(e)}")
+            logger.critical(
+                f"DPoP signature verification: Unhandled exception: {str(e)}",
+                exc_info=True
+            )
+            # FAIL CLOSED: Any exception = deny
             return False
     
     def _compute_ath(self, access_token: str) -> str:

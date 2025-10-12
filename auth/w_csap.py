@@ -210,6 +210,9 @@ class SignatureValidator:
         """
         Verify that a message was signed by the expected wallet address.
         
+        SECURITY FIX (CRITICAL-003): FAIL-CLOSED signature verification.
+        Any error or exception = DENY authentication. Never fail open.
+        
         Args:
             message: The original challenge message
             signature: The hex-encoded signature
@@ -218,36 +221,155 @@ class SignatureValidator:
         Returns:
             Tuple of (is_valid, recovered_address)
         """
+        # SECURITY: Initialize to failed state
+        is_valid = False
+        recovered_address = None
+        
         try:
-            # Normalize addresses
-            expected_address = Web3.to_checksum_address(expected_address)
+            # ===== INPUT VALIDATION (FAIL CLOSED) =====
             
-            # Encode message for Ethereum signing (EIP-191)
-            encoded_message = encode_defunct(text=message)
+            # Validate message is not empty
+            if not message or not isinstance(message, str):
+                logger.critical(
+                    "SECURITY: Invalid message in signature verification",
+                    extra={"message_type": type(message).__name__}
+                )
+                return False, None
             
-            # Recover the address that signed the message
-            recovered_address = self.web3.eth.account.recover_message(
-                encoded_message,
-                signature=signature
-            )
+            # Validate signature is not empty and is hex string
+            if not signature or not isinstance(signature, str):
+                logger.critical(
+                    "SECURITY: Invalid signature format",
+                    extra={"signature_type": type(signature).__name__}
+                )
+                return False, None
             
-            # CONSTANT-TIME comparison (FIX MEDIUM-001: Timing attack protection)
-            # hmac.compare_digest prevents timing attacks by always taking
-            # the same amount of time regardless of where strings differ
-            is_valid = hmac.compare_digest(
-                recovered_address.lower(),
-                expected_address.lower()
-            )
+            # Validate signature format (should be 0x + 130 hex chars for Ethereum)
+            if not signature.startswith('0x'):
+                logger.warning(
+                    "SECURITY: Signature missing 0x prefix",
+                    extra={"signature_preview": signature[:20]}
+                )
+                return False, None
+            
+            if len(signature) not in [130, 132]:  # With or without recovery byte
+                logger.warning(
+                    "SECURITY: Invalid signature length",
+                    extra={"length": len(signature), "expected": "130 or 132"}
+                )
+                return False, None
+            
+            # Validate expected address
+            if not expected_address or not isinstance(expected_address, str):
+                logger.critical(
+                    "SECURITY: Invalid expected address",
+                    extra={"address_type": type(expected_address).__name__}
+                )
+                return False, None
+            
+            # ===== NORMALIZE ADDRESS (FAIL CLOSED) =====
+            
+            try:
+                expected_address = Web3.to_checksum_address(expected_address)
+            except Exception as addr_error:
+                logger.critical(
+                    "SECURITY: Invalid Ethereum address format",
+                    extra={
+                        "address": expected_address[:20] if expected_address else None,
+                        "error": str(addr_error)
+                    }
+                )
+                return False, None
+            
+            # ===== ENCODE MESSAGE (FAIL CLOSED) =====
+            
+            try:
+                encoded_message = encode_defunct(text=message)
+            except Exception as encode_error:
+                logger.critical(
+                    "SECURITY: Failed to encode message for EIP-191",
+                    extra={
+                        "error": str(encode_error),
+                        "message_length": len(message)
+                    }
+                )
+                return False, None
+            
+            # ===== RECOVER SIGNER ADDRESS (FAIL CLOSED) =====
+            
+            try:
+                recovered_address = self.web3.eth.account.recover_message(
+                    encoded_message,
+                    signature=signature
+                )
+            except Exception as recover_error:
+                logger.critical(
+                    "SECURITY: Failed to recover address from signature",
+                    extra={
+                        "error_type": type(recover_error).__name__,
+                        "error": str(recover_error),
+                        "signature_length": len(signature)
+                    },
+                    exc_info=True
+                )
+                return False, None
+            
+            # ===== VERIFY ADDRESS MATCH (CONSTANT-TIME) =====
+            
+            # SECURITY: Use constant-time comparison to prevent timing attacks
+            # hmac.compare_digest always takes the same time regardless of
+            # where the strings differ
+            try:
+                is_valid = hmac.compare_digest(
+                    recovered_address.lower(),
+                    expected_address.lower()
+                )
+            except Exception as compare_error:
+                logger.critical(
+                    "SECURITY: Failed to compare addresses",
+                    extra={"error": str(compare_error)}
+                )
+                return False, None
+            
+            # ===== AUDIT LOGGING =====
             
             if is_valid:
-                logger.info(f"✅ Signature verified for {expected_address[:10]}...")
+                logger.info(
+                    f"✅ Signature verified for {expected_address[:10]}...",
+                    extra={
+                        "wallet_address": expected_address,
+                        "success": True
+                    }
+                )
+                return True, recovered_address
             else:
-                logger.warning(f"❌ Signature mismatch: expected {expected_address}, got {recovered_address}")
-            
-            return is_valid, recovered_address
+                logger.warning(
+                    f"❌ Signature mismatch: expected {expected_address[:10]}..., "
+                    f"got {recovered_address[:10]}...",
+                    extra={
+                        "expected_address": expected_address,
+                        "recovered_address": recovered_address,
+                        "success": False
+                    }
+                )
+                return False, None
             
         except Exception as e:
-            logger.error(f"Signature verification error: {str(e)}")
+            # ===== CATCH-ALL: FAIL CLOSED =====
+            # CRITICAL: Log ALL exceptions in signature verification
+            # ANY exception = DENY authentication
+            logger.critical(
+                f"SECURITY CRITICAL: Unhandled exception in signature verification",
+                extra={
+                    "exception_type": type(e).__name__,
+                    "exception": str(e),
+                    "expected_address": expected_address[:20] if expected_address else None,
+                    "signature_length": len(signature) if signature else 0,
+                    "message_length": len(message) if message else 0
+                },
+                exc_info=True
+            )
+            # FAIL CLOSED: Return False
             return False, None
 
 
@@ -332,47 +454,112 @@ class SessionManager:
     
     def validate_session_token(self, session_token: str) -> Tuple[bool, Optional[Dict[str, Any]]]:
         """
-        Validate a session token cryptographically.
+        Validate a session token cryptographically with CONSTANT-TIME operations.
+        
+        SECURITY FIX (HIGH-002): Prevents timing attacks by always taking
+        the same time regardless of which validation step fails.
         
         Returns:
             Tuple of (is_valid, decoded_data)
         """
+        # SECURITY: Record start time for constant-time response
+        start_time = time.perf_counter()
+        
+        # SECURITY: Initialize to failed state
+        result = False
+        decoded_data = None
+        
         try:
-            # Parse token (format: assertion_id.wallet.expires_at.hmac)
+            # ===== PARSE TOKEN (Always execute, never early return) =====
+            
             parts = session_token.split('.')
-            if len(parts) != 4:
-                return False, None
+            valid_format = (len(parts) == 4)
             
-            assertion_id, wallet_address, expires_at_str, token_hmac = parts
-            expires_at = int(expires_at_str)
+            if valid_format:
+                assertion_id, wallet_address, expires_at_str, token_hmac = parts
+                
+                # Try to parse expires_at (fail safe)
+                try:
+                    expires_at = int(expires_at_str)
+                except (ValueError, TypeError):
+                    expires_at = 0
+                    valid_format = False
+            else:
+                # Set dummy values to continue computation
+                assertion_id = ""
+                wallet_address = ""
+                expires_at = 0
+                token_hmac = ""
             
-            # Check expiry
-            if int(time.time()) >= expires_at:
-                logger.warning("Session token expired")
-                return False, None
+            # ===== COMPUTE EXPECTED HMAC (Always compute, even if format invalid) =====
             
-            # Verify HMAC
-            expected_hmac = self._compute_token_hmac(
-                assertion_id, wallet_address, expires_at
-            )
+            # This ensures constant time even for invalid tokens
+            if valid_format:
+                expected_hmac = self._compute_token_hmac(
+                    assertion_id, wallet_address, expires_at
+                )
+            else:
+                # Compute dummy HMAC to maintain constant time
+                expected_hmac = self._compute_token_hmac(
+                    "dummy", "0x0000000000000000000000000000000000000000", 0
+                )
             
-            if not hmac.compare_digest(token_hmac, expected_hmac):
-                logger.warning("Session token HMAC verification failed")
-                return False, None
+            # ===== VERIFY HMAC (Always verify, constant time) =====
             
-            # Return decoded data
-            decoded_data = {
-                "assertion_id": assertion_id,
-                "wallet_address": Web3.to_checksum_address(wallet_address),
-                "expires_at": expires_at,
-                "expires_in": expires_at - int(time.time())
-            }
+            # SECURITY: Use constant-time comparison
+            hmac_valid = hmac.compare_digest(token_hmac, expected_hmac) if valid_format else False
             
-            return True, decoded_data
+            # ===== CHECK EXPIRY (Always check, constant time) =====
+            
+            current_time = int(time.time())
+            not_expired = (current_time < expires_at) if valid_format else False
+            
+            # ===== COMBINE CHECKS (All must pass) =====
+            
+            if valid_format and hmac_valid and not_expired:
+                # All checks passed
+                result = True
+                
+                try:
+                    decoded_data = {
+                        "assertion_id": assertion_id,
+                        "wallet_address": Web3.to_checksum_address(wallet_address),
+                        "expires_at": expires_at,
+                        "expires_in": expires_at - current_time
+                    }
+                except Exception:
+                    # Invalid wallet address format
+                    result = False
+                    decoded_data = None
+            else:
+                result = False
+                decoded_data = None
+            
+            # ===== LOGGING (Different messages but same execution time) =====
+            
+            if not result:
+                if not valid_format:
+                    logger.warning("Session token validation failed: Invalid format")
+                elif not hmac_valid:
+                    logger.warning("Session token validation failed: HMAC verification failed")
+                elif not not_expired:
+                    logger.warning("Session token validation failed: Token expired")
             
         except Exception as e:
             logger.error(f"Session token validation error: {str(e)}")
-            return False, None
+            result = False
+            decoded_data = None
+        
+        # ===== CONSTANT-TIME GUARANTEE =====
+        # Always ensure minimum execution time to prevent timing attacks
+        
+        elapsed = time.perf_counter() - start_time
+        MIN_EXECUTION_TIME = 0.005  # 5ms minimum
+        
+        if elapsed < MIN_EXECUTION_TIME:
+            time.sleep(MIN_EXECUTION_TIME - elapsed)
+        
+        return result, decoded_data
     
     def refresh_session(
         self,
