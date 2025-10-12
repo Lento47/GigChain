@@ -169,39 +169,199 @@ python test_api.py
 
 ---
 
-## 🗂️ Project Structure (Simplified)
+## 🗂️ Project Structure (Actualizada 2025-10-12)
 
 ```
 GigChain/
-├── 🐍 Backend Python Files
-│   ├── main.py                 # ⭐ FastAPI entry point (USE THIS)
-│   ├── contract_ai.py          # Contract parsing & generation
-│   ├── agents.py               # 5 AI agents with chaining
-│   ├── chat_enhanced.py        # Chat AI system
-│   ├── gamification.py         # XP/Badges/Trust
-│   ├── gamification_api.py     # Gamification endpoints
-│   └── auth/                   # W-CSAP authentication
+├── 🐍 BACKEND (Python - FastAPI)
+│   ├── main.py ⭐              # FastAPI entry point (USE THIS)
+│   ├── app.py                  # Flask legacy
+│   │
+│   ├── 🤖 AI & Contract Generation (5 archivos)
+│   │   ├── contract_ai.py      # Contract generation engine
+│   │   ├── agents.py           # 5 AI Agents with chaining
+│   │   ├── chat_enhanced.py    # Chat AI with persistence
+│   │   ├── negotiation_assistant.py  # Negotiation AI
+│   │   └── dispute_mediation_ai.py   # Dispute resolution AI
+│   │
+│   ├── 🎮 Gamification & Tokens (5 archivos)
+│   │   ├── gamification.py     # XP/Badges/TrustScore system
+│   │   ├── gamification_api.py
+│   │   ├── token_system.py     # GigSoul token system
+│   │   ├── token_api.py
+│   │   └── token_database.py
+│   │
+│   ├── 📝 Contracts & Marketplace (3 archivos)
+│   │   ├── contracts_api.py
+│   │   ├── template_marketplace.py
+│   │   └── template_marketplace_api.py
+│   │
+│   ├── ⚖️ Dispute & Mediation (4 archivos)
+│   │   ├── dispute_oracle_system.py
+│   │   ├── dispute_oracle_api.py
+│   │   ├── dispute_mediation_api.py
+│   │   └── dispute_mediation_ai.py
+│   │
+│   ├── 📊 Analytics & Monitoring (3 archivos)
+│   │   ├── analytics_system.py
+│   │   ├── analytics_api.py
+│   │   └── security_monitoring.py
+│   │
+│   ├── 🌐 i18n & IPFS (4 archivos)
+│   │   ├── i18n_backend.py
+│   │   ├── i18n_api.py
+│   │   ├── ipfs_storage.py
+│   │   └── ipfs_api.py
+│   │
+│   ├── 👨‍💼 Admin & Reputation (6 archivos)
+│   │   ├── admin_system.py
+│   │   ├── admin_api.py
+│   │   ├── admin_mfa_system.py
+│   │   ├── admin_export_system.py
+│   │   ├── reputation_nft_system.py
+│   │   └── reputation_nft_api.py
+│   │
+│   ├── 💼 Wallet Management (7 archivos)
+│   │   ├── wallet_manager.py
+│   │   └── wallets/
+│   │       ├── wallet_manager.py
+│   │       ├── internal_wallet.py
+│   │       ├── external_wallet.py
+│   │       ├── database.py
+│   │       ├── routes.py
+│   │       └── schemas.py
+│   │
+│   ├── 🔐 Authentication System (19 módulos)
+│   │   └── auth/
+│   │       ├── w_csap.py       # Core protocol
+│   │       ├── config.py
+│   │       ├── database.py
+│   │       ├── middleware.py
+│   │       ├── routes.py
+│   │       ├── schemas.py
+│   │       ├── jwt_tokens.py
+│   │       ├── dpop.py         # DPoP authentication
+│   │       ├── kms.py          # Key Management
+│   │       ├── proof_of_work.py
+│   │       ├── risk_scoring.py
+│   │       ├── revocation.py
+│   │       ├── global_rate_limiter.py
+│   │       ├── scope_validator.py
+│   │       ├── step_up.py
+│   │       ├── analytics.py
+│   │       └── errors.py
+│   │
+│   ├── 🛡️ Security (1 módulo)
+│   │   └── security/
+│   │       └── template_security.py
+│   │
+│   ├── 🗄️ Database (3 archivos)
+│   │   ├── database_manager.py
+│   │   ├── database_schema.sql
+│   │   └── migrate_to_postgres.py
+│   │
+│   ├── ⚙️ Setup & Utilities (5 archivos)
+│   │   ├── setup_gigchain.py
+│   │   ├── setup_w_csap.py
+│   │   ├── start_local.py
+│   │   ├── verify_all_features.py
+│   │   └── exceptions.py
+│   │
+│   └── 🌍 Translations (4 idiomas)
+│       └── translations/
+│           ├── en.json
+│           ├── es.json
+│           ├── fr.json
+│           └── pt.json
 │
-├── ⚛️ Frontend React App
+├── ⚛️ FRONTEND (React 18.3 + Vite)
 │   └── src/
-│       ├── App.jsx             # Main app entry
-│       ├── components/         # 40+ UI components
-│       └── hooks/              # Custom React hooks
+│       ├── main.jsx
+│       ├── App.jsx
+│       ├── 📦 Components (40+)
+│       │   ├── layout/         # Header, Sidebar
+│       │   ├── common/         # LoadingSpinner, Toast, etc.
+│       │   └── features/       # Chart, Contract, Wallet
+│       ├── 🖥️ Views (11)
+│       │   ├── Dashboard/
+│       │   ├── Contracts/
+│       │   ├── Wallets/
+│       │   ├── AIAgents/
+│       │   └── Legal/
+│       ├── 🎣 Hooks (5 custom hooks)
+│       ├── 🌐 Services (3)
+│       ├── 🎨 Styles
+│       └── 🛠️ Utils
 │
-├── 🔗 Smart Contracts
+├── 👨‍💼 ADMIN PANEL (React + Vite)
+│   └── src/
+│       ├── pages/              # 14+ admin pages
+│       └── store/
+│
+├── 📱 MOBILE APP (React Native)
+│   └── src/
+│       ├── contexts/           # Theme, Wallet
+│       ├── navigation/
+│       └── screens/            # 8 mobile screens
+│
+├── 🔗 SMART CONTRACTS (Solidity)
 │   └── contracts/
-│       ├── GigChainEscrow.sol  # Main escrow contract
-│       └── test/               # Hardhat tests
+│       ├── GigChainEscrow.sol
+│       ├── DisputeOracle.sol
+│       ├── ReputationNFT.sol
+│       ├── governance/
+│       │   └── GigChainGovernor.sol.template
+│       └── token/
+│           └── GigsToken.sol.template
 │
-├── 🧪 Tests
+├── 🧪 TESTS (10 test files)
 │   └── tests/
-│       ├── test_*.py           # Pytest unit/integration
-│       └── integration_*.py    # Manual integration scripts
+│       ├── test_api.py
+│       ├── test_contract_ai.py
+│       ├── test_agents_*.py (3 files)
+│       ├── test_w_csap_auth.py
+│       └── integration_*.py (2 files)
 │
-└── 📚 Documentation
-    ├── README.md               # ⭐ Main documentation
-    ├── PROJECT_OVERVIEW.md     # This file
-    └── docs/                   # Extended documentation
+├── 📚 DOCUMENTATION (140+ docs)
+│   ├── README.md
+│   ├── DOCUMENTATION_INDEX.md
+│   └── docs/
+│       ├── getting-started/    # 6 docs
+│       ├── guides/             # 4 docs
+│       ├── features/           # 14 docs
+│       ├── security/           # 24 docs
+│       ├── api/                # 8 docs
+│       ├── deployment/         # 3 docs
+│       ├── testing/            # 2 docs
+│       ├── reports/            # 65+ docs
+│       └── standards/          # 3 docs
+│
+├── 🐳 DOCKER & DEPLOYMENT (11 files)
+│   ├── Dockerfile
+│   ├── docker-compose.yml
+│   ├── nginx.conf
+│   ├── deploy.sh / deploy.ps1
+│   └── vps-setup.sh
+│
+└── ⚙️ CONFIGURATION
+    ├── requirements.txt
+    ├── pytest.ini
+    ├── codex.yaml
+    ├── Makefile
+    └── env.example
+
+📊 ESTADÍSTICAS DEL PROYECTO:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Backend:       80+ archivos Python
+• Frontend:      100+ componentes y vistas
+• Admin Panel:   14+ páginas
+• Mobile App:    8 pantallas
+• Smart Contracts: 5 contratos
+• Tests:         10 archivos de prueba
+• Documentación: 140+ documentos
+• APIs:          11 módulos de API
+• Auth Modules:  19 módulos avanzados
+• i18n:          4 idiomas
 ```
 
 ---
