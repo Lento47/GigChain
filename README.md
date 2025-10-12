@@ -84,115 +84,403 @@ Total: **140+ documentos** organizados en **11 categorías**.
 
 ## 🏗️ Arquitectura del Sistema
 
-### 📐 Diagrama de Componentes
+### 📐 Diagrama de Componentes (Actualizado 2025-10-12)
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         FRONTEND (React)                        │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐      │
-│  │Dashboard │  │ Chat AI  │  │ Contracts│  │ Wallets  │      │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘      │
-│         │              │              │              │          │
-│         └──────────────┴──────────────┴──────────────┘          │
-│                          │ HTTPS/WebSocket                      │
-└──────────────────────────┼──────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                           FRONTEND LAYER (React 18.3+)                          │
+│  ┌─────────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌─────────────┐  │
+│  │  Dashboard  │  │ Chat AI  │  │Contracts │  │ Wallets  │  │ Admin Panel │  │
+│  │  Analytics  │  │ WebSocket│  │ Manager  │  │ W-CSAP   │  │   (MFA)     │  │
+│  └─────────────┘  └──────────┘  └──────────┘  └──────────┘  └─────────────┘  │
+│  ┌─────────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌─────────────┐  │
+│  │ Marketplace │  │Templates │  │  i18n    │  │ NFT Repo │  │ Mobile App  │  │
+│  │  (Store)    │  │ (Library)│  │Multi-Lang│  │ (Viewer) │  │(React Nat.) │  │
+│  └─────────────┘  └──────────┘  └──────────┘  └──────────┘  └─────────────┘  │
+│                          │ HTTPS/WebSocket/REST                                │
+└──────────────────────────┼──────────────────────────────────────────────────────┘
                            │
-┌──────────────────────────┼──────────────────────────────────────┐
-│                    NGINX (Reverse Proxy)                        │
-│              Rate Limiting │ SSL │ Security Headers             │
-└──────────────────────────┼──────────────────────────────────────┘
+┌──────────────────────────┼──────────────────────────────────────────────────────┐
+│                   NGINX (Reverse Proxy + Security)                              │
+│     Rate Limiting │ SSL/TLS │ Security Headers │ DDoS Protection               │
+└──────────────────────────┼──────────────────────────────────────────────────────┘
                            │
-┌──────────────────────────┼──────────────────────────────────────┐
-│                   BACKEND (FastAPI)                             │
-│  ┌────────────────┐  ┌────────────────┐  ┌─────────────────┐  │
-│  │  Auth System   │  │  AI Agents     │  │  Gamification   │  │
-│  │  (W-CSAP)      │  │  (5 Agents)    │  │  System         │  │
-│  └────────────────┘  └────────────────┘  └─────────────────┘  │
-│  ┌────────────────┐  ┌────────────────┐  ┌─────────────────┐  │
-│  │  Contract AI   │  │  Chat Manager  │  │  API Routes     │  │
-│  │  Engine        │  │  (WebSocket)   │  │  (REST)         │  │
-│  └────────────────┘  └────────────────┘  └─────────────────┘  │
-└──────────────────────────┼──────────────────────────────────────┘
+┌──────────────────────────┼──────────────────────────────────────────────────────┐
+│                      BACKEND API LAYER (FastAPI)                                │
+│  ┌──────────────────────────────────────────────────────────────────────────┐  │
+│  │                     CORE MODULES (main.py)                               │  │
+│  │  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────────────────┐ │  │
+│  │  │ Auth System│  │ AI Agents  │  │Gamification│  │   Contract AI      │ │  │
+│  │  │  (W-CSAP)  │  │(5 Agents)  │  │XP/Badges   │  │   Engine           │ │  │
+│  │  │  Advanced  │  │ Chaining   │  │Trust Score │  │   Parser/Generator │ │  │
+│  │  └────────────┘  └────────────┘  └────────────┘  └────────────────────┘ │  │
+│  └──────────────────────────────────────────────────────────────────────────┘  │
+│                                                                                  │
+│  ┌──────────────────────────────────────────────────────────────────────────┐  │
+│  │                     BUSINESS MODULES                                     │  │
+│  │  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────────────────┐ │  │
+│  │  │  Contracts │  │ Chat Mgr   │  │ Token Sys  │  │  Dispute Oracle    │ │  │
+│  │  │  CRUD API  │  │ WebSocket  │  │ (GigSoul)  │  │  & Mediation AI    │ │  │
+│  │  └────────────┘  └────────────┘  └────────────┘  └────────────────────┘ │  │
+│  │  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────────────────┐ │  │
+│  │  │ Analytics  │  │   IPFS     │  │ Reputation │  │  Template Market   │ │  │
+│  │  │  System    │  │  Storage   │  │    NFT     │  │  (Buy/Sell)        │ │  │
+│  │  └────────────┘  └────────────┘  └────────────┘  └────────────────────┘ │  │
+│  │  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────────────────┐ │  │
+│  │  │ Admin API  │  │    i18n    │  │  Wallets   │  │  Negotiation AI    │ │  │
+│  │  │  (MFA)     │  │  Backend   │  │  Manager   │  │  Assistant         │ │  │
+│  │  └────────────┘  └────────────┘  └────────────┘  └────────────────────┘ │  │
+│  └──────────────────────────────────────────────────────────────────────────┘  │
+│                                                                                  │
+│  ┌──────────────────────────────────────────────────────────────────────────┐  │
+│  │                   ADVANCED AUTH FEATURES (auth/)                         │  │
+│  │  DPoP │ KMS │ Proof of Work │ Risk Scoring │ Rate Limiting │ Revocation │  │
+│  │  JWT Tokens │ Scope Validator │ Step-up Auth │ Analytics                │  │
+│  └──────────────────────────────────────────────────────────────────────────┘  │
+└──────────────────────────┼──────────────────────────────────────────────────────┘
                            │
-┌──────────────────────────┼──────────────────────────────────────┐
-│              BLOCKCHAIN & EXTERNAL SERVICES                     │
-│  ┌────────────────┐  ┌────────────────┐  ┌─────────────────┐  │
-│  │  Polygon       │  │  OpenAI API    │  │  SQLite DB      │  │
-│  │  (USDC/Escrow) │  │  (GPT-4)       │  │  (Sessions)     │  │
-│  └────────────────┘  └────────────────┘  └─────────────────┘  │
-└─────────────────────────────────────────────────────────────────┘
+┌──────────────────────────┼──────────────────────────────────────────────────────┐
+│                    DATA & STORAGE LAYER                                         │
+│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐  ┌─────────────┐ │
+│  │  PostgreSQL    │  │   SQLite       │  │     IPFS       │  │   Redis     │ │
+│  │  (Production)  │  │   (Sessions)   │  │  (Distributed) │  │  (Cache)    │ │
+│  └────────────────┘  └────────────────┘  └────────────────┘  └─────────────┘ │
+└──────────────────────────┼──────────────────────────────────────────────────────┘
+                           │
+┌──────────────────────────┼──────────────────────────────────────────────────────┐
+│              BLOCKCHAIN & EXTERNAL SERVICES LAYER                               │
+│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐  ┌─────────────┐ │
+│  │  Polygon       │  │  OpenAI API    │  │  Thirdweb      │  │  Chainlink  │ │
+│  │  (USDC/Escrow) │  │  (GPT-4o-mini) │  │  (Wallets)     │  │  (Oracles)  │ │
+│  │  Smart Contracts│  │  AI Agents     │  │  Web3 SDK      │  │  Price Feeds│ │
+│  └────────────────┘  └────────────────┘  └────────────────┘  └─────────────┘ │
+│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐  ┌─────────────┐ │
+│  │  ERC20 Tokens  │  │  ERC721 NFTs   │  │  IPFS Network  │  │  Analytics  │ │
+│  │  (USDC, GSL)   │  │  (Reputation)  │  │  (Storage)     │  │  Services   │ │
+│  └────────────────┘  └────────────────┘  └────────────────┘  └─────────────┘ │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+📊 LEYENDA DE COMPONENTES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ CORE:          Auth (W-CSAP), AI Agents (5), Gamification, Contract Engine
+🆕 NEW:           Token System (GigSoul), Dispute Oracle, Admin Panel, Analytics
+🔐 SECURITY:      MFA, DPoP, KMS, Risk Scoring, Rate Limiting, Proof of Work
+📦 STORAGE:       PostgreSQL, SQLite, IPFS, Redis Cache
+🔗 BLOCKCHAIN:    Polygon, Smart Contracts, USDC, NFTs, Oracles
+🤖 AI:            5 Agents + Chat AI + Negotiation AI + Mediation AI
+🌐 MULTI-PLATFORM: React Web + Mobile App (React Native) + Admin Panel
 ```
 
-### 📂 Estructura de Archivos
+### 📂 Estructura de Archivos (Actualizada 2025-10-12)
 
 ```
 GigChain/
-├── 🐍 Backend (Python)
-│   ├── main.py                    # FastAPI app principal (✨ USAR ESTE)
-│   ├── app.py                     # Flask legacy (para compatibilidad)
-│   ├── contract_ai.py             # Motor de generación de contratos
-│   ├── agents.py                  # 5 AI Agents con chaining
-│   ├── chat_enhanced.py           # Chat AI con persistencia
-│   ├── gamification.py            # Sistema XP/Badges/TrustScore
-│   ├── gamification_api.py        # API endpoints de gamificación
-│   ├── negotiation_assistant.py   # Asistente de negociación AI
-│   ├── exceptions.py              # Custom exception classes
-│   └── auth/                      # W-CSAP Authentication System
-│       ├── __init__.py            # Exports principales
-│       ├── w_csap.py              # Protocolo W-CSAP core
-│       ├── database.py            # SQLite database manager
-│       └── middleware.py          # FastAPI middleware
+├── 🐍 BACKEND (Python - FastAPI)
+│   ├── main.py ⭐                 # FastAPI app principal (USAR ESTE)
+│   ├── app.py                     # Flask legacy (compatibilidad)
+│   │
+│   ├── 🤖 AI & Contract Generation
+│   │   ├── contract_ai.py         # Motor de generación de contratos
+│   │   ├── agents.py              # 5 AI Agents con chaining
+│   │   ├── chat_enhanced.py       # Chat AI con persistencia
+│   │   ├── negotiation_assistant.py  # Asistente de negociación AI
+│   │   └── dispute_mediation_ai.py   # AI para resolución de disputas
+│   │
+│   ├── 🎮 Gamification & Tokens
+│   │   ├── gamification.py        # Sistema XP/Badges/TrustScore
+│   │   ├── gamification_api.py    # API endpoints de gamificación
+│   │   ├── token_system.py        # Sistema de tokens GigSoul
+│   │   ├── token_api.py           # API endpoints de tokens
+│   │   └── token_database.py      # Database para tokens
+│   │
+│   ├── 📝 Contracts & Marketplace
+│   │   ├── contracts_api.py       # CRUD de contratos
+│   │   ├── template_marketplace.py      # Sistema de marketplace
+│   │   └── template_marketplace_api.py  # API de marketplace
+│   │
+│   ├── ⚖️ Dispute & Mediation
+│   │   ├── dispute_oracle_system.py      # Sistema de oracles
+│   │   ├── dispute_oracle_api.py         # API de oracles
+│   │   ├── dispute_mediation_api.py      # API de mediación
+│   │   └── dispute_mediation_ai.py       # AI de mediación
+│   │
+│   ├── 📊 Analytics & Monitoring
+│   │   ├── analytics_system.py    # Sistema de analytics
+│   │   ├── analytics_api.py       # API de analytics
+│   │   └── security_monitoring.py # Monitoreo de seguridad
+│   │
+│   ├── 🌐 Internationalization & Storage
+│   │   ├── i18n_backend.py        # Backend i18n
+│   │   ├── i18n_api.py            # API i18n
+│   │   ├── ipfs_storage.py        # Almacenamiento IPFS
+│   │   └── ipfs_api.py            # API IPFS
+│   │
+│   ├── 👨‍💼 Admin & Reputation
+│   │   ├── admin_system.py        # Sistema administrativo
+│   │   ├── admin_api.py           # API admin
+│   │   ├── admin_mfa_system.py    # Sistema MFA para admin
+│   │   ├── admin_export_system.py # Sistema de exportación
+│   │   ├── reputation_nft_system.py   # Sistema NFT de reputación
+│   │   └── reputation_nft_api.py      # API NFT de reputación
+│   │
+│   ├── 💼 Wallet Management
+│   │   ├── wallet_manager.py      # Gestor de wallets
+│   │   └── wallets/               # Sistema completo de wallets
+│   │       ├── __init__.py
+│   │       ├── wallet_manager.py  # Manager principal
+│   │       ├── internal_wallet.py # Wallets internas
+│   │       ├── external_wallet.py # Wallets externas
+│   │       ├── database.py        # DB de wallets
+│   │       ├── routes.py          # Rutas API
+│   │       └── schemas.py         # Pydantic schemas
+│   │
+│   ├── 🔐 Authentication System (W-CSAP)
+│   │   └── auth/                  # 19 módulos de autenticación avanzada
+│   │       ├── __init__.py        # Exports principales
+│   │       ├── w_csap.py          # Protocolo W-CSAP core
+│   │       ├── config.py          # Configuración avanzada
+│   │       ├── database.py        # SQLite database manager
+│   │       ├── middleware.py      # FastAPI middleware
+│   │       ├── routes.py          # Auth routes
+│   │       ├── schemas.py         # Pydantic models
+│   │       ├── jwt_tokens.py      # JWT token management
+│   │       ├── dpop.py            # DPoP authentication
+│   │       ├── kms.py             # Key Management System
+│   │       ├── proof_of_work.py   # PoW anti-spam
+│   │       ├── risk_scoring.py    # Risk analysis
+│   │       ├── revocation.py      # Token revocation
+│   │       ├── global_rate_limiter.py  # Rate limiting
+│   │       ├── scope_validator.py      # Scope validation
+│   │       ├── step_up.py         # Step-up auth
+│   │       ├── analytics.py       # Auth analytics
+│   │       ├── errors.py          # Custom errors
+│   │       └── README.md          # Auth documentation
+│   │
+│   ├── 🛡️ Security
+│   │   └── security/
+│   │       └── template_security.py  # Template validation
+│   │
+│   ├── 🗄️ Database & Migrations
+│   │   ├── database_manager.py    # Database manager
+│   │   ├── database_schema.sql    # Schema SQL
+│   │   └── migrate_to_postgres.py # Migration script
+│   │
+│   ├── 🧪 Testing Scripts
+│   │   ├── test_admin_mfa.py
+│   │   ├── test_ipfs.py
+│   │   ├── test_mediation.py
+│   │   ├── test_token_system.py
+│   │   └── test_wallet_system.py
+│   │
+│   ├── ⚙️ Setup & Utilities
+│   │   ├── setup_gigchain.py      # Setup completo
+│   │   ├── setup_w_csap.py        # Setup W-CSAP
+│   │   ├── start_local.py         # Inicio local
+│   │   ├── verify_all_features.py # Verificación
+│   │   └── exceptions.py          # Custom exceptions
+│   │
+│   └── 🌍 i18n Translations
+│       └── translations/
+│           ├── en.json            # English
+│           ├── es.json            # Español
+│           ├── fr.json            # Français
+│           └── pt.json            # Português
 │
-├── ⚛️ Frontend (React + Vite)
+├── ⚛️ FRONTEND (React 18.3 + Vite)
 │   └── src/
+│       ├── main.jsx               # Entry point
 │       ├── App.jsx                # App principal con routing
-│       ├── components/            # 40+ componentes
-│       │   ├── layout/            # Sidebar, Header
-│       │   ├── dashboard/         # DashboardView, Charts
-│       │   ├── views/             # AIAgents, Templates, etc.
-│       │   └── legal/             # Terms, Privacy, etc.
-│       ├── hooks/                 # Custom React hooks
-│       ├── utils/                 # Utilidades (logger, wallet)
-│       └── constants/             # API URLs, templates
+│       │
+│       ├── 📦 Components (40+)
+│       │   ├── layout/            # Layout components
+│       │   │   ├── Header/        # Header.jsx, Header.css
+│       │   │   └── Sidebar/       # Sidebar.jsx, Sidebar.css
+│       │   │
+│       │   ├── common/            # Common components
+│       │   │   ├── LoadingSpinner/
+│       │   │   ├── NetworkAlert/
+│       │   │   ├── NotificationCenter/
+│       │   │   ├── ThemeToggle/
+│       │   │   ├── Toast/
+│       │   │   ├── VirtualList/
+│       │   │   ├── OptimizedImage/
+│       │   │   └── CookieConsent/
+│       │   │
+│       │   ├── features/          # Feature components
+│       │   │   ├── Chart/         # Chart components
+│       │   │   ├── Contract/      # Contract components
+│       │   │   └── Wallet/        # Wallet components
+│       │   │
+│       │   ├── ErrorBoundary.jsx
+│       │   ├── LanguageSelector.jsx
+│       │   ├── NegotiationAssistant.jsx
+│       │   ├── ThirdwebStatus.jsx
+│       │   ├── UserProfileCard.jsx
+│       │   └── WalletAuthButton.jsx
+│       │
+│       ├── 🖥️ Views (11 views)
+│       │   ├── Dashboard/         # DashboardView + Charts
+│       │   ├── Home/              # HomeView
+│       │   ├── Contracts/         # ContractsView + Table
+│       │   ├── Wallets/           # WalletsView
+│       │   ├── Payments/          # PaymentsView
+│       │   ├── Transactions/      # TransactionsView
+│       │   ├── Templates/         # TemplatesView
+│       │   ├── AIAgents/          # AIAgentsView
+│       │   ├── Settings/          # SettingsView
+│       │   ├── Help/              # HelpView
+│       │   └── Legal/             # Terms, Privacy, GDPR
+│       │
+│       ├── 🎣 Hooks (Custom React Hooks)
+│       │   ├── useContract.js
+│       │   ├── useDashboardMetrics.js
+│       │   ├── useDebounce.js
+│       │   ├── useWallet.js
+│       │   └── useWalletAuth.js
+│       │
+│       ├── 🌐 Services
+│       │   ├── api.js             # API client
+│       │   ├── agentService.js    # AI agents service
+│       │   └── walletService.js   # Wallet service
+│       │
+│       ├── 🎨 Styles
+│       │   ├── index.css          # Global styles
+│       │   ├── components/        # Component styles
+│       │   └── utils/             # Utility styles (animations, responsive)
+│       │
+│       ├── 📚 Constants & Contexts
+│       │   ├── constants/         # API URLs, templates
+│       │   ├── contexts/          # ThemeContext
+│       │   └── i18n/              # i18nContext
+│       │
+│       └── 🛠️ Utils
+│           ├── logger.js          # Professional logging
+│           ├── walletUtils.js
+│           ├── dateUtils.js
+│           └── registerSW.js      # Service Worker
 │
-├── 🔗 Smart Contracts (Solidity)
+├── 👨‍💼 ADMIN PANEL (React + Vite)
+│   └── src/
+│       ├── main.jsx
+│       ├── App.jsx
+│       ├── components/
+│       │   └── Layout/
+│       │       └── AdminLayout.jsx
+│       ├── pages/                 # 14+ admin pages
+│       │   ├── DashboardPage.jsx
+│       │   ├── UsersPage.jsx
+│       │   ├── ContractsPage.jsx
+│       │   ├── DisputesPage.jsx
+│       │   ├── AnalyticsPage.jsx
+│       │   ├── MarketplacePage.jsx
+│       │   ├── SecurityPage.jsx
+│       │   ├── SecurityMonitoringPage.jsx
+│       │   ├── ActivityLogPage.jsx
+│       │   ├── ExportPage.jsx
+│       │   ├── TroubleshootPage.jsx
+│       │   ├── SettingsPage.jsx
+│       │   └── LoginPage.jsx
+│       └── store/
+│           └── adminStore.js
+│
+├── 📱 MOBILE APP (React Native)
+│   ├── App.tsx
+│   └── src/
+│       ├── contexts/
+│       │   ├── ThemeContext.tsx
+│       │   └── WalletContext.tsx
+│       ├── navigation/
+│       │   └── MainNavigator.tsx
+│       └── screens/               # 8 mobile screens
+│           ├── HomeScreen.tsx
+│           ├── LoadingScreen.tsx
+│           ├── ContractsScreen.tsx
+│           ├── ContractDetailScreen.tsx
+│           ├── CreateContractScreen.tsx
+│           ├── MarketplaceScreen.tsx
+│           ├── ProfileScreen.tsx
+│           └── WalletScreen.tsx
+│
+├── 🔗 SMART CONTRACTS (Solidity)
 │   └── contracts/
-│       ├── GigChainEscrow.sol     # Escrow principal con milestones
-│       ├── MockERC20.sol          # Mock USDC para testing
-│       ├── scripts/deploy.ts      # Scripts de deployment
-│       └── test/                  # Tests Hardhat
+│       ├── contracts/
+│       │   ├── GigChainEscrow.sol     # Escrow principal con milestones
+│       │   └── MockERC20.sol          # Mock USDC para testing
+│       ├── DisputeOracle.sol          # Oracle de disputas
+│       ├── ReputationNFT.sol          # NFTs de reputación
+│       ├── governance/
+│       │   └── GigChainGovernor.sol.template  # DAO governance
+│       ├── token/
+│       │   └── GigsToken.sol.template         # Token ERC20
+│       ├── scripts/
+│       │   └── deploy.ts              # Scripts de deployment
+│       ├── test/
+│       │   └── GigChainEscrow.test.ts # Tests Hardhat
+│       ├── hardhat.config.ts
+│       ├── tsconfig.json
+│       └── package.json
 │
-├── 🧪 Tests (Pytest + Manual)
+├── 🧪 TESTS (Pytest + Manual)
 │   └── tests/
+│       ├── README.md              # Testing guide
 │       ├── test_api.py            # API endpoint tests
 │       ├── test_contract_ai.py    # Contract generation tests
-│       ├── test_agents_*.py       # AI agents tests
+│       ├── test_agents_mock.py    # AI agents tests (mocked)
+│       ├── test_agents_enhanced.py     # Enhanced agents tests
+│       ├── test_agents_endpoints.py    # Agent management endpoints
 │       ├── test_w_csap_auth.py    # Authentication tests
-│       └── integration_*.py       # Integration scripts
+│       ├── test_backend.py        # Backend tests
+│       ├── integration_chat.py    # Chat AI flow
+│       └── integration_security.py     # Security validation
 │
-├── 📚 Documentation
+├── 📚 DOCUMENTATION (140+ docs)
+│   ├── README.md                  # Este archivo
+│   ├── DOCUMENTATION_INDEX.md     # Índice completo
 │   └── docs/
 │       ├── INDEX.md               # Documentation index
-│       ├── api/                   # API & development reports
-│       ├── deployment/            # Deployment guides
-│       ├── guides/                # User & developer guides
-│       ├── security/              # Security documentation
-│       └── testing/               # Testing guides
+│       ├── getting-started/       # Quick start guides (6 docs)
+│       ├── guides/                # User guides (4 docs)
+│       ├── features/              # Feature docs (14 docs)
+│       ├── security/              # Security docs (24 docs)
+│       ├── api/                   # API docs (8 docs)
+│       ├── deployment/            # Deployment guides (3 docs)
+│       ├── testing/               # Testing guides (2 docs)
+│       ├── reports/               # Development reports (65+ docs)
+│       ├── changelogs/            # CHANGELOG.md
+│       ├── standards/             # RFCs y estándares (3 docs)
+│       └── wallets/               # Wallet guides (1 doc)
 │
-├── 🐳 Docker & Deployment
+├── 🐳 DOCKER & DEPLOYMENT
 │   ├── Dockerfile                 # Multi-stage optimized
+│   ├── Dockerfile.prod            # Production optimized
+│   ├── Dockerfile.optimized       # Extra optimized
 │   ├── docker-compose.yml         # Development setup
 │   ├── docker-compose.prod.yml    # Production setup
-│   ├── nginx.conf                 # Nginx configuration
+│   ├── nginx.conf                 # Nginx dev config
+│   ├── nginx.prod.conf            # Nginx prod config
 │   ├── deploy.sh                  # Unix deployment script
-│   └── deploy.ps1                 # Windows deployment script
+│   ├── deploy.ps1                 # Windows deployment script
+│   ├── deploy-vps.sh              # VPS deployment
+│   ├── deploy-vps.ps1             # VPS deployment (Windows)
+│   ├── vps-setup.sh               # VPS initial setup
+│   ├── start-dev.sh               # Dev start script
+│   └── start-dev.ps1              # Dev start (Windows)
 │
-└── ⚙️ Configuration
-    ├── requirements.txt           # Python dependencies (pinned)
-    ├── requirements-dev.txt       # Development dependencies
-    ├── pytest.ini                 # Pytest configuration
+├── ⚙️ CONFIGURATION
+│   ├── requirements.txt           # Python dependencies (pinned)
+│   ├── requirements-dev.txt       # Development dependencies
+│   ├── pytest.ini                 # Pytest configuration
+│   ├── codex.yaml                 # Codex configuration
+│   ├── Makefile                   # Build automation
+│   ├── env.example                # Environment template
+│   └── LICENSE                    # MIT License
+│
+└── 📊 PROJECT MANAGEMENT
     ├── .github/workflows/ci.yml   # CI/CD pipeline
-    └── env.example                # Environment template
+    ├── CHANGES_SUMMARY.txt        # Summary of changes
+    ├── COMMIT_MESSAGE.txt         # Commit templates
+    ├── README_IMPLEMENTACION.txt  # Implementation notes
+    └── TOKEN_QUICK_START.txt      # Token system quickstart
 ```
 
 ### 🤖 AI Agents System
