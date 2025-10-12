@@ -73,38 +73,77 @@ python test_api.py
 
 ## 📐 System Architecture
 
-### High-Level Architecture
+### High-Level Architecture (Actualizado 2025-10-12)
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    USER INTERFACE (React)                   │
-│  Dashboard │ Chat AI │ Contracts │ Wallets │ Analytics     │
-└────────────────────────┬────────────────────────────────────┘
-                         │
-┌────────────────────────┼────────────────────────────────────┐
-│               NGINX (Production Only)                       │
-│       Rate Limiting │ SSL │ Security Headers               │
-└────────────────────────┼────────────────────────────────────┘
-                         │
-┌────────────────────────┼────────────────────────────────────┐
-│                FASTAPI BACKEND (main.py)                    │
-│  ┌──────────────┐  ┌──────────────┐  ┌─────────────────┐  │
-│  │ W-CSAP Auth  │  │  AI Agents   │  │  Gamification   │  │
-│  │ (Wallets)    │  │  (5 agents)  │  │  (XP/Badges)    │  │
-│  └──────────────┘  └──────────────┘  └─────────────────┘  │
-│  ┌──────────────┐  ┌──────────────┐  ┌─────────────────┐  │
-│  │ Contract AI  │  │  Chat System │  │  API Routes     │  │
-│  │ Engine       │  │  (WebSocket) │  │  (REST)         │  │
-│  └──────────────┘  └──────────────┘  └─────────────────┘  │
-└────────────────────────┼────────────────────────────────────┘
-                         │
-┌────────────────────────┼────────────────────────────────────┐
-│              EXTERNAL SERVICES & STORAGE                    │
-│  ┌──────────────┐  ┌──────────────┐  ┌─────────────────┐  │
-│  │  Polygon     │  │  OpenAI API  │  │  SQLite DB      │  │
-│  │  (USDC)      │  │  (GPT-4)     │  │  (Sessions)     │  │
-│  └──────────────┘  └──────────────┘  └─────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│                       FRONTEND LAYER (React 18.3+)                       │
+│  ┌────────────┐ ┌──────────┐ ┌──────────┐ ┌──────────────┐ ┌───────────┐│
+│  │ Dashboard  │ │ Chat AI  │ │Contracts │ │ Admin Panel  │ │Marketplace││
+│  │ Analytics  │ │WebSocket │ │ Manager  │ │   (MFA)      │ │ Templates ││
+│  └────────────┘ └──────────┘ └──────────┘ └──────────────┘ └───────────┘│
+│  ┌────────────┐ ┌──────────┐ ┌──────────┐ ┌──────────────┐ ┌───────────┐│
+│  │  Wallets   │ │NFT Repo  │ │  i18n    │ │ Mobile App   │ │ Security  ││
+│  │  (W-CSAP)  │ │ (Viewer) │ │Multi-Lang│ │React Native  │ │Monitoring ││
+│  └────────────┘ └──────────┘ └──────────┘ └──────────────┘ └───────────┘│
+└──────────────────────────────┬───────────────────────────────────────────┘
+                               │ HTTPS/WebSocket/REST
+┌──────────────────────────────┼───────────────────────────────────────────┐
+│          NGINX (Reverse Proxy + Security)                                │
+│  Rate Limiting │ SSL/TLS │ Security Headers │ DDoS Protection            │
+└──────────────────────────────┼───────────────────────────────────────────┘
+                               │
+┌──────────────────────────────┼───────────────────────────────────────────┐
+│            BACKEND API LAYER (FastAPI - main.py)                         │
+│                                                                           │
+│  ┌─────────────────────────────────────────────────────────────────────┐ │
+│  │                      CORE MODULES                                   │ │
+│  │   Auth (W-CSAP) │ AI Agents (5) │ Gamification │ Contract Engine   │ │
+│  └─────────────────────────────────────────────────────────────────────┘ │
+│                                                                           │
+│  ┌─────────────────────────────────────────────────────────────────────┐ │
+│  │                    BUSINESS MODULES (11 APIs)                       │ │
+│  │  Contracts │ Chat WebSocket │ Token System (GigSoul) │ Analytics    │ │
+│  │  Dispute Oracle & Mediation │ IPFS Storage │ Reputation NFT         │ │
+│  │  Template Marketplace │ Admin API (MFA) │ i18n │ Wallets            │ │
+│  └─────────────────────────────────────────────────────────────────────┘ │
+│                                                                           │
+│  ┌─────────────────────────────────────────────────────────────────────┐ │
+│  │           ADVANCED AUTH FEATURES (auth/ - 19 modules)               │ │
+│  │  DPoP │ KMS │ Proof of Work │ Risk Scoring │ JWT │ Revocation       │ │
+│  └─────────────────────────────────────────────────────────────────────┘ │
+└──────────────────────────────┼───────────────────────────────────────────┘
+                               │
+┌──────────────────────────────┼───────────────────────────────────────────┐
+│              DATA & STORAGE LAYER                                        │
+│  ┌──────────────┐ ┌────────────┐ ┌──────────────┐ ┌────────────┐       │
+│  │ PostgreSQL   │ │SQLite      │ │     IPFS     │ │   Redis    │       │
+│  │ (Production) │ │(Sessions)  │ │(Distributed) │ │  (Cache)   │       │
+│  └──────────────┘ └────────────┘ └──────────────┘ └────────────┘       │
+└──────────────────────────────┼───────────────────────────────────────────┘
+                               │
+┌──────────────────────────────┼───────────────────────────────────────────┐
+│         BLOCKCHAIN & EXTERNAL SERVICES LAYER                             │
+│  ┌──────────────┐ ┌──────────────┐ ┌────────────┐ ┌────────────┐       │
+│  │  Polygon     │ │ OpenAI API   │ │ Thirdweb   │ │ Chainlink  │       │
+│  │(USDC/Escrow) │ │(GPT-4o-mini) │ │  (Web3)    │ │ (Oracles)  │       │
+│  └──────────────┘ └──────────────┘ └────────────┘ └────────────┘       │
+│  ┌──────────────┐ ┌──────────────┐ ┌────────────┐ ┌────────────┐       │
+│  │ ERC20 Tokens │ │ ERC721 NFTs  │ │IPFS Network│ │ Analytics  │       │
+│  │ (USDC, GSL)  │ │ (Reputation) │ │ (Storage)  │ │ Services   │       │
+│  └──────────────┘ └──────────────┘ └────────────┘ └────────────┘       │
+└──────────────────────────────────────────────────────────────────────────┘
+
+📊 COMPONENTES CLAVE:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ CORE (4):         Auth, AI Agents, Gamification, Contract Engine
+🆕 NEW (7):          Token System, Dispute Oracle, Admin Panel, Analytics,
+                    Template Marketplace, Reputation NFT, Mobile App
+🔐 AUTH (19 mods):   DPoP, KMS, Proof of Work, Risk Scoring, JWT, Revocation,
+                    Rate Limiting, Step-up Auth, Analytics
+📦 STORAGE (4):      PostgreSQL, SQLite, IPFS, Redis
+🔗 BLOCKCHAIN (5):   Polygon, Smart Contracts, USDC, NFTs, Oracles
+🤖 AI (8 agents):    5 Core + Chat + Negotiation + Mediation
 ```
 
 ### Data Flow: Contract Creation
