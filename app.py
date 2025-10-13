@@ -15,7 +15,13 @@ app = Flask(__name__)
 CORS(app)  # Enable CORS for frontend integration
 
 # Configuration
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
+secret_key = os.getenv('SECRET_KEY')
+if not secret_key:
+    raise ValueError(
+        "SECRET_KEY environment variable is required. "
+        "Generate a secure 32+ character secret key."
+    )
+app.config['SECRET_KEY'] = secret_key
 app.config['OPENAI_API_KEY'] = os.getenv('OPENAI_API_KEY')
 
 @app.before_request

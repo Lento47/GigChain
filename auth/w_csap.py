@@ -473,10 +473,10 @@ class SessionManager:
             # ===== PARSE TOKEN (Always execute, never early return) =====
             
             parts = session_token.split('.')
-            valid_format = (len(parts) == 4)
+            valid_format = (len(parts) == 5)
             
             if valid_format:
-                assertion_id, wallet_address, expires_at_str, token_hmac = parts
+                assertion_id, random_token, wallet_address, expires_at_str, token_hmac = parts
                 
                 # Try to parse expires_at (fail safe)
                 try:
@@ -487,6 +487,7 @@ class SessionManager:
             else:
                 # Set dummy values to continue computation
                 assertion_id = ""
+                random_token = ""
                 wallet_address = ""
                 expires_at = 0
                 token_hmac = ""
@@ -496,12 +497,12 @@ class SessionManager:
             # This ensures constant time even for invalid tokens
             if valid_format:
                 expected_hmac = self._compute_token_hmac(
-                    assertion_id, wallet_address, expires_at
+                    f"{assertion_id}:{random_token}", wallet_address, expires_at
                 )
             else:
                 # Compute dummy HMAC to maintain constant time
                 expected_hmac = self._compute_token_hmac(
-                    "dummy", "0x0000000000000000000000000000000000000000", 0
+                    "dummy:dummy", "0x0000000000000000000000000000000000000000", 0
                 )
             
             # ===== VERIFY HMAC (Always verify, constant time) =====
@@ -523,6 +524,7 @@ class SessionManager:
                 try:
                     decoded_data = {
                         "assertion_id": assertion_id,
+                        "random_token": random_token,
                         "wallet_address": Web3.to_checksum_address(wallet_address),
                         "expires_at": expires_at,
                         "expires_in": expires_at - current_time
@@ -575,10 +577,10 @@ class SessionManager:
         try:
             # Validate old session token (even if expired, we need to verify it)
             parts = old_session_token.split('.')
-            if len(parts) != 4:
+            if len(parts) != 5:
                 return None
             
-            assertion_id, wallet_address, _, token_hmac = parts
+            assertion_id, random_token, wallet_address, _, token_hmac = parts
             
             # Validate refresh token
             expected_refresh_hmac = self._compute_refresh_token_hmac(
@@ -613,10 +615,14 @@ class SessionManager:
     ) -> str:
         """
         Generate cryptographically secure session token.
-        Format: assertion_id.wallet_address.expires_at.hmac
+        Format: assertion_id.random_token.wallet_address.expires_at.hmac
         """
-        token_hmac = self._compute_token_hmac(assertion_id, wallet_address, expires_at)
-        return f"{assertion_id}.{wallet_address}.{expires_at}.{token_hmac}"
+        # Generate cryptographically secure random token for additional entropy
+        random_token = secrets.token_urlsafe(32)
+        
+        # Compute HMAC for the assertion_id + random_token combination
+        token_hmac = self._compute_token_hmac(f"{assertion_id}:{random_token}", wallet_address, expires_at)
+        return f"{assertion_id}.{random_token}.{wallet_address}.{expires_at}.{token_hmac}"
     
     def _generate_refresh_token(self, assertion_id: str, wallet_address: str) -> str:
         """Generate cryptographically secure refresh token."""
@@ -624,12 +630,12 @@ class SessionManager:
     
     def _compute_token_hmac(
         self,
-        assertion_id: str,
+        token_data: str,
         wallet_address: str,
         expires_at: int
     ) -> str:
         """Compute HMAC for session token."""
-        data = f"{assertion_id}:{wallet_address}:{expires_at}"
+        data = f"{token_data}:{wallet_address}:{expires_at}"
         return hmac.new(
             self.secret_key.encode(),
             data.encode(),
