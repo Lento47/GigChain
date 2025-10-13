@@ -162,7 +162,8 @@ contract DisputeOracle {
         oracleStake[msg.sender] = 0;
         totalStaked -= stake;
         
-        payable(msg.sender).transfer(stake);
+        (bool success, ) = payable(msg.sender).call{value: stake}("");
+        require(success, "Transfer failed");
         
         emit OracleUnregistered(msg.sender, stake);
     }

@@ -12,7 +12,20 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for frontend integration
+
+# Restrictive CORS: allow only explicit origins for /api/* routes
+allowed_origins = os.getenv(
+    'ALLOWED_ORIGINS',
+    'http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173'
+)
+origins_list = [o.strip() for o in allowed_origins.split(',') if o.strip()]
+CORS(
+    app,
+    resources={r"/api/*": {"origins": origins_list}},
+    supports_credentials=True,
+    methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"]
+)
 
 # Configuration
 secret_key = os.getenv('SECRET_KEY')
