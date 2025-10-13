@@ -6,6 +6,7 @@ from typing import Dict, Any, Optional
 from dataclasses import dataclass
 from openai import OpenAI
 import json
+from security.input_sanitizer import sanitize_for_ai, sanitizer
 
 
 @dataclass
@@ -23,9 +24,18 @@ class BaseAgent:
 
     def run(self, prompt: str, input_data: Dict[str, Any]) -> Dict[str, Any]:
         try:
+            # Sanitize input data to prevent prompt injection
+            sanitized_data = sanitize_for_ai(input_data)
+            
+            # Sanitize the prompt itself
+            sanitized_prompt = sanitizer.sanitize_text(prompt, max_length=5000)
+            
             response = self.client.chat.completions.create(
                 model=self.model,
-                messages=[{"role": "system", "content": prompt}, {"role": "user", "content": json.dumps(input_data)}],
+                messages=[
+                    {"role": "system", "content": sanitized_prompt}, 
+                    {"role": "user", "content": sanitizer.sanitize_json(sanitized_data)}
+                ],
                 temperature=self.temp,
                 response_format={"type": "json_object"}
             )
@@ -38,12 +48,15 @@ class BaseAgent:
 
 class NegotiationAgent(BaseAgent):
     def run(self, input_data: AgentInput) -> Dict[str, Any]:
+        # Sanitize input data first
+        sanitized_input = sanitize_for_ai(input_data)
+        
         prompt = f"""Eres NegotiationAgent para GigChain.io. Analiza la propuesta y genera una contraoferta equilibrada.
 
 CONTEXTO:
-- Role: {input_data.role}
-- Complexity: {input_data.complexity}
-- Parsed Data: {json.dumps(input_data.parsed, ensure_ascii=False)}
+- Role: {sanitized_input.get('role', 'cliente')}
+- Complexity: {sanitized_input.get('complexity', 'low')}
+- Parsed Data: {sanitizer.sanitize_json(sanitized_input.get('parsed', {}))}
 
 REGLAS DE NEGOCIACIÓN:
 1. Si complexity="low": Aumenta precio 10-15% (menor riesgo)
@@ -72,15 +85,18 @@ OUTPUT JSON:
   "confidence_score": float,
   "negotiation_tips": ["string"]
 }}"""
-        return super().run(prompt, input_data.__dict__)
+        return super().run(prompt, sanitized_input)
 
 
 class ContractGeneratorAgent(BaseAgent):
     def run(self, input_data: Dict[str, Any]) -> Dict[str, Any]:  # Toma output de Negotiation
+        # Sanitize input data
+        sanitized_input = sanitize_for_ai(input_data)
+        
         prompt = f"""Eres ContractGeneratorAgent para GigChain.io. Genera un contrato inteligente completo basado en la negociación.
 
 INPUT NEGOCIACIÓN:
-{json.dumps(input_data, ensure_ascii=False, indent=2)}
+{sanitizer.sanitize_json(sanitized_input)}
 
 FUNCIONALIDADES REQUERIDAS:
 1. Escrow automático con USDC en Polygon
@@ -125,15 +141,18 @@ OUTPUT JSON:
   "deployment_ready": boolean,
   "estimated_gas": integer
 }}"""
-        return super().run(prompt, input_data)
+        return super().run(prompt, sanitized_input)
 
 
 class DisputeResolverAgent(BaseAgent):
     def run(self, input_data: Dict[str, Any]) -> Dict[str, Any]:  # Hook opcional, para disputes futuros
+        # Sanitize input data
+        sanitized_input = sanitize_for_ai(input_data)
+        
         prompt = f"""Eres DisputeResolverAgent para GigChain.io. Evalúa disputas y propone resoluciones justas.
 
 INPUT DISPUTA:
-{json.dumps(input_data, ensure_ascii=False, indent=2)}
+{sanitizer.sanitize_json(sanitized_input)}
 
 CRITERIOS DE EVALUACIÓN:
 1. Cumplimiento de milestones vs evidencia
@@ -164,16 +183,19 @@ OUTPUT JSON:
   "confidence_score": float,
   "next_steps": ["string"]
 }}"""
-        return super().run(prompt, input_data)
+        return super().run(prompt, sanitized_input)
 
 
 class QualityAgent(BaseAgent):
     """Agent especializado en evaluación de calidad de trabajos."""
     def run(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        # Sanitize input data
+        sanitized_input = sanitize_for_ai(input_data)
+        
         prompt = f"""Eres QualityAgent para GigChain.io. Evalúa la calidad de trabajos entregados.
 
 INPUT TRABAJO:
-{json.dumps(input_data, ensure_ascii=False, indent=2)}
+{sanitizer.sanitize_json(sanitized_input)}
 
 CRITERIOS DE CALIDAD:
 1. Cumplimiento de especificaciones técnicas
@@ -194,16 +216,19 @@ OUTPUT JSON:
   "approval_recommendation": "approve/request_changes/reject",
   "detailed_feedback": "string"
 }}"""
-        return super().run(prompt, input_data)
+        return super().run(prompt, sanitized_input)
 
 
 class PaymentAgent(BaseAgent):
     """Agent especializado en gestión de pagos y transacciones."""
     def run(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        # Sanitize input data
+        sanitized_input = sanitize_for_ai(input_data)
+        
         prompt = f"""Eres PaymentAgent para GigChain.io. Gestiona pagos y transacciones Web3.
 
 INPUT PAGO:
-{json.dumps(input_data, ensure_ascii=False, indent=2)}
+{sanitizer.sanitize_json(sanitized_input)}
 
 FUNCIONALIDADES:
 1. Validación de wallets y balances
@@ -235,7 +260,7 @@ OUTPUT JSON:
   "transaction_hash": "string",
   "estimated_completion": "YYYY-MM-DDTHH:MM:SSZ"
 }}"""
-        return super().run(prompt, input_data)
+        return super().run(prompt, sanitized_input)
 
 
 # Factory para chaining mejorado
@@ -251,11 +276,21 @@ def chain_agents(input_data: AgentInput) -> Dict[str, Any]:
     5. DisputeResolverAgent: Solo para casos complejos
     """
     try:
+        # Sanitize input data first
+        sanitized_input = sanitize_for_ai(input_data)
+        
+        # Create sanitized AgentInput
+        sanitized_agent_input = AgentInput(
+            parsed=sanitized_input.get('parsed', {}),
+            role=sanitized_input.get('role', 'cliente'),
+            complexity=sanitized_input.get('complexity', 'low')
+        )
+        
         # Paso 1: Negociación
-        negotiation_result = NegotiationAgent().run(input_data)
+        negotiation_result = NegotiationAgent().run(sanitized_agent_input)
         
         # Paso 2: Generación de contrato
-        contract_result = ContractGeneratorAgent().run(negotiation_result)
+        contract_result = ContractGeneratorAgent().run(sanitize_for_ai(negotiation_result))
         
         # Combinar resultados
         full_result = {
@@ -269,32 +304,32 @@ def chain_agents(input_data: AgentInput) -> Dict[str, Any]:
         }
         
         # Paso 3: Quality Agent (si hay entregables)
-        if "deliverables" in input_data.parsed or "work_samples" in input_data.parsed:
-            quality_result = QualityAgent().run({
+        if "deliverables" in sanitized_input.get("parsed", {}) or "work_samples" in sanitized_input.get("parsed", {}):
+            quality_result = QualityAgent().run(sanitize_for_ai({
                 "contract": contract_result,
-                "deliverables": input_data.parsed.get("deliverables", []),
-                "work_samples": input_data.parsed.get("work_samples", [])
-            })
+                "deliverables": sanitized_input.get("parsed", {}).get("deliverables", []),
+                "work_samples": sanitized_input.get("parsed", {}).get("work_samples", [])
+            }))
             full_result["quality_assessment"] = quality_result
             full_result["chain_metadata"]["agents_used"].append("QualityAgent")
         
         # Paso 4: Payment Agent (si hay transacciones)
-        if "payment_info" in input_data.parsed or "wallet_addresses" in input_data.parsed:
-            payment_result = PaymentAgent().run({
+        if "payment_info" in sanitized_input.get("parsed", {}) or "wallet_addresses" in sanitized_input.get("parsed", {}):
+            payment_result = PaymentAgent().run(sanitize_for_ai({
                 "contract": contract_result,
-                "payment_info": input_data.parsed.get("payment_info", {}),
-                "wallet_addresses": input_data.parsed.get("wallet_addresses", {})
-            })
+                "payment_info": sanitized_input.get("parsed", {}).get("payment_info", {}),
+                "wallet_addresses": sanitized_input.get("parsed", {}).get("wallet_addresses", {})
+            }))
             full_result["payment_management"] = payment_result
             full_result["chain_metadata"]["agents_used"].append("PaymentAgent")
         
         # Paso 5: Dispute Resolver (solo para casos complejos)
-        if input_data.complexity == "high":
-            dispute_result = DisputeResolverAgent().run({
+        if sanitized_input.get("complexity") == "high":
+            dispute_result = DisputeResolverAgent().run(sanitize_for_ai({
                 "contract": contract_result,
                 "negotiation": negotiation_result,
-                "evidence": input_data.parsed.get("evidence", [])
-            })
+                "evidence": sanitized_input.get("parsed", {}).get("evidence", [])
+            }))
             full_result["dispute_resolution"] = dispute_result
             full_result["chain_metadata"]["agents_used"].append("DisputeResolverAgent")
         

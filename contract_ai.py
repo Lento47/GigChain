@@ -282,11 +282,20 @@ def full_flow(text: str, store_ipfs: bool = False) -> Dict[str, Any]:
         Contract data with optional IPFS CID
     """
     from agents import chain_agents, AgentInput
+    from security.input_sanitizer import sanitizer
     
-    parsed = parse_input(text)
-    role = _detect_role(text)
+    # Validate and sanitize input text
+    is_valid, error_msg = sanitizer.validate_contract_input(text)
+    if not is_valid:
+        raise ValueError(f"Invalid contract input: {error_msg}")
+    
+    # Sanitize the text before processing
+    sanitized_text = sanitizer.sanitize_text(text, max_length=2000)
+    
+    parsed = parse_input(sanitized_text)
+    role = _detect_role(sanitized_text)
     total_amount = _determine_total_amount(parsed, role) or 5000.0
-    total_days = _extract_days(text) or 14
+    total_days = _extract_days(sanitized_text) or 14
     total_days = max(total_days, 5)
     risks = _derive_risks(total_days, parsed)
     
@@ -300,7 +309,7 @@ def full_flow(text: str, store_ipfs: bool = False) -> Dict[str, Any]:
     )
     
     if complexity == "low":
-        result = generate_contract(text)  # Rule-based fallback
+        result = generate_contract(sanitized_text)  # Rule-based fallback
     else:
         ai_output = chain_agents(input_data)
         result = {

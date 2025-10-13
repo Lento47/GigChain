@@ -21,6 +21,7 @@ load_dotenv()
 from contract_ai import full_flow, generate_contract
 from agents import chain_agents, AgentInput, get_agent_status
 from security.template_security import validate_template_security, SecurityValidationResult
+from security.validators import validator
 from chat_enhanced import chat_manager
 
 # Import custom exceptions
@@ -86,7 +87,12 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Initialize resources on startup and cleanup on shutdown."""
     # Startup: Initialize authentication system
-    secret_key = os.getenv('W_CSAP_SECRET_KEY', os.urandom(32).hex())
+    secret_key = os.getenv('W_CSAP_SECRET_KEY')
+    if not secret_key:
+        raise ValueError(
+            "W_CSAP_SECRET_KEY environment variable is required. "
+            "Generate a secure 32+ character secret key."
+        )
     
     app.state.authenticator = WCSAPAuthenticator(
         secret_key=secret_key,
@@ -147,39 +153,49 @@ app.include_router(ipfs_router)
 # Include Contracts router
 app.include_router(contracts_router)
 
-# CORS middleware - Production-ready configuration
-# Get allowed origins from environment or use defaults
-ALLOWED_ORIGINS = os.getenv(
-    'ALLOWED_ORIGINS',
-    'http://localhost:3000,http://localhost:5173,http://localhost:5174,http://127.0.0.1:3000,http://127.0.0.1:5173,http://127.0.0.1:5174'
-).split(',')
+# CORS middleware - Security-hardened configuration
+# Get allowed origins from environment - NO DEFAULTS for security
+ALLOWED_ORIGINS_ENV = os.getenv('ALLOWED_ORIGINS')
+if not ALLOWED_ORIGINS_ENV:
+    raise ValueError(
+        "ALLOWED_ORIGINS environment variable is required. "
+        "Specify comma-separated list of allowed origins."
+    )
 
-# In production, restrict to specific origins
-if not os.getenv('DEBUG', 'False').lower() == 'true':
-    # Production mode - only allow configured origins
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=ALLOWED_ORIGINS,
-        allow_credentials=True,
-        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
-        max_age=3600,  # Cache preflight requests for 1 hour
-    )
-else:
-    # Development mode - allow all origins
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+ALLOWED_ORIGINS = [origin.strip() for origin in ALLOWED_ORIGINS_ENV.split(',') if origin.strip()]
+
+# Validate origins format
+for origin in ALLOWED_ORIGINS:
+    if not (origin.startswith('http://') or origin.startswith('https://')):
+        raise ValueError(f"Invalid origin format: {origin}. Must include protocol (http:// or https://)")
+
+# Apply CORS middleware with strict configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With", "X-CSRF-Token"],
+    max_age=3600,  # Cache preflight requests for 1 hour
+)
 
 # Add W-CSAP authentication middleware
 # Note: Middleware currently commented out - needs refactoring to be compatible with FastAPI
 # TODO: Implement as BaseHTTPMiddleware or pure ASGI middleware
 # app.add_middleware(RateLimitMiddleware)  # Uncomment to enable rate limiting
 # app.add_middleware(SessionCleanupMiddleware)  # Uncomment for auto cleanup
+
+# Add security middleware
+from auth.security_middleware import get_security_middleware
+
+# Apply security middleware
+security_middleware = get_security_middleware(
+    app,
+    secret_key=os.getenv('W_CSAP_SECRET_KEY'),
+    environment=os.getenv('ENVIRONMENT', 'production')
+)
+
+# Note: Security middleware is applied in the middleware list above
 
 # Pydantic models for authentication
 class AuthChallengeRequest(BaseModel):
@@ -380,7 +396,12 @@ async def auth_challenge(request: Request, body: AuthChallengeRequest):
     try:
         # Get or initialize authenticator (for test compatibility)
         if not hasattr(request.app.state, 'authenticator'):
-            secret_key = os.getenv('W_CSAP_SECRET_KEY', os.urandom(32).hex())
+            secret_key = os.getenv('W_CSAP_SECRET_KEY')
+            if not secret_key:
+                raise HTTPException(
+                    status_code=500,
+                    detail="Authentication system not properly configured"
+                )
             request.app.state.authenticator = WCSAPAuthenticator(
                 secret_key=secret_key,
                 challenge_ttl=300,
@@ -972,6 +993,14 @@ async def api_full_flow(request: ContractRequest):
     for complex contract negotiations and generation.
     """
     try:
+        # Validate input
+        is_valid, errors = validator.validate_contract_request(request.dict())
+        if not is_valid:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid input: {'; '.join(errors)}"
+            )
+        
         logger.info(f"Processing AI contract request: {request.text[:100]}...")
         
         # Process with full AI flow
@@ -1005,6 +1034,14 @@ async def api_simple_contract(request: SimpleContractRequest):
     Faster response for simple contracts without complex negotiations.
     """
     try:
+        # Validate input
+        is_valid, error = validator.validate_text(request.text, 'text')
+        if not is_valid:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid input: {error}"
+            )
+        
         logger.info(f"Processing simple contract: {request.text[:100]}...")
         
         # Process with rule-based generation only
@@ -1038,6 +1075,14 @@ async def api_structured_contract(request: StructuredContractRequest):
     Accepts individual form fields and constructs the contract text internally.
     """
     try:
+        # Validate input
+        is_valid, errors = validator.validate_contract_request(request.dict())
+        if not is_valid:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid input: {'; '.join(errors)}"
+            )
+        
         logger.info(f"Processing structured contract for role: {request.role}")
         
         # Construct text from structured data

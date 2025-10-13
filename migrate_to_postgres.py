@@ -8,6 +8,7 @@ import psycopg2
 from psycopg2 import sql
 import os
 import sys
+import re
 from datetime import datetime
 from typing import List, Dict, Any
 import logging
@@ -45,6 +46,9 @@ class DatabaseMigration:
     def get_table_schema(self, conn, table_name: str) -> str:
         """Get CREATE TABLE statement from SQLite."""
         cursor = conn.cursor()
+        # Validate table name first
+        if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', table_name):
+            raise ValueError(f"Invalid table name: {table_name}")
         cursor.execute(f"SELECT sql FROM sqlite_master WHERE type='table' AND name='{table_name}'")
         result = cursor.fetchone()
         return result[0] if result else None
@@ -83,6 +87,9 @@ class DatabaseMigration:
         cursor = pg_conn.cursor()
         
         # Drop table if exists
+        # Table names cannot be parameterized, so we validate the name first
+        if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', table_name):
+            raise ValueError(f"Invalid table name: {table_name}")
         cursor.execute(f"DROP TABLE IF EXISTS {table_name} CASCADE")
         
         # Create table
@@ -96,6 +103,9 @@ class DatabaseMigration:
         """Migrate data from SQLite table to PostgreSQL."""
         # Get column names
         sqlite_cursor = sqlite_conn.cursor()
+        # Validate table name first
+        if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', table_name):
+            raise ValueError(f"Invalid table name: {table_name}")
         sqlite_cursor.execute(f"PRAGMA table_info({table_name})")
         columns = [row[1] for row in sqlite_cursor.fetchall()]
         
@@ -226,11 +236,17 @@ class DatabaseMigration:
             for table in tables:
                 # Count rows in SQLite
                 sqlite_cursor = sqlite_conn.cursor()
+                # Validate table name first
+                if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', table):
+                    raise ValueError(f"Invalid table name: {table}")
                 sqlite_cursor.execute(f"SELECT COUNT(*) FROM {table}")
                 sqlite_count = sqlite_cursor.fetchone()[0]
                 
                 # Count rows in PostgreSQL
                 pg_cursor = pg_conn.cursor()
+                # Validate table name first
+                if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', table):
+                    raise ValueError(f"Invalid table name: {table}")
                 pg_cursor.execute(f"SELECT COUNT(*) FROM {table}")
                 pg_count = pg_cursor.fetchone()[0]
                 
