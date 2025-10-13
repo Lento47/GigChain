@@ -131,8 +131,14 @@ class DatabaseMigration:
             try:
                 pg_cursor.execute(insert_query, row)
                 rows_inserted += 1
+            except (psycopg2.IntegrityError, psycopg2.DataError, psycopg2.ProgrammingError) as e:
+                logger.warning(f"  ⚠️  Database error inserting row into {table_name}: {str(e)}")
+                continue
+            except (ValueError, TypeError) as e:
+                logger.warning(f"  ⚠️  Data type error inserting row into {table_name}: {str(e)}")
+                continue
             except Exception as e:
-                logger.warning(f"  ⚠️  Error inserting row into {table_name}: {str(e)}")
+                logger.error(f"  ❌ Unexpected error inserting row into {table_name}: {str(e)}")
                 continue
         
         pg_conn.commit()
@@ -166,8 +172,10 @@ class DatabaseMigration:
                 """)
                 pg_conn.commit()
                 logger.info(f"  ✅ Fixed sequence for {table_name}.{column}")
+            except (psycopg2.ProgrammingError, psycopg2.OperationalError) as e:
+                logger.warning(f"  ⚠️  Database error fixing sequence for {table_name}.{column}: {str(e)}")
             except Exception as e:
-                logger.warning(f"  ⚠️  Could not fix sequence for {table_name}.{column}: {str(e)}")
+                logger.error(f"  ❌ Unexpected error fixing sequence for {table_name}.{column}: {str(e)}")
     
     def migrate_database(self, database_name: str):
         """Migrate a complete database."""
@@ -214,8 +222,16 @@ class DatabaseMigration:
             logger.info(f"Rows migrated: {self.rows_migrated}")
             logger.info(f"{'='*60}\n")
             
+        except (psycopg2.OperationalError, psycopg2.ProgrammingError) as e:
+            logger.error(f"❌ Database migration failed: {str(e)}")
+            pg_conn.rollback()
+            raise
+        except (sqlite3.OperationalError, sqlite3.ProgrammingError) as e:
+            logger.error(f"❌ SQLite migration failed: {str(e)}")
+            pg_conn.rollback()
+            raise
         except Exception as e:
-            logger.error(f"❌ Migration failed: {str(e)}")
+            logger.error(f"❌ Unexpected migration error: {str(e)}")
             pg_conn.rollback()
             raise
         

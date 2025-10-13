@@ -19,9 +19,16 @@ def main():
         print("   OPENAI_API_KEY=sk-your-key-here")
         print("")
         
-        # For testing purposes, set a dummy key
-        os.environ['OPENAI_API_KEY'] = 'sk-test-key-for-local-development'
-        print("Using dummy key for local testing...")
+        # Check if OpenAI API key is set
+        if not os.environ.get('OPENAI_API_KEY'):
+            print("⚠️  WARNING: OPENAI_API_KEY not set!")
+            print("   Please set your OpenAI API key in .env file or environment variable")
+            print("   Example: export OPENAI_API_KEY='your-api-key-here'")
+            print("   Or add OPENAI_API_KEY=your-api-key-here to .env file")
+            print("")
+            print("   Some features may not work without a valid API key.")
+            print("   Continuing with limited functionality...")
+            print("")
     
     # Set other defaults
     os.environ.setdefault('SECRET_KEY', 'dev-secret-key-local')
