@@ -172,30 +172,37 @@ class AdminManagementSystem:
             self._create_default_admin()
     
     def _create_default_admin(self):
-        """Create default super admin account."""
+        """Create default super admin account with secure password."""
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             
             cursor.execute('SELECT COUNT(*) FROM admin_users WHERE role = ?', (AdminRole.SUPER_ADMIN.value,))
             if cursor.fetchone()[0] == 0:
-                # Create default admin: admin / admin123
+                # Generate secure random password
                 admin_id = secrets.token_hex(16)
-                password_hash = hashlib.sha256("admin123".encode()).hexdigest()
+                secure_password = secrets.token_urlsafe(16)  # 16 character secure password
+                password_hash = hashlib.sha256(secure_password.encode()).hexdigest()
                 
                 cursor.execute('''
-                    INSERT INTO admin_users (admin_id, username, email, password_hash, role, created_at, is_active)
-                    VALUES (?, ?, ?, ?, ?, ?, 1)
+                    INSERT INTO admin_users (admin_id, username, email, password_hash, role, created_at, is_active, password_changed_at)
+                    VALUES (?, ?, ?, ?, ?, ?, 1, ?)
                 ''', (
                     admin_id,
                     "admin",
                     "admin@gigchain.io",
                     password_hash,
                     AdminRole.SUPER_ADMIN.value,
-                    datetime.now().isoformat()
+                    datetime.now().isoformat(),
+                    None  # password_changed_at is None, forcing password change on first login
                 ))
                 
                 conn.commit()
-                logger.info("✅ Default super admin created: username=admin, password=admin123")
+                # Log secure password to console for initial setup (only once)
+                print(f"🔐 SECURITY: Default admin created with secure password: {secure_password}")
+                print("🔐 SECURITY: Please change this password immediately after first login!")
+                logger.warning("🔐 SECURITY: Default admin created with secure password (check console)")
+                logger.warning("🔐 SECURITY: Please change this password immediately after first login!")
+                logger.info("✅ Default super admin created: username=admin, password=GENERATED_SECURE_PASSWORD")
     
     def authenticate_admin(self, username: str, password: str) -> Optional[Dict[str, Any]]:
         """Authenticate admin user."""
@@ -205,7 +212,7 @@ class AdminManagementSystem:
             cursor = conn.cursor()
             
             cursor.execute('''
-                SELECT admin_id, username, email, role, is_active
+                SELECT admin_id, username, email, role, is_active, password_changed_at
                 FROM admin_users
                 WHERE username = ? AND password_hash = ?
             ''', (username, password_hash))
@@ -217,8 +224,13 @@ class AdminManagementSystem:
                     "admin_id": result[0],
                     "username": result[1],
                     "email": result[2],
-                    "role": result[3]
+                    "role": result[3],
+                    "password_changed_at": result[5]
                 }
+                
+                # Check if password change is required (first login)
+                if result[5] is None:  # password_changed_at is None
+                    admin_data["requires_password_change"] = True
                 
                 # Update last login
                 cursor.execute('''

@@ -885,26 +885,25 @@ async def get_system_logs(
     Returns recent log entries filtered by level.
     """
     try:
-        import os
-        import glob
+        from security.file_utils import get_safe_log_files, safe_read_file_lines
         
         logs = []
         
-        # Read recent log files (if they exist)
-        log_files = glob.glob("*.log")
+        # Get safe log files with path validation
+        log_files = get_safe_log_files(".", 5)
         
-        for log_file in log_files[:5]:  # Last 5 log files
+        for log_file in log_files:
             try:
-                with open(log_file, 'r') as f:
-                    lines = f.readlines()[-limit:]
-                    
-                    # Filter by level
-                    filtered_lines = [
-                        line for line in lines
-                        if level.upper() in line.upper() or level == "ALL"
-                    ]
-                    
-                    logs.extend(filtered_lines)
+                # Safely read file lines with limits
+                lines = safe_read_file_lines(log_file, limit)
+                
+                # Filter by level
+                filtered_lines = [
+                    line for line in lines
+                    if level.upper() in line.upper() or level == "ALL"
+                ]
+                
+                logs.extend(filtered_lines)
             except Exception as e:
                 logger.error(f"Error reading log file {log_file}: {str(e)}")
         

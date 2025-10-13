@@ -103,10 +103,10 @@ def create_env_file():
 
 # Server Configuration
 PORT=5000
-DEBUG=True
+DEBUG=False
 
-# OpenAI Configuration (REPLACE WITH YOUR REAL KEY)
-OPENAI_API_KEY=sk-test-dummy-key-for-development
+# OpenAI Configuration (REQUIRED - Set your real API key)
+OPENAI_API_KEY=your_openai_api_key_here
 
 # CORS Configuration
 ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173

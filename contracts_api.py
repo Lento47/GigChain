@@ -312,9 +312,15 @@ async def update_contract(
         current = dict(row)
         now = datetime.now().isoformat()
         
-        # Build update query
+        # Build update query with whitelisted column names
         updates = []
         params = []
+        
+        # Whitelist of allowed column names for security
+        ALLOWED_COLUMNS = {
+            'status', 'freelancer_address', 'milestones', 'started_at', 
+            'completed_at', 'updated_at'
+        }
         
         if update.status:
             updates.append("status = ?")
@@ -339,6 +345,16 @@ async def update_contract(
         params.append(now)
         
         if updates:
+            # Validate all column names against whitelist
+            for update_clause in updates:
+                column_name = update_clause.split(' = ')[0]
+                if column_name not in ALLOWED_COLUMNS:
+                    conn.close()
+                    raise HTTPException(
+                        status_code=400, 
+                        detail=f"Invalid column name: {column_name}"
+                    )
+            
             params.append(contract_id)
             query = f"UPDATE contracts SET {', '.join(updates)} WHERE id = ?"
             c.execute(query, params)
