@@ -49,7 +49,7 @@ from auth.risk_scoring import RiskScorer, DeviceFingerprint, RiskAssessment, get
 from auth.step_up import StepUpManager, OperationClassifier, OperationRisk, require_step_up, get_step_up_manager
 from auth.kms import KMSKeyManager, get_kms_manager
 from auth.analytics import AnalyticsDashboard, ThreatIntelligence, get_analytics_dashboard, get_threat_intelligence
-from auth.global_rate_limiter import GlobalRateLimiter, get_global_rate_limiter
+from auth.global_rate_limiter import GlobalRateLimiter, get_rate_limiter
 from auth.proof_of_work import ProofOfWork, get_proof_of_work
 from auth import schemas
 
@@ -133,7 +133,7 @@ __all__ = [
     
     # Critical Security Fixes
     'GlobalRateLimiter',
-    'get_global_rate_limiter',
+    'get_rate_limiter',
     'ProofOfWork',
     'get_proof_of_work',
     

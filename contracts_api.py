@@ -12,6 +12,9 @@ import sqlite3
 import json
 import logging
 
+# Import authentication 
+from auth import get_current_wallet
+
 # Setup logger
 logger = logging.getLogger(__name__)
 
@@ -41,8 +44,16 @@ def init_contracts_db():
         started_at TEXT,
         completed_at TEXT,
         milestones TEXT,
-        metadata TEXT
+        metadata TEXT,
+        contract_type TEXT DEFAULT 'project'
     )''')
+    
+    # Add contract_type column if it doesn't exist (for existing databases)
+    try:
+        c.execute("ALTER TABLE contracts ADD COLUMN contract_type TEXT DEFAULT 'project'")
+    except:
+        # Column already exists
+        pass
     
     # Create activity logs table
     c.execute('''CREATE TABLE IF NOT EXISTS contract_activity (
@@ -207,15 +218,30 @@ async def get_contracts(
         raise HTTPException(status_code=500, detail="Failed to retrieve contracts")
 
 @router.post("/", response_model=Contract)
-async def create_contract(contract: CreateContractRequest):
+async def create_contract(
+    contract: CreateContractRequest,
+    current_wallet: Dict[str, Any] = Depends(get_current_wallet)
+):
     """
-    Create a new contract
+    Create a new contract - REQUIRES AUTHENTICATION
+    Only authenticated wallet holders can create contracts
     """
     try:
         import uuid
         
         contract_id = f"CNT-{uuid.uuid4().hex[:12].upper()}"
         now = datetime.now().isoformat()
+        
+        # 🔒 SECURITY: Use authenticated wallet address, not client request
+        authenticated_client_address = current_wallet["address"]
+        
+        # Validate that provided client_address matches authenticated wallet
+        if contract.client_address != authenticated_client_address:
+            logger.warning(f"⚠️ SECURITY: Wallet mismatch. Authenticated: {authenticated_client_address}, Provided: {contract.client_address}")
+            raise HTTPException(
+                status_code=403, 
+                detail="Client address must match authenticated wallet address"
+            )
         
         conn = get_db()
         c = conn.cursor()
@@ -226,7 +252,7 @@ async def create_contract(contract: CreateContractRequest):
                       milestones, metadata)
                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
                   (contract_id, contract.title, contract.description, 
-                   contract.client_address, contract.amount, contract.currency,
+                   authenticated_client_address, contract.amount, contract.currency,
                    ContractStatus.OPEN.value, contract.category.value if contract.category else None,
                    json.dumps(contract.skills), contract.deadline, now, now,
                    json.dumps(contract.milestones), json.dumps({})))
@@ -234,17 +260,17 @@ async def create_contract(contract: CreateContractRequest):
         conn.commit()
         conn.close()
         
-        # Log activity
-        log_activity(contract_id, contract.client_address, "contract_created")
+        # Log activity with authenticated wallet
+        log_activity(contract_id, authenticated_client_address, "contract_created")
         
         logger.info(f"✅ Contract created: {contract_id}")
         
-        # Return created contract
+        # Return created contract with authenticated address
         return Contract(
             id=contract_id,
             title=contract.title,
             description=contract.description,
-            client_address=contract.client_address,
+            client_address=authenticated_client_address,
             amount=contract.amount,
             currency=contract.currency,
             status=ContractStatus.OPEN,
@@ -293,10 +319,11 @@ async def get_contract(contract_id: str):
 async def update_contract(
     contract_id: str,
     update: UpdateContractRequest,
-    wallet_address: str = Query(..., description="Wallet address of user making update")
+    current_wallet: Dict[str, Any] = Depends(get_current_wallet)
 ):
     """
-    Update a contract
+    Update a contract - REQUIRES AUTHENTICATION
+    User must be authenticated and authorized to modify the contract
     """
     try:
         conn = get_db()
@@ -310,6 +337,18 @@ async def update_contract(
             raise HTTPException(status_code=404, detail="Contract not found")
         
         current = dict(row)
+        authenticated_wallet_address = current_wallet["address"]
+        
+        # 🔒 SECURITY: Check authorization - only client or freelancer can update
+        if (current['client_address'] != authenticated_wallet_address and 
+            current['freelancer_address'] != authenticated_wallet_address):
+            conn.close()
+            logger.warning(f"⚠️ SECURITY: Unauthorized contract update attempt by {authenticated_wallet_address} for contract {contract_id}")
+            raise HTTPException(
+                status_code=403, 
+                detail="Only the client or assigned freelancer can update this contract"
+            )
+        
         now = datetime.now().isoformat()
         
         # Build update query with whitelisted column names
@@ -365,8 +404,8 @@ async def update_contract(
         row = c.fetchone()
         conn.close()
         
-        # Log activity
-        log_activity(contract_id, wallet_address, "contract_updated", 
+        # Log activity with authenticated wallet
+        log_activity(contract_id, authenticated_wallet_address, "contract_updated", 
                     {"updates": update.dict(exclude_none=True)})
         
         contract_dict = dict(row)
@@ -418,6 +457,7 @@ async def get_dashboard_stats(
     If wallet_address is provided, shows personal stats
     If not provided, shows global platform stats
     """
+    conn = None
     try:
         conn = get_db()
         c = conn.cursor()
@@ -425,14 +465,16 @@ async def get_dashboard_stats(
         # Calculate time threshold
         threshold = (datetime.now() - timedelta(hours=hours)).isoformat()
         
-        # Get stats
+        # Get stats with default values to ensure consistency
         stats = {
             "total_contracts": 0,
             "active_contracts": 0,
             "completed_contracts": 0,
             "total_earned": 0.0,
             "total_spent": 0.0,
-            "activity_by_hour": []
+            "activity_by_hour": [],
+            "timestamp": datetime.now().isoformat(),
+            "wallet_address": wallet_address
         }
         
         if wallet_address:
@@ -470,12 +512,14 @@ async def get_dashboard_stats(
                       (wallet_address,))
             stats["total_spent"] = c.fetchone()[0]
         else:
-            # Global stats
-            c.execute('SELECT COUNT(*) FROM contracts')
+            # Global stats - only for last 24 hours
+            c.execute('''SELECT COUNT(*) FROM contracts 
+                         WHERE created_at >= ?''', (threshold,))
             stats["total_contracts"] = c.fetchone()[0]
             
             c.execute('''SELECT COUNT(*) FROM contracts 
-                         WHERE status IN ('active', 'in_progress')''')
+                         WHERE status IN ('active', 'in_progress')
+                         AND created_at >= ?''', (threshold,))
             stats["active_contracts"] = c.fetchone()[0]
             
             c.execute('''SELECT COUNT(*) FROM contracts 
@@ -484,7 +528,8 @@ async def get_dashboard_stats(
             stats["completed_contracts"] = c.fetchone()[0]
             
             c.execute('''SELECT COALESCE(SUM(amount), 0) FROM contracts 
-                         WHERE status = 'completed' ''')
+                         WHERE status = 'completed' 
+                         AND completed_at >= ?''', (threshold,))
             total_completed = c.fetchone()[0]
             stats["total_earned"] = total_completed
             stats["total_spent"] = total_completed
@@ -494,6 +539,7 @@ async def get_dashboard_stats(
         for i in range(24):
             hour_start = (datetime.now() - timedelta(hours=23-i)).replace(minute=0, second=0, microsecond=0)
             hour_end = hour_start + timedelta(hours=1)
+            
             
             if wallet_address:
                 # Personal activity
@@ -539,32 +585,38 @@ async def get_dashboard_stats(
                           (hour_start.isoformat(), hour_end.isoformat()))
                 activity_count = c.fetchone()[0]
             
-            # Count open contracts in this hour
+            # Count contracts that changed status in this specific hour
             if wallet_address:
+                # Count contracts that became 'open' in this hour
                 c.execute('''SELECT COUNT(*) FROM contracts 
                              WHERE (freelancer_address = ? OR client_address = ?)
                              AND status = 'open'
-                             AND created_at <= ?''',
-                          (wallet_address, wallet_address, hour_end.isoformat()))
+                             AND created_at >= ? AND created_at < ?''',
+                          (wallet_address, wallet_address, hour_start.isoformat(), hour_end.isoformat()))
                 open_contracts = c.fetchone()[0]
                 
+                # Count contracts that became 'active' or 'in_progress' in this hour
                 c.execute('''SELECT COUNT(*) FROM contracts 
                              WHERE (freelancer_address = ? OR client_address = ?)
-                             AND status IN ('active', 'in_progress', 'completed')
-                             AND created_at <= ?''',
-                          (wallet_address, wallet_address, hour_end.isoformat()))
+                             AND status IN ('active', 'in_progress')
+                             AND updated_at >= ? AND updated_at < ?
+                             AND updated_at != created_at''',
+                          (wallet_address, wallet_address, hour_start.isoformat(), hour_end.isoformat()))
                 accepted_contracts = c.fetchone()[0]
             else:
+                # Count contracts that became 'open' in this hour
                 c.execute('''SELECT COUNT(*) FROM contracts 
                              WHERE status = 'open'
-                             AND created_at <= ?''',
-                          (hour_end.isoformat(),))
+                             AND created_at >= ? AND created_at < ?''',
+                          (hour_start.isoformat(), hour_end.isoformat()))
                 open_contracts = c.fetchone()[0]
                 
+                # Count contracts that became 'active' or 'in_progress' in this hour
                 c.execute('''SELECT COUNT(*) FROM contracts 
-                             WHERE status IN ('active', 'in_progress', 'completed')
-                             AND created_at <= ?''',
-                          (hour_end.isoformat(),))
+                             WHERE status IN ('active', 'in_progress')
+                             AND updated_at >= ? AND updated_at < ?
+                             AND updated_at != created_at''',
+                          (hour_start.isoformat(), hour_end.isoformat()))
                 accepted_contracts = c.fetchone()[0]
             
             # Total activity for this hour
@@ -573,7 +625,7 @@ async def get_dashboard_stats(
             stats["activity_by_hour"].append({
                 "hour": hour_start.strftime("%H:00"),
                 "contracts": total_activity,
-                "value": total_activity * 5,  # Simulated value
+                "value": total_activity,  # Real value, not simulated
                 "created": created_count,
                 "updated": updated_count,
                 "activities": activity_count,
@@ -581,11 +633,37 @@ async def get_dashboard_stats(
                 "accepted_contracts": accepted_contracts
             })
         
-        conn.close()
-        
         return stats
         
     except Exception as e:
         logger.error(f"Error getting dashboard stats: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to retrieve dashboard stats")
+        # Return default stats instead of raising exception to prevent frontend crashes
+        return {
+            "total_contracts": 0,
+            "active_contracts": 0,
+            "completed_contracts": 0,
+            "total_earned": 0.0,
+            "total_spent": 0.0,
+            "activity_by_hour": [
+                {
+                    "hour": f"{i:02d}:00",
+                    "contracts": 0,
+                    "value": 0,
+                    "created": 0,
+                    "updated": 0,
+                    "activities": 0,
+                    "open_contracts": 0,
+                    "accepted_contracts": 0
+                } for i in range(24)
+            ],
+            "timestamp": datetime.now().isoformat(),
+            "wallet_address": wallet_address,
+            "error": "Failed to retrieve dashboard stats"
+        }
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except:
+                pass  # Ignore connection close errors
 

@@ -1583,3 +1583,131 @@ async def test_security_alert(admin: Dict[str, Any] = Depends(verify_super_admin
     except Exception as e:
         logger.error(f"Error sending test alert: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# ==========================================
+# DATABASE MANAGEMENT ENDPOINTS
+# ==========================================
+
+@router.delete("/database/contracts/test")
+async def delete_test_contracts(admin: Dict[str, Any] = Depends(verify_super_admin)):
+    """
+    Delete test contracts and activities from the database
+    DANGER: This will permanently delete data
+    """
+    try:
+        import sqlite3
+        from datetime import datetime, timedelta
+        
+        # Only super admin can delete data
+        if admin.get("role") != "super_admin":
+            raise HTTPException(
+                status_code=403,
+                detail="Only super admin can delete database records"
+            )
+        
+        # Connect to database
+        conn = sqlite3.connect('gigchain.db')
+        c = conn.cursor()
+        
+        # Get current date for filtering
+        today = datetime.now().date()
+        
+        # Delete test contracts (created today or with test patterns)
+        c.execute('''DELETE FROM contracts 
+                     WHERE title LIKE '%test%' 
+                     OR title LIKE '%Test%' 
+                     OR title LIKE '%prueba%'
+                     OR client_address = '0x0000000000000000000000000000000000000000'
+                     OR created_at >= ?''', (today.isoformat(),))
+        deleted_contracts = c.rowcount
+        
+        # Delete related activities
+        c.execute('''DELETE FROM contract_activity 
+                     WHERE contract_id NOT IN (SELECT id FROM contracts)
+                     OR timestamp >= ?''', (today.isoformat(),))
+        deleted_activities = c.rowcount
+        
+        conn.commit()
+        conn.close()
+        
+        # Log admin activity
+        admin_system.log_admin_activity(
+            admin["admin_id"],
+            "delete_test_contracts",
+            f"Deleted {deleted_contracts} contracts and {deleted_activities} activities"
+        )
+        
+        logger.info(f"Admin {admin['admin_id']} deleted {deleted_contracts} test contracts and {deleted_activities} activities")
+        
+        return {
+            "success": True,
+            "message": "Test contracts and activities deleted successfully",
+            "deleted_contracts": deleted_contracts,
+            "deleted_activities": deleted_activities,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error deleting test contracts: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to delete test contracts: {str(e)}"
+        )
+
+@router.delete("/database/clear/all")
+async def clear_all_data(admin: Dict[str, Any] = Depends(verify_super_admin)):
+    """
+    Clear ALL data from the database (DANGER!)
+    This is for development/testing purposes only
+    """
+    try:
+        import sqlite3
+        
+        # Only super admin can clear all data
+        if admin.get("role") != "super_admin":
+            raise HTTPException(
+                status_code=403,
+                detail="Only super admin can clear all database data"
+            )
+        
+        # Connect to database
+        conn = sqlite3.connect('gigchain.db')
+        c = conn.cursor()
+        
+        # Get counts before deletion
+        c.execute('SELECT COUNT(*) FROM contracts')
+        contracts_count = c.fetchone()[0]
+        
+        c.execute('SELECT COUNT(*) FROM contract_activity')
+        activities_count = c.fetchone()[0]
+        
+        # Clear all tables
+        c.execute('DELETE FROM contract_activity')
+        c.execute('DELETE FROM contracts')
+        
+        conn.commit()
+        conn.close()
+        
+        # Log admin activity
+        admin_system.log_admin_activity(
+            admin["admin_id"],
+            "clear_all_database_data",
+            f"Cleared {contracts_count} contracts and {activities_count} activities"
+        )
+        
+        logger.warning(f"Admin {admin['admin_id']} cleared ALL database data: {contracts_count} contracts, {activities_count} activities")
+        
+        return {
+            "success": True,
+            "message": "All database data cleared successfully",
+            "cleared_contracts": contracts_count,
+            "cleared_activities": activities_count,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error clearing database: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to clear database: {str(e)}"
+        )

@@ -9,7 +9,7 @@ Handles environment variables, defaults, and validation.
 import os
 import secrets
 from typing import Optional
-from pydantic import Field, validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
 from pathlib import Path
 import logging
@@ -32,7 +32,8 @@ class WCSAPConfig(BaseSettings):
         description="Secret key for HMAC signing (MANDATORY - must be set via W_CSAP_SECRET_KEY)"
     )
     
-    @validator('secret_key', pre=True, always=True)
+    @field_validator('secret_key', mode='before')
+    @classmethod
     def validate_secret_key(cls, v):
         """Ensure secret key is strong enough and explicitly set."""
         # SECURITY: Reject if not set (no default allowed in production)
@@ -280,10 +281,30 @@ class WCSAPConfig(BaseSettings):
             "http://localhost:3000",
             "http://localhost:5173",
             "http://127.0.0.1:3000",
-            "http://127.0.0.1:5173"
+            "http://127.0.0.1:5173",
+            "http://127.0.0.1:5174"
         ],
         description="Allowed CORS origins"
     )
+    
+    @field_validator('allowed_origins', mode='before')
+    @classmethod
+    def validate_allowed_origins(cls, v):
+        """Convert comma-separated string to list if needed."""
+        if isinstance(v, str):
+            # Convert comma-separated string to list
+            return [origin.strip() for origin in v.split(',') if origin.strip()]
+        elif isinstance(v, list):
+            return v
+        else:
+            # Fallback to default
+            return [
+                "http://localhost:3000",
+                "http://localhost:5173", 
+                "http://127.0.0.1:3000",
+                "http://127.0.0.1:5173",
+                "http://127.0.0.1:5174"
+            ]
     
     # ==================== Phase 2 Settings ====================
     

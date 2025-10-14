@@ -82,6 +82,181 @@ from ipfs_api import router as ipfs_router
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Database helper function
+def save_contract_to_dashboard(contract_id: str, contract_data: Dict[str, Any], client_address: str = None) -> bool:
+    """
+    Save contract to the contracts database for dashboard integration.
+    
+    Args:
+        contract_id: Unique contract identifier
+        contract_data: Contract data including text, formData, and result
+        client_address: Client wallet address (optional)
+        
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    try:
+        import sqlite3
+        import json
+        
+        logger.info(f"Attempting to save contract {contract_id} to database")
+        logger.info(f"Contract data keys: {list(contract_data.keys()) if contract_data else 'None'}")
+        
+        # Get database connection
+        conn = sqlite3.connect('gigchain.db')
+        conn.row_factory = sqlite3.Row
+        c = conn.cursor()
+        
+        logger.info("Database connection established")
+        
+        # Initialize contracts database if needed
+        c.execute('''CREATE TABLE IF NOT EXISTS contracts (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            description TEXT,
+            freelancer_address TEXT,
+            client_address TEXT NOT NULL,
+            amount REAL NOT NULL,
+            currency TEXT DEFAULT 'USDC',
+            status TEXT NOT NULL,
+            category TEXT,
+            skills TEXT,
+            deadline TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            started_at TEXT,
+            completed_at TEXT,
+            milestones TEXT,
+            metadata TEXT,
+            contract_type TEXT DEFAULT 'project'
+        )''')
+        
+        # Add contract_type column if it doesn't exist (for existing databases)
+        try:
+            c.execute("ALTER TABLE contracts ADD COLUMN contract_type TEXT DEFAULT 'project'")
+        except Exception:
+            # Column already exists, ignore
+            pass
+        
+        # Extract data from contract_data
+        form_data = contract_data.get('formData', {})
+        result = contract_data.get('result', {})
+        
+        # Extract title and description
+        base_title = form_data.get('projectTitle', 'Contrato Generado')
+        contract_type = form_data.get('contractType', 'project')
+        
+        # Set appropriate title based on type
+        if contract_type == 'service':
+            title = f"[SERVICIO] {base_title}"
+        else:
+            title = f"[PROYECTO] {base_title}"
+            
+        description = contract_data.get('text', form_data.get('description', 'Contrato generado por IA'))
+        
+        # Extract amount
+        amount = form_data.get('requestedAmount') or form_data.get('offeredAmount') or 1000.0
+        if isinstance(amount, str):
+            try:
+                amount = float(amount)
+            except (ValueError, TypeError):
+                amount = 1000.0
+                
+        # Extract other fields with category mapping
+        category_spanish = form_data.get('category', 'otros')
+        
+        # Map Spanish categories to English (for API compatibility)
+        category_mapping = {
+            'desarrollo-web': 'development',
+            'diseno-grafico': 'design', 
+            'marketing-digital': 'marketing',
+            'redaccion': 'writing',
+            'traduccion': 'writing',
+            'consultoria': 'consulting',
+            'otros': 'other'
+        }
+        
+        category = category_mapping.get(category_spanish, 'other')
+        
+        skills = form_data.get('requiredSkills', '')
+        skills_list = [skill.strip() for skill in skills.split(',')] if skills else []
+        deadline = form_data.get('deadline')
+        
+        # Contract type is already handled in title generation above
+        
+        # Debug: Log what we're receiving
+        logger.info(f"DEBUG - save_contract_to_dashboard called with:")
+        logger.info(f"  - contract_id: {contract_id}")
+        logger.info(f"  - client_address param: {client_address}")
+        
+        # Set client and freelancer addresses based on role and wallet data
+        role = form_data.get('role', 'unknown')
+        client_wallet = form_data.get('clientWallet')
+        freelancer_wallet = form_data.get('freelancerWallet')
+        
+        logger.info(f"  - role from form: {role}")
+        logger.info(f"  - clientWallet from form: {client_wallet}")
+        logger.info(f"  - freelancerWallet from form: {freelancer_wallet}")
+        
+        if role == 'client':
+            # When role is client, use clientWallet for client_address
+            client_address = client_wallet or client_address or 'unknown_client'
+            freelancer_address = None  # Will be assigned when freelancer accepts
+        elif role == 'freelancer':
+            # When role is freelancer, use freelancerWallet for freelancer_address
+            client_address = client_address or 'unknown_client'
+            freelancer_address = freelancer_wallet
+        else:
+            # Fallback to original logic
+            client_address = client_wallet or client_address or 'unknown_client'
+            freelancer_address = freelancer_wallet
+            
+        logger.info(f"  - Final client_address: {client_address}")
+        logger.info(f"  - Final freelancer_address: {freelancer_address}")
+            
+        now = datetime.now().isoformat()
+        
+        logger.info(f"Contract details:")
+        logger.info(f"  - ID: {contract_id}")
+        logger.info(f"  - Title: {title}")
+        logger.info(f"  - Type: {contract_type}")
+        logger.info(f"  - Amount: {amount}")
+        logger.info(f"  - Category: {category}")
+        logger.info(f"  - Role: {role}")
+        logger.info(f"  - Client Wallet from form: {client_wallet}")
+        logger.info(f"  - Freelancer Wallet from form: {freelancer_wallet}")
+        logger.info(f"  - Client: {client_address}")
+        logger.info(f"  - Freelancer: {freelancer_address}")
+        logger.info(f"  - Skills: {skills_list}")
+        
+        # Insert contract
+        c.execute('''INSERT OR REPLACE INTO contracts 
+                     (id, title, description, freelancer_address, client_address, amount, currency, 
+                      status, category, skills, deadline, created_at, updated_at,
+                      milestones, metadata, contract_type)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                  (contract_id, title, description, freelancer_address, client_address, amount, 'USDC',
+                   'open', category, json.dumps(skills_list), deadline, now, now,
+                   json.dumps(result.get('milestones', [])), 
+                   json.dumps(contract_data), contract_type))
+        
+        conn.commit()
+        logger.info(f"Database commit successful")
+        
+        # Verify the contract was saved
+        c.execute("SELECT COUNT(*) FROM contracts WHERE id = ?", (contract_id,))
+        count = c.fetchone()[0]
+        logger.info(f"Contract verification: {count} contract(s) with ID {contract_id}")
+        
+        conn.close()
+        
+        logger.info(f"Contract {contract_id} saved to database successfully")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Failed to save contract {contract_id} to database: {e}")
+        return False
+
 # Lifespan context manager for startup/shutdown events
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -303,6 +478,22 @@ class StructuredContractRequest(BaseModel):
     clientCompany: Optional[str] = Field(None, description="Client company/project name")
     clientBio: Optional[str] = Field(None, description="Client project description")
     clientLocation: Optional[str] = Field(None, description="Client location")
+    
+    # Additional Frontend Form Fields
+    projectTitle: Optional[str] = Field(None, description="Project/Service title")
+    category: Optional[str] = Field(None, description="Project/Service category")
+    contractType: Optional[str] = Field(None, description="Type: project (client) or service (freelancer)")
+    budgetType: Optional[str] = Field(None, description="Budget type: fixed or hourly")
+    hourlyRate: Optional[float] = Field(None, ge=0, description="Hourly rate for hourly projects")
+    estimatedHours: Optional[int] = Field(None, ge=1, description="Estimated hours for hourly projects")
+    fixedBudget: Optional[float] = Field(None, ge=0, description="Fixed budget amount")
+    projectDuration: Optional[int] = Field(None, ge=1, description="Project duration in days")
+    requiredSkills: Optional[str] = Field(None, description="Required skills")
+    experienceLevel: Optional[str] = Field(None, description="Required experience level")
+    deliverables: Optional[str] = Field(None, description="Expected deliverables")
+    milestones: Optional[str] = Field(None, description="Project milestones")
+    additionalRequirements: Optional[str] = Field(None, description="Additional requirements")
+    deadline: Optional[str] = Field(None, description="Project deadline")
 
 class WalletValidationRequest(BaseModel):
     address: str = Field(..., min_length=42, max_length=42, description="Wallet address to validate")
@@ -1009,12 +1200,34 @@ async def api_full_flow(request: ContractRequest):
         # Process with full AI flow
         result = full_flow(request.text)
         
+        # Save to contracts database for dashboard integration
+        try:
+            contract_id = result.get('contract_id', f"gig_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
+            
+            # Save to dashboard database
+            user_address = None  # TODO: Get from authentication when implemented
+            dashboard_saved = save_contract_to_dashboard(
+                contract_id, 
+                {'text': request.text, 'result': result}, 
+                user_address
+            )
+            
+            if dashboard_saved:
+                logger.info(f"✅ Full flow contract saved to dashboard: {contract_id}")
+            else:
+                logger.warning(f"⚠️ Failed to save full flow contract to dashboard: {contract_id}")
+            
+        except Exception as db_error:
+            logger.warning(f"Failed to save full flow contract to database: {db_error}")
+            # Continue without failing the request
+        
         # Add API metadata
         result['api_metadata'] = {
             'timestamp': datetime.now().isoformat(),
             'endpoint': 'full_flow',
             'ai_agents_used': 'json' in result,
-            'processing_time': 'calculated_by_client'
+            'processing_time': 'calculated_by_client',
+            'database_saved': True
         }
         
         logger.info(f"Successfully generated contract: {result.get('contract_id', 'unknown')}")
@@ -1050,12 +1263,34 @@ async def api_simple_contract(request: SimpleContractRequest):
         # Process with rule-based generation only
         result = generate_contract(request.text)
         
+        # Save to contracts database for dashboard integration
+        try:
+            contract_id = result.get('contract_id', f"simple_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
+            
+            # Save to dashboard database
+            user_address = None  # TODO: Get from authentication when implemented
+            dashboard_saved = save_contract_to_dashboard(
+                contract_id, 
+                {'text': request.text, 'result': result}, 
+                user_address
+            )
+            
+            if dashboard_saved:
+                logger.info(f"✅ Simple contract saved to dashboard: {contract_id}")
+            else:
+                logger.warning(f"⚠️ Failed to save simple contract to dashboard: {contract_id}")
+            
+        except Exception as db_error:
+            logger.warning(f"Failed to save simple contract to database: {db_error}")
+            # Continue without failing the request
+        
         # Add API metadata
         result['api_metadata'] = {
             'timestamp': datetime.now().isoformat(),
             'endpoint': 'contract',
             'ai_agents_used': False,
-            'processing_time': 'calculated_by_client'
+            'processing_time': 'calculated_by_client',
+            'database_saved': True
         }
         
         logger.info("Successfully generated simple contract")
@@ -1089,10 +1324,25 @@ async def api_structured_contract(request: StructuredContractRequest):
         logger.info(f"Processing structured contract for role: {request.role}")
         
         # Construct text from structured data
-        constructed_text = _construct_text_from_structured_data(request)
+        try:
+            constructed_text = _construct_text_from_structured_data(request)
+            logger.info(f"Constructed text length: {len(constructed_text)}")
+        except Exception as e:
+            logger.error(f"Error constructing text: {str(e)}")
+            raise HTTPException(status_code=400, detail=f"Error processing form data: {str(e)}")
         
         # Generate contract using the AI module
-        result = generate_contract(constructed_text)
+        try:
+            result = generate_contract(constructed_text)
+            logger.info(f"Contract generated successfully, keys: {list(result.keys())}")
+        except Exception as e:
+            logger.error(f"Error generating contract: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Error generating contract: {str(e)}")
+        
+        # Generate contract_id if not present
+        if 'contract_id' not in result:
+            contract_id = f"gig_{datetime.now().isoformat().replace(':', '-').replace('.', '-')}"
+            result['contract_id'] = contract_id
         
         # Add structured data to response for reference
         result["formData"] = {
@@ -1126,12 +1376,47 @@ async def api_structured_contract(request: StructuredContractRequest):
             "clientLocation": request.clientLocation
         }
         
+        # DEBUG: Check if we reach this point
+        print("DEBUG: Reached the contract saving section")
+        logger.info("DEBUG: About to save contract to database")
+        
+        # Save to contracts database for dashboard integration
+        try:
+            contract_id = result.get('contract_id')
+            logger.info(f"ATTEMPTING TO SAVE CONTRACT: {contract_id}")
+            
+            # Don't pass user_address as client_address - let save_contract_to_dashboard
+            # determine the correct addresses from the form data
+            logger.info(f"Saving contract with role: {request.role}")
+            
+            # Save to dashboard database with form data
+            dashboard_saved = save_contract_to_dashboard(
+                contract_id, 
+                {
+                    'text': constructed_text,
+                    'formData': result['formData'],
+                    'result': result
+                }
+            )
+            
+            if dashboard_saved:
+                logger.info(f"Structured contract saved to dashboard: {contract_id}")
+            else:
+                logger.warning(f"Failed to save structured contract to dashboard: {contract_id}")
+            
+        except Exception as db_error:
+            logger.error(f"CRITICAL ERROR saving structured contract to database: {str(db_error)}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            # Continue without failing the request
+        
         # Add API metadata
         result['api_metadata'] = {
             'timestamp': datetime.now().isoformat(),
             'endpoint': 'structured_contract',
             'ai_agents_used': False,
-            'processing_time': 'calculated_by_client'
+            'processing_time': 'calculated_by_client',
+            'database_saved': True
         }
         
         logger.info("Successfully generated structured contract")
@@ -1147,7 +1432,22 @@ async def api_structured_contract(request: StructuredContractRequest):
 
 def _construct_text_from_structured_data(data: StructuredContractRequest) -> str:
     """Construct text input from structured form data."""
-    text = data.description
+    # Determine contract type based on role if not explicitly set
+    contract_type = data.contractType or ("project" if data.role == "client" else "service")
+    
+    # Start with appropriate title
+    text = ""
+    if data.projectTitle:
+        if contract_type == "service":
+            text = f"Servicio: {data.projectTitle}. "
+        else:
+            text = f"Proyecto: {data.projectTitle}. "
+    
+    # Add description with context
+    if contract_type == "service":
+        text += f"Ofrezco: {data.description}"
+    else:
+        text += f"Necesito: {data.description}"
     
     # Add profile information
     if data.role == 'freelancer':
@@ -1166,11 +1466,20 @@ def _construct_text_from_structured_data(data: StructuredContractRequest) -> str
         if data.freelancerRate:
             text += f" Tarifa: ${data.freelancerRate}/hora"
         
-        if data.offeredAmount:
-            text += f" Ofrezco ${data.offeredAmount} dolares."
-        if data.requestedAmount:
-            text += f" Cliente solicita ${data.requestedAmount} dolares."
+        # For freelancer services, emphasize what they offer
+        if contract_type == "service":
+            if data.offeredAmount:
+                text += f" Precio: ${data.offeredAmount} dolares."
+            elif data.hourlyRate:
+                text += f" Tarifa: ${data.hourlyRate}/hora."
+        else:
+            # For freelancer projects (rare case)
+            if data.offeredAmount:
+                text += f" Ofrezco ${data.offeredAmount} dolares."
+            if data.requestedAmount:
+                text += f" Cliente solicita ${data.requestedAmount} dolares."
     else:
+        # Client profile information
         if data.clientName:
             text += f" Cliente: {data.clientName}"
         if data.clientCompany:
@@ -1180,8 +1489,13 @@ def _construct_text_from_structured_data(data: StructuredContractRequest) -> str
         if data.clientBio:
             text += f". {data.clientBio}"
         
-        if data.requestedAmount:
-            text += f" Cliente solicita ${data.requestedAmount} dolares."
+        # For client projects, emphasize budget
+        if contract_type == "project":
+            if data.requestedAmount:
+                text += f" Presupuesto disponible: ${data.requestedAmount} dolares."
+            elif data.fixedBudget:
+                text += f" Presupuesto: ${data.fixedBudget} dolares."
+        
         if data.offeredAmount:
             text += f" Freelancer ofrezco ${data.offeredAmount} dolares."
     
@@ -1207,6 +1521,38 @@ def _construct_text_from_structured_data(data: StructuredContractRequest) -> str
     
     if social_links:
         text += f" Enlaces: {', '.join(social_links)}."
+    
+    # Add frontend form fields
+    if data.category:
+        text += f" Categoría: {data.category}."
+    
+    if data.budgetType == 'fixed' and data.fixedBudget:
+        text += f" Presupuesto fijo: ${data.fixedBudget}"
+    elif data.budgetType == 'hourly' and data.hourlyRate:
+        text += f" Tarifa por hora: ${data.hourlyRate}"
+        if data.estimatedHours:
+            text += f" Horas estimadas: {data.estimatedHours}"
+    
+    if data.projectDuration:
+        text += f" Duración: {data.projectDuration} días"
+    
+    if data.requiredSkills:
+        text += f" Habilidades requeridas: {data.requiredSkills}."
+    
+    if data.experienceLevel:
+        text += f" Nivel de experiencia: {data.experienceLevel}."
+    
+    if data.deliverables:
+        text += f" Entregables: {data.deliverables}."
+    
+    if data.milestones:
+        text += f" Hitos: {data.milestones}."
+    
+    if data.additionalRequirements:
+        text += f" Requisitos adicionales: {data.additionalRequirements}."
+    
+    if data.deadline:
+        text += f" Fecha límite: {data.deadline}."
     
     return text
 

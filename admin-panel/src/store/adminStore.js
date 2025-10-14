@@ -99,4 +99,51 @@ export const useAdminStore = create((set, get) => ({
 
   // Clear error
   clearError: () => set({ error: null }),
+
+  // Database Management Functions
+  deleteTestContracts: async () => {
+    const token = get().token;
+    if (!token) {
+      throw new Error('No authentication token available');
+    }
+
+    try {
+      const response = await axios.delete(`${API_URL}/api/admin/database/contracts/test`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.data.success) {
+        return response.data;
+      } else {
+        throw new Error(response.data.message || 'Failed to delete test contracts');
+      }
+    } catch (error) {
+      throw new Error(error.response?.data?.detail || error.message || 'Failed to delete test contracts');
+    }
+  },
+
+  clearAllData: async () => {
+    const token = get().token;
+    if (!token) {
+      throw new Error('No authentication token available');
+    }
+
+    try {
+      const response = await axios.delete(`${API_URL}/api/admin/database/clear/all`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.data.success) {
+        return response.data;
+      } else {
+        throw new Error(response.data.message || 'Failed to clear all data');
+      }
+    } catch (error) {
+      throw new Error(error.response?.data?.detail || error.message || 'Failed to clear all data');
+    }
+  },
 }));

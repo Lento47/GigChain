@@ -106,8 +106,18 @@ def _format_amount(amount: float) -> str:
 
 
 def _build_milestones(total_amount: float, total_days: int) -> List[Dict[str, str]]:
+    # Validate inputs to prevent date errors
+    if total_days <= 0:
+        total_days = 14  # Default to 14 days
+    if total_days > 3650:  # More than 10 years is unrealistic
+        total_days = 365  # Cap at 1 year
+        
     today = _dt.date.today()
     milestone_days = [max(2, int(total_days * 0.3)), max(2, int(total_days * 0.7)), total_days]
+    
+    # Ensure milestone days are reasonable
+    milestone_days = [min(day, 365) for day in milestone_days]
+    
     milestones: List[Dict[str, str]] = []
     descriptions = [
         "Kickoff, alcance final y setup técnico",
@@ -116,15 +126,27 @@ def _build_milestones(total_amount: float, total_days: int) -> List[Dict[str, st
     ]
     payments = [round(total_amount * 0.3, 2), round(total_amount * 0.4, 2), round(total_amount * 0.3, 2)]
     payments[-1] = round(total_amount - sum(payments[:-1]), 2)
+    
     for days_offset, description, payment in zip(milestone_days, descriptions, payments):
-        deadline = today + _dt.timedelta(days=days_offset)
-        milestones.append(
-            {
-                "descripcion": description,
-                "deadline": deadline.isoformat(),
-                "pago_parcial": _format_amount(payment),
-            }
-        )
+        try:
+            deadline = today + _dt.timedelta(days=days_offset)
+            milestones.append(
+                {
+                    "descripcion": description,
+                    "deadline": deadline.isoformat(),
+                    "pago_parcial": _format_amount(payment),
+                }
+            )
+        except (ValueError, OverflowError) as e:
+            # If date calculation fails, use a safe default
+            safe_deadline = today + _dt.timedelta(days=min(30, days_offset))
+            milestones.append(
+                {
+                    "descripcion": description,
+                    "deadline": safe_deadline.isoformat(),
+                    "pago_parcial": _format_amount(payment),
+                }
+            )
     return milestones
 
 
