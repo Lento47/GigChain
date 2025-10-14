@@ -56,38 +56,34 @@ const HelpView = React.memo(() => {
 
   return (
     <div className="help-view">
-      <div className="view-header">
-        <div className="header-content">
-          <div className="header-info">
-            <h1>🆘 Centro de Ayuda</h1>
-            <p>Encuentra respuestas rápidas y recursos útiles para usar GigChain</p>
-          </div>
-          <div className="header-stats">
-            <div className="stat-item">
-              <span className="stat-number">5</span>
-              <span className="stat-label">FAQs</span>
-            </div>
-            <div className="stat-item">
-              <span className="stat-number">3</span>
-              <span className="stat-label">Recursos</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="help-content">
-        <div className="search-section">
+      {/* Action Bar */}
+      <div className="action-bar">
+        <div className="help-filters">
           <div className="search-container">
-            <Search size={20} className="search-icon" />
+            <Search size={18} className="search-icon" />
             <input
               type="text"
-              placeholder="¿En qué podemos ayudarte? Busca por preguntas, categorías..."
+              placeholder="¿En qué podemos ayudarte?"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="search-input"
             />
           </div>
         </div>
+        
+        <div className="help-stats">
+          <div className="stat-item">
+            <span className="stat-number">5</span>
+            <span className="stat-label">FAQs</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-number">3</span>
+            <span className="stat-label">Recursos</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="help-content">
 
         <div className="resources-section">
           <div className="section-header">

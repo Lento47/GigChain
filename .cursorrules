@@ -15,6 +15,13 @@ python main.py                    # Servidor local
 python test_*.py                  # Tests individuales
 pip install -r requirements.txt   # Instalar dependencias
 
+### ** VERIFICACION **
+NO ESTA PERMITIDO DUPLICAR LINEAS NI DEJAR CODIGO SIN USO, ELIMINA LAS DUPLICACIONES Y TRABAJA LO MAS EFICIENTE QUE PUEDAS PARA NO AFRONTAR PROBLEMAS EN EL FUTURO.
+USA DEBUG PERO DESHABILITALO SI ENCUENTRAS EL PROBLEMA
+ELIMINA DUPLICACIONES 
+REMUEVE CODIGO INNECESARIO
+MANTENGAMOS EL PROYECTO LO MAS SIMPLE QUE SE PUEDA
+
 # ❌ PROHIBIDO (por ahora)
 docker build
 docker-compose up

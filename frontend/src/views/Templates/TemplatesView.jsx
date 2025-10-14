@@ -100,28 +100,11 @@ const TemplatesView = React.memo(() => {
 
   return (
     <div className="templates-view">
-      <div className="view-header">
-        <div className="header-content">
-          <div className="header-info">
-            <h1>Plantillas de Contratos</h1>
-            <p>Plantillas predefinidas para acelerar la creación de contratos</p>
-          </div>
-          <div>
-            <button 
-              className="create-template-btn"
-              onClick={handleCreateTemplate}
-            >
-              <Plus size={20} />
-              Nueva Plantilla
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="templates-content">
+      {/* Action Bar */}
+      <div className="action-bar">
         <div className="templates-filters">
           <div className="search-container">
-            <Search size={20} className="search-icon" />
+            <Search size={18} className="search-icon" />
             <input
               type="text"
               placeholder="Buscar plantillas..."
@@ -132,7 +115,7 @@ const TemplatesView = React.memo(() => {
           </div>
           
           <div className="filter-container">
-            <Filter size={20} className="filter-icon" />
+            <Filter size={18} className="filter-icon" />
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
@@ -146,6 +129,19 @@ const TemplatesView = React.memo(() => {
             </select>
           </div>
         </div>
+        
+        <div className="action-buttons">
+          <button 
+            className="action-btn primary"
+            onClick={handleCreateTemplate}
+          >
+            <Plus size={18} />
+            Nueva Plantilla
+          </button>
+        </div>
+      </div>
+
+      <div className="templates-content">
 
         <div className="templates-grid">
           {filteredTemplates.map(template => (

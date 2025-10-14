@@ -119,28 +119,11 @@ const TransactionsView = React.memo(() => {
 
   return (
     <div className="transactions-view">
-      <div className="view-header">
-        <div className="header-content">
-          <div className="header-info">
-            <h1>Transacciones</h1>
-            <p>Historial completo de pagos y recibos</p>
-          </div>
-          <div>
-            <button 
-              className="export-btn"
-              onClick={handleExportTransactions}
-            >
-              <Download size={20} />
-              Exportar
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="transactions-content">
+      {/* Action Bar */}
+      <div className="action-bar">
         <div className="transactions-filters">
           <div className="search-container">
-            <Search size={20} className="search-icon" />
+            <Search size={18} className="search-icon" />
             <input
               type="text"
               placeholder="Buscar transacciones..."
@@ -151,12 +134,13 @@ const TransactionsView = React.memo(() => {
           </div>
           
           <div className="filter-container">
+            <Filter size={18} className="filter-icon" />
             <select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
               className="filter-select"
             >
-              <option value="all">Todos los estados</option>
+              <option value="all">Estados</option>
               <option value="completed">Completadas</option>
               <option value="pending">Pendientes</option>
               <option value="failed">Fallidas</option>
@@ -164,17 +148,31 @@ const TransactionsView = React.memo(() => {
           </div>
 
           <div className="filter-container">
+            <Filter size={18} className="filter-icon" />
             <select
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
               className="filter-select"
             >
-              <option value="all">Todos los tipos</option>
+              <option value="all">Tipos</option>
               <option value="payment">Pagos</option>
               <option value="receipt">Recibos</option>
             </select>
           </div>
         </div>
+        
+        <div className="action-buttons">
+          <button 
+            className="action-btn secondary"
+            onClick={handleExportTransactions}
+          >
+            <Download size={18} />
+            Exportar
+          </button>
+        </div>
+      </div>
+
+      <div className="transactions-content">
 
         <div className="transactions-table">
           <div className="table-header">

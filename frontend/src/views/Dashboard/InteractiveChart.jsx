@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 
-const InteractiveChart = ({ onDataPointClick, activityData = [], userType = 'freelancer', chartType = 'line' }) => {
+const InteractiveChart = ({ onDataPointClick, activityData = [], chartType = 'line' }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [tooltipData, setTooltipData] = useState({ value: 0, time: '', contracts: 0 });
@@ -8,20 +8,8 @@ const InteractiveChart = ({ onDataPointClick, activityData = [], userType = 'fre
   // Convert backend activity data to chart format
   const chartData = useMemo(() => {
     if (!activityData || activityData.length === 0) {
-      // Fallback to mock data
-      return [
-        { x: 0, y: 250, value: 12, time: '00:00', openContracts: 5, acceptedContracts: 3 },
-        { x: 100, y: 150, value: 28, time: '04:00', openContracts: 12, acceptedContracts: 8 },
-        { x: 200, y: 280, value: 8, time: '08:00', openContracts: 3, acceptedContracts: 2 },
-        { x: 300, y: 180, value: 22, time: '12:00', openContracts: 9, acceptedContracts: 6 },
-        { x: 400, y: 80, value: 45, time: '16:00', openContracts: 18, acceptedContracts: 12 },
-        { x: 500, y: 250, value: 15, time: '20:00', openContracts: 6, acceptedContracts: 4 },
-        { x: 600, y: 150, value: 32, time: '22:00', openContracts: 13, acceptedContracts: 9 },
-        { x: 700, y: 50, value: 58, time: '23:00', openContracts: 23, acceptedContracts: 15 },
-        { x: 800, y: 200, value: 18, time: '23:30', openContracts: 7, acceptedContracts: 5 },
-        { x: 900, y: 100, value: 38, time: '23:45', openContracts: 15, acceptedContracts: 10 },
-        { x: 1000, y: 150, value: 25, time: '24:00', openContracts: 10, acceptedContracts: 7 }
-      ];
+      // Return empty data for proper loading state - NO MOCK DATA
+      return [];
     }
 
     // Convert backend data (24 hours) to chart points
@@ -149,7 +137,6 @@ const InteractiveChart = ({ onDataPointClick, activityData = [], userType = 'fre
           width="30"
           height={barHeight}
           fill="var(--accent-color)"
-          opacity={isHovered && Math.abs(mousePosition.x - point.x) < 30 ? 0.8 : 0.6}
           className="chart-bar"
         />
       );
@@ -171,6 +158,21 @@ const InteractiveChart = ({ onDataPointClick, activityData = [], userType = 'fre
     
     return path;
   };
+
+  // Show empty state if no data
+  if (chartData.length === 0) {
+    return (
+      <div className="chart-visualization">
+        <div className="chart-empty-state">
+          <div className="empty-state-icon">📊</div>
+          <div className="empty-state-message">
+            <h3>No hay datos disponibles</h3>
+            <p>Los datos de actividad aparecerán aquí cuando haya contratos y transacciones.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="chart-visualization">
@@ -197,13 +199,11 @@ const InteractiveChart = ({ onDataPointClick, activityData = [], userType = 'fre
         
         {/* Accepted contracts line (dashed) */}
         <path 
-          className="chart-line-secondary"
           d={generateAcceptedContractsLine()}
           fill="none" 
           stroke="var(--text-secondary)" 
           strokeWidth="2" 
           strokeDasharray="5,5"
-          opacity="0.7"
         />
         
         {/* Chart content based on type */}
@@ -213,17 +213,14 @@ const InteractiveChart = ({ onDataPointClick, activityData = [], userType = 'fre
             <path 
               d={`${generateLinePath()} L 1000 280 L 0 280 Z`}
               fill="url(#chartGradient)"
-              opacity={isHovered ? 0.6 : 0.3}
-              className="chart-area"
             />
             
             {/* Main line */}
             <path 
-              className={`chart-line-main ${isHovered ? 'hovered' : ''}`}
               d={generateLinePath()}
               fill="none" 
               stroke="var(--accent-color)" 
-              strokeWidth="4" 
+              strokeWidth="4"
               strokeLinecap="round" 
               strokeLinejoin="round"
             />
@@ -245,8 +242,6 @@ const InteractiveChart = ({ onDataPointClick, activityData = [], userType = 'fre
             stroke="var(--accent-color)" 
             strokeWidth="2" 
             strokeDasharray="5,5"
-            opacity="0.8"
-            className="mouse-tracking-line"
           />
         )}
         
@@ -259,7 +254,6 @@ const InteractiveChart = ({ onDataPointClick, activityData = [], userType = 'fre
             fill="var(--accent-color)" 
             stroke="var(--bg-primary)"
             strokeWidth="3"
-            className="hover-circle"
           />
         )}
       </svg>

@@ -10,21 +10,21 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@tanstack/react-table": "^8.11.0",
+    "axios": "^1.7.7",
+    "date-fns": "^3.0.0",
+    "lucide-react": "^0.445.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.20.0",
-    "axios": "^1.7.7",
     "recharts": "^2.10.3",
-    "lucide-react": "^0.445.0",
-    "@tanstack/react-table": "^8.11.0",
-    "date-fns": "^3.0.0",
     "zustand": "^4.4.7"
   },
   "devDependencies": {
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.3",
-    "vite": "^5.4.10",
-    "vitest": "^1.0.4"
+    "vite": "^6.3.6",
+    "vitest": "^3.2.4"
   }
 }

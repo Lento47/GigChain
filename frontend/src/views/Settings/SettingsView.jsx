@@ -33,15 +33,17 @@ const SettingsView = React.memo(() => {
 
   return (
     <div className="settings-view">
-      <div className="view-header">
-        <div className="header-content">
-          <div className="header-info">
-            <h1>⚙️ Configuración</h1>
-            <p>Personaliza tu experiencia y ajusta tus preferencias</p>
-          </div>
-          <button className="save-btn" onClick={handleSave}>
-            <Save size={20} />
-            <span>Guardar Cambios</span>
+      {/* Action Bar */}
+      <div className="action-bar">
+        <div className="settings-info">
+          <span className="settings-subtitle">
+            Personaliza tu experiencia y ajusta tus preferencias
+          </span>
+        </div>
+        <div className="action-buttons">
+          <button className="action-btn primary" onClick={handleSave}>
+            <Save size={18} />
+            <span>Guardar</span>
           </button>
         </div>
       </div>

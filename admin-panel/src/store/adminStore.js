@@ -3,9 +3,7 @@
  */
 
 import { create } from 'zustand';
-import axios from 'axios';
-
-const API_URL = 'http://localhost:5000';
+import axios, { API_URL } from '../config/axios';
 
 export const useAdminStore = create((set, get) => ({
   // Auth state

@@ -29,10 +29,10 @@ const Footer = ({ onNavigate }) => {
               <a href="https://github.com/gigchain" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
                 <Github size={20} />
               </a>
-              <a href="https://twitter.com/gigchain" target="_blank" rel="noopener noreferrer" aria-label="Twitter">
+              <a href="https://twitter.com/gigchainio" target="_blank" rel="noopener noreferrer" aria-label="Twitter">
                 <Twitter size={20} />
               </a>
-              <a href="https://discord.gg/gigchain" target="_blank" rel="noopener noreferrer" aria-label="Discord">
+              <a href="https://discord.gg/Hb293WkWS" target="_blank" rel="noopener noreferrer" aria-label="Discord">
                 <MessageCircle size={20} />
               </a>
               <a href="mailto:contact@gigchain.io" aria-label="Email">

@@ -231,10 +231,33 @@ const AIAgentsView = React.memo(() => {
         </div>
       )}
 
-      <div className="view-header">
-        <div className="header-info">
-          <h1>AI Agents</h1>
-          <p>Gestiona tus agentes de inteligencia artificial especializados</p>
+      {/* Action Bar */}
+      <div className="action-bar">
+        <div className="agents-filters">
+          <div className="search-container">
+            <Search size={18} className="search-icon" />
+            <input
+              type="text"
+              placeholder="Buscar agentes..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="search-input"
+            />
+          </div>
+          
+          <div className="filter-container">
+            <Filter size={18} className="filter-icon" />
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="filter-select"
+            >
+              <option value="all">Todos</option>
+              <option value="active">Activos</option>
+              <option value="inactive">Inactivos</option>
+              <option value="training">Entrenando</option>
+            </select>
+          </div>
         </div>
       </div>
 

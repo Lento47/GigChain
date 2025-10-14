@@ -56,19 +56,33 @@ const PaymentsView = React.memo(() => {
 
   return (
     <div className="payments-view">
-      <div className="view-header">
-        <div className="header-content">
-          <div className="header-info">
-            <h1>💰 Pagos y Transacciones</h1>
-            <p>Gestiona tus pagos, cobros y transacciones de forma segura</p>
+      {/* Action Bar */}
+      <div className="action-bar">
+        <div className="payments-filters">
+          <div className="search-container">
+            <Search size={18} className="search-icon" />
+            <input
+              type="text"
+              placeholder="Buscar pagos..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="search-input"
+            />
           </div>
-          <button className="new-payment-btn" onClick={handleNewPayment}>
-            <Plus size={20} />
+        </div>
+        
+        <div className="action-buttons">
+          <button 
+            className="action-btn primary"
+            onClick={handleNewPayment}
+          >
+            <Plus size={18} />
             <span>Nuevo Pago</span>
           </button>
         </div>
       </div>
 
+      {/* Stats Cards */}
       <div className="payments-stats">
         {stats.map((stat, index) => (
           <div key={index} className="stat-card">
@@ -84,16 +98,6 @@ const PaymentsView = React.memo(() => {
       </div>
 
       <div className="payments-content">
-        <div className="search-container">
-          <Search size={20} className="search-icon" />
-          <input
-            type="text"
-            placeholder="Buscar por descripción, destinatario o monto..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="search-input"
-          />
-        </div>
 
         <div className="payments-list">
           {filteredPayments.map(payment => (

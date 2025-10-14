@@ -154,8 +154,11 @@ app.include_router(ipfs_router)
 app.include_router(contracts_router)
 
 # CORS middleware - Security-hardened configuration
-# Get allowed origins from environment - NO DEFAULTS for security
-ALLOWED_ORIGINS_ENV = os.getenv('ALLOWED_ORIGINS')
+# Get allowed origins from environment with development defaults
+ALLOWED_ORIGINS_ENV = os.getenv(
+    'ALLOWED_ORIGINS',
+    'http://localhost:3000,http://localhost:3001,http://localhost:5173,http://localhost:5174,http://127.0.0.1:3000,http://127.0.0.1:3001,http://127.0.0.1:5173,http://127.0.0.1:5174'
+)
 if not ALLOWED_ORIGINS_ENV:
     raise ValueError(
         "ALLOWED_ORIGINS environment variable is required. "

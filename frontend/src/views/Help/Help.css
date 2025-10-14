@@ -1,123 +1,107 @@
-/* Help View Styles */
+/* Help View Styles - Optimized */
 .help-view {
-  padding: 2rem;
+  padding: 0.75rem 1.5rem;
   background: var(--bg-secondary);
   min-height: 100vh;
-}
-
-.help-view .view-header {
-  margin-bottom: 2rem;
-}
-
-.help-view .header-content {
   display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* Action Bar */
+.help-view .action-bar {
+  display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
-  background: linear-gradient(135deg, rgba(236, 72, 153, 0.08) 0%, rgba(190, 24, 93, 0.04) 100%);
-  padding: 2rem;
-  border-radius: 20px;
-  border: 1px solid rgba(236, 72, 153, 0.2);
-  box-shadow: var(--shadow-lg);
-  backdrop-filter: blur(10px);
+  padding: 0.75rem 1rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  backdrop-filter: blur(8px);
 }
 
-.help-view .header-info h1 {
-  font-size: 2rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, #ec4899 0%, #be185d 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  margin: 0 0 0.5rem 0;
+.help-view .help-filters {
   display: flex;
+  gap: 0.75rem;
   align-items: center;
-  gap: 0.5rem;
+  flex-wrap: wrap;
+  flex: 1;
+  max-width: 400px;
 }
 
-.help-view .header-info p {
-  font-size: 1rem;
+.help-view .help-filters .search-container {
+  position: relative;
+  flex: 1;
+  min-width: 240px;
+}
+
+.help-view .help-filters .search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
   color: var(--text-secondary);
-  margin: 0;
+  z-index: 1;
 }
 
-.help-view .header-stats {
+.help-view .help-filters .search-input {
+  width: 100%;
+  padding: 0.6rem 0.75rem 0.6rem 2.5rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  transition: all 0.3s ease;
+}
+
+.help-view .help-filters .search-input:focus {
+  outline: none;
+  border-color: rgba(236, 72, 153, 0.4);
+  box-shadow: 0 0 0 2px rgba(236, 72, 153, 0.1);
+  background: var(--bg-primary);
+}
+
+.help-view .help-stats {
   display: flex;
-  gap: 1.5rem;
+  gap: 1rem;
+  align-items: center;
 }
 
-.help-view .header-stats .stat-item {
+.help-view .help-stats .stat-item {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.25rem;
-  padding: 1rem;
-  background: var(--bg-primary);
-  border-radius: 12px;
+  padding: 0.6rem 0.8rem;
+  background: var(--bg-secondary);
+  border-radius: 8px;
   border: 1px solid var(--border-color);
-  min-width: 70px;
+  min-width: 50px;
 }
 
-.help-view .header-stats .stat-number {
-  font-size: 1.5rem;
+.help-view .help-stats .stat-number {
+  font-size: 1.1rem;
   font-weight: 800;
   color: var(--text-primary);
 }
 
-.help-view .header-stats .stat-label {
-  font-size: 0.75rem;
+.help-view .help-stats .stat-label {
+  font-size: 0.65rem;
   color: var(--text-muted);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
 }
 
 /* Help Content */
 .help-content {
   display: flex;
   flex-direction: column;
-  gap: 2.5rem;
-}
-
-/* Search Section */
-.search-section {
-  margin-bottom: 1rem;
-}
-
-.search-container {
-  position: relative;
-  max-width: 600px;
-  margin: 0 auto;
-}
-
-.search-icon {
-  position: absolute;
-  left: 1rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-muted);
-  z-index: 1;
-}
-
-.search-input {
-  width: 100%;
-  padding: 1.25rem 1.25rem 1.25rem 3rem;
-  background: var(--bg-primary);
-  border: 2px solid var(--border-color);
-  border-radius: 16px;
-  color: var(--text-primary);
-  font-size: 1rem;
-  transition: all 0.3s ease;
-  box-shadow: var(--shadow-md);
-}
-
-.search-input:focus {
-  outline: none;
-  border-color: #ec4899;
-  box-shadow: 0 0 0 4px rgba(236, 72, 153, 0.1);
-}
-
-.search-input::placeholder {
-  color: var(--text-muted);
+  gap: 2rem;
+  background: transparent;
+  padding: 0;
 }
 
 /* Section Headers */
@@ -362,8 +346,24 @@
   color: var(--text-muted);
 }
 
-/* Responsive Design */
+/* Responsive Design - Optimized */
 @media (max-width: 1024px) {
+  .help-view {
+    padding: 0.75rem 1rem;
+  }
+
+  .help-view .action-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .help-view .help-filters {
+    width: 100%;
+    max-width: none;
+  }
+
   .resources-grid {
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   }
@@ -371,35 +371,30 @@
 
 @media (max-width: 768px) {
   .help-view {
-    padding: 1rem;
-  }
-  
-  .help-view .header-content {
-    flex-direction: column;
-    gap: 1.5rem;
-    padding: 1.5rem;
-    align-items: stretch;
-  }
-  
-  .help-view .header-info h1 {
-    font-size: 1.6rem;
-    justify-content: center;
+    padding: 0.5rem 0.75rem;
   }
 
-  .help-view .header-stats {
+  .help-view .action-bar {
+    padding: 0.6rem;
+    gap: 0.5rem;
+  }
+
+  .help-view .help-filters {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .help-view .help-filters .search-container {
+    min-width: auto;
+  }
+
+  .help-view .help-stats {
+    align-self: stretch;
     justify-content: center;
   }
   
   .help-content {
-    gap: 2rem;
-  }
-
-  .search-container {
-    max-width: 100%;
-  }
-
-  .search-input {
-    padding: 1rem 1rem 1rem 2.75rem;
+    gap: 1.5rem;
   }
 
   .resources-section,
@@ -431,21 +426,31 @@
 }
 
 @media (max-width: 480px) {
-  .help-view .header-info h1 {
-    font-size: 1.4rem;
+  .help-view {
+    padding: 0.5rem;
   }
 
-  .help-view .header-stats {
-    gap: 1rem;
+  .help-view .action-bar {
+    padding: 0.5rem;
+    border-radius: 8px;
   }
 
-  .help-view .header-stats .stat-item {
-    padding: 0.75rem;
-    min-width: 60px;
+  .help-view .help-filters .search-input {
+    padding: 0.5rem 0.6rem 0.5rem 2.2rem;
+    font-size: 0.75rem;
   }
 
-  .help-view .header-stats .stat-number {
-    font-size: 1.25rem;
+  .help-view .help-stats .stat-item {
+    padding: 0.5rem 0.6rem;
+    min-width: 45px;
+  }
+
+  .help-view .help-stats .stat-number {
+    font-size: 1rem;
+  }
+
+  .help-view .help-stats .stat-label {
+    font-size: 0.6rem;
   }
 
   .section-header h2 {

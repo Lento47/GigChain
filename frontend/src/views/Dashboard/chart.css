@@ -258,10 +258,22 @@
 .chart-bar {
   transition: all 0.3s ease;
   cursor: pointer;
+  opacity: 0.7;
 }
 
 .chart-bar:hover {
   filter: drop-shadow(0 0 8px var(--accent-color));
   transform: scaleY(1.05);
   transform-origin: bottom;
+  opacity: 1;
+}
+
+/* Chart gradients and areas */
+.chart-gradient {
+  opacity: 0.4;
+}
+
+/* Secondary elements */
+.chart-secondary {
+  opacity: 0.6;
 }

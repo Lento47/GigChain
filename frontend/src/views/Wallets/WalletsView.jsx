@@ -159,14 +159,6 @@ const WalletsView = React.memo(() => {
   if (loading) {
     return (
       <div className="wallets-view">
-        <div className="view-header">
-          <div className="header-content">
-            <div className="header-info">
-              <h1>💳 Mis Wallets</h1>
-              <p>Gestiona tus wallets internas de GigChain</p>
-            </div>
-          </div>
-        </div>
         <div className="wallets-content">
           <div className="loading-state">
             <Loader size={48} className="spinner" />
@@ -181,14 +173,6 @@ const WalletsView = React.memo(() => {
   if (authError) {
     return (
       <div className="wallets-view">
-        <div className="view-header">
-          <div className="header-content">
-            <div className="header-info">
-              <h1>💳 Mis Wallets</h1>
-              <p>Gestiona tus wallets internas de GigChain</p>
-            </div>
-          </div>
-        </div>
         <div className="wallets-content">
           <div className="auth-error-state">
             <AlertCircle size={64} className="auth-error-icon" />
@@ -231,60 +215,55 @@ const WalletsView = React.memo(() => {
 
   return (
     <div className="wallets-view">
-      <div className="view-header">
-        <div className="header-content">
-          <div className="header-info">
-            <h1>💳 Mis Wallets</h1>
-            <p>Gestiona tus wallets internas de GigChain de forma segura</p>
-          </div>
-          
-          <div className="header-actions">
-            {hasWallet && (
-              <button 
-                className="toggle-balance-btn"
-                onClick={() => setShowBalances(!showBalances)}
-              >
-                {showBalances ? <EyeOff size={18} /> : <Eye size={18} />}
-                <span>{showBalances ? 'Ocultar' : 'Mostrar'} Saldos</span>
-              </button>
-            )}
-            
-            <button 
-              className="add-wallet-btn"
-              onClick={handleAddWallet}
-              disabled={creating || hasWallet}
-            >
-              {creating ? (
-                <>
-                  <Loader size={18} className="spinner" />
-                  <span>Creando...</span>
-                </>
-              ) : (
-                <>
-                  <Plus size={18} />
-                  <span>{hasWallet ? 'Límite Alcanzado' : 'Crear Wallet'}</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="wallets-content">
-        {hasWallet && (
-          <div className="wallets-filters">
+      {/* Action Bar */}
+      <div className="action-bar">
+        <div className="wallets-filters">
+          {hasWallet && (
             <div className="search-container">
-              <Search size={20} className="search-icon" />
+              <Search size={18} className="search-icon" />
               <input
                 type="text"
-                placeholder="Buscar por nombre, dirección o red..."
+                placeholder="Buscar wallets..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="search-input"
               />
             </div>
-          </div>
-        )}
+          )}
+        </div>
+        
+        <div className="action-buttons">
+          {hasWallet && (
+            <button 
+              className="action-btn secondary"
+              onClick={() => setShowBalances(!showBalances)}
+            >
+              {showBalances ? <EyeOff size={18} /> : <Eye size={18} />}
+              <span>{showBalances ? 'Ocultar' : 'Mostrar'}</span>
+            </button>
+          )}
+          
+          <button 
+            className="action-btn primary"
+            onClick={handleAddWallet}
+            disabled={creating || hasWallet}
+          >
+            {creating ? (
+              <>
+                <Loader size={18} className="spinner" />
+                <span>Creando...</span>
+              </>
+            ) : (
+              <>
+                <Plus size={18} />
+                <span>{hasWallet ? 'Límite' : 'Crear'}</span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+      <div className="wallets-content">
 
         {hasWallet && filteredWallets.length > 0 ? (
           <div className="wallets-grid">

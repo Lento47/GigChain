@@ -147,7 +147,7 @@ async def admin_login(request: AdminLoginRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/verify")
-async def verify_admin_session(admin: Dict[str, Any] = Depends(verify_admin)):
+async def verify_admin_session_endpoint(admin: Dict[str, Any] = Depends(verify_admin)):
     """
     Verify admin session is valid.
     
@@ -525,12 +525,12 @@ async def get_analytics_overview(admin: Dict[str, Any] = Depends(verify_admin)):
     Returns platform-wide analytics for admin review.
     """
     try:
-        from analytics_system import analytics_db
+        from analytics_system import analytics_db, TimePeriod
         
         # Generate reports for different periods
-        day_report = analytics_db.generate_report(analytics_db.TimePeriod.DAY)
-        week_report = analytics_db.generate_report(analytics_db.TimePeriod.WEEK)
-        month_report = analytics_db.generate_report(analytics_db.TimePeriod.MONTH)
+        day_report = analytics_db.generate_report(TimePeriod.DAY)
+        week_report = analytics_db.generate_report(TimePeriod.WEEK)
+        month_report = analytics_db.generate_report(TimePeriod.MONTH)
         
         # Log activity
         admin_system.log_admin_activity(
