@@ -9,11 +9,11 @@ import "@openzeppelin/contracts/governance/extensions/GovernorVotesQuorumFractio
 import "@openzeppelin/contracts/governance/extensions/GovernorTimelockControl.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "./ChainLinkProToken.sol";
+import "./GigChainToken.sol";
 
 /**
- * @title ChainLinkProDAO
- * @notice Decentralized governance for ChainLinkPro social network
+ * @title GigChainDAO
+ * @notice Decentralized governance for GigChain social network
  * @dev Handles proposals, voting, and community decisions
  * 
  * Features:
@@ -24,7 +24,7 @@ import "./ChainLinkProToken.sol";
  * - Social feature updates
  * - Token parameter changes
  */
-contract ChainLinkProDAO is
+contract GigChainDAO is
     Governor,
     GovernorSettings,
     GovernorCountingSimple,
@@ -127,16 +127,16 @@ contract ChainLinkProDAO is
 
     /**
      * @notice Constructor
-     * @param _token ChainLinkPro token address
+     * @param _token GigChain token address
      * @param _timelock Timelock controller address
      * @param admin Admin address
      */
     constructor(
-        ChainLinkProToken _token,
+        GigChainToken _token,
         TimelockController _timelock,
         address admin
     )
-        Governor("ChainLinkPro DAO")
+        Governor("GigChain DAO")
         GovernorSettings(
             1, // voting delay (1 block)
             17280, // voting period (3 days in blocks, assuming 15s block time)

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# ChainLinkPro Deployment Script
-# This script deploys the complete ChainLinkPro platform
+# GigChain Deployment Script
+# This script deploys the complete GigChain platform
 
 set -e
 
@@ -13,9 +13,9 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-PROJECT_NAME="chainlinkpro"
-DOMAIN="chainlinkpro.io"
-EMAIL="admin@chainlinkpro.io"
+PROJECT_NAME="gigchain"
+DOMAIN="gigchain.io"
+EMAIL="admin@gigchain.io"
 BACKUP_DIR="./backups"
 LOG_DIR="./logs"
 
@@ -93,12 +93,12 @@ create_directories() {
 generate_ssl() {
     log "Generating SSL certificates..."
     
-    if [ ! -f "./ssl/chainlinkpro.crt" ] || [ ! -f "./ssl/chainlinkpro.key" ]; then
+    if [ ! -f "./ssl/gigchain.crt" ] || [ ! -f "./ssl/gigchain.key" ]; then
         # Generate self-signed certificate for development
         openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-            -keyout ./ssl/chainlinkpro.key \
-            -out ./ssl/chainlinkpro.crt \
-            -subj "/C=US/ST=State/L=City/O=ChainLinkPro/CN=$DOMAIN"
+            -keyout ./ssl/gigchain.key \
+            -out ./ssl/gigchain.crt \
+            -subj "/C=US/ST=State/L=City/O=GigChain/CN=$DOMAIN"
         
         success "SSL certificates generated"
     else
@@ -148,7 +148,7 @@ create_db_init() {
     log "Creating database initialization script..."
     
     cat > ./database/init.sql << 'EOF'
--- ChainLinkPro Database Initialization
+-- GigChain Database Initialization
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
@@ -339,7 +339,7 @@ EOF
 
 # Deploy the application
 deploy() {
-    log "Deploying ChainLinkPro platform..."
+    log "Deploying GigChain platform..."
     
     # Pull latest images
     docker-compose pull
@@ -417,7 +417,7 @@ create_backup_script() {
     cat > ./scripts/backup.sh << 'EOF'
 #!/bin/bash
 
-# ChainLinkPro Backup Script
+# GigChain Backup Script
 BACKUP_DIR="./backups"
 DATE=$(date +%Y%m%d_%H%M%S)
 
@@ -425,7 +425,7 @@ DATE=$(date +%Y%m%d_%H%M%S)
 mkdir -p $BACKUP_DIR
 
 # Backup database
-docker-compose exec -T postgres pg_dump -U chainlinkpro chainlinkpro > $BACKUP_DIR/db_backup_$DATE.sql
+docker-compose exec -T postgres pg_dump -U gigchain gigchain > $BACKUP_DIR/db_backup_$DATE.sql
 
 # Backup uploads
 tar -czf $BACKUP_DIR/uploads_backup_$DATE.tar.gz ./uploads
@@ -446,7 +446,7 @@ EOF
 
 # Main deployment function
 main() {
-    log "Starting ChainLinkPro deployment..."
+    log "Starting GigChain deployment..."
     
     check_root
     check_requirements
@@ -458,7 +458,7 @@ main() {
     create_backup_script
     deploy
     
-    success "ChainLinkPro platform deployed successfully!"
+    success "GigChain platform deployed successfully!"
     
     echo ""
     echo "🌐 Access URLs:"

@@ -1,4 +1,4 @@
-# Multi-stage build for ChainLinkPro Frontend
+# Multi-stage build for GigChain Frontend
 FROM node:18-alpine as builder
 
 # Set working directory

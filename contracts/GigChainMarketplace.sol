@@ -5,11 +5,11 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "./ChainLinkProSocial.sol";
+import "./GigChainSocial.sol";
 
 /**
- * @title ChainLinkProMarketplace
- * @notice Marketplace for professional services and skills on ChainLinkPro
+ * @title GigChainMarketplace
+ * @notice Marketplace for professional services and skills on GigChain
  * @dev Handles service listings, bookings, payments, and reviews
  * 
  * Features:
@@ -20,7 +20,7 @@ import "./ChainLinkProSocial.sol";
  * - Dispute resolution
  * - Commission-based monetization
  */
-contract ChainLinkProMarketplace is Ownable, ReentrancyGuard {
+contract GigChainMarketplace is Ownable, ReentrancyGuard {
     
     // Service categories
     enum ServiceCategory {
@@ -115,7 +115,7 @@ contract ChainLinkProMarketplace is Ownable, ReentrancyGuard {
     Counters.Counter private _reviewCounter;
     
     // State variables
-    ChainLinkProSocial public socialContract;
+    GigChainSocial public socialContract;
     IERC20 public paymentToken;
     
     // Marketplace fees (in basis points, 100 = 1%)
@@ -170,7 +170,7 @@ contract ChainLinkProMarketplace is Ownable, ReentrancyGuard {
     }
     
     constructor(address _socialContract, address _paymentToken) Ownable(msg.sender) {
-        socialContract = ChainLinkProSocial(_socialContract);
+        socialContract = GigChainSocial(_socialContract);
         paymentToken = IERC20(_paymentToken);
     }
     
@@ -191,7 +191,7 @@ contract ChainLinkProMarketplace is Ownable, ReentrancyGuard {
         uint256 price,
         uint256 duration
     ) external nonReentrant {
-        require(socialContract.hasProfile(msg.sender), "Must have ChainLinkPro profile");
+        require(socialContract.hasProfile(msg.sender), "Must have GigChain profile");
         require(bytes(title).length > 0, "Title cannot be empty");
         require(bytes(description).length > 0, "Description cannot be empty");
         require(price >= minimumPrice, "Price below minimum");
@@ -296,7 +296,7 @@ contract ChainLinkProMarketplace is Ownable, ReentrancyGuard {
         Service storage service = services[serviceId];
         require(service.status == ServiceStatus.Active, "Service not active");
         require(service.provider != msg.sender, "Cannot book own service");
-        require(socialContract.hasProfile(msg.sender), "Must have ChainLinkPro profile");
+        require(socialContract.hasProfile(msg.sender), "Must have GigChain profile");
         
         uint256 bookingId = _bookingCounter.current();
         _bookingCounter.increment();

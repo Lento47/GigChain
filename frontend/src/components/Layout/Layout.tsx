@@ -59,11 +59,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <div className="flex items-center space-x-6 mb-4 md:mb-0">
                 <div className="flex items-center space-x-3">
                   <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                    <span className="text-white font-bold text-sm">CLP</span>
+                    <span className="text-white font-bold text-sm">GCH</span>
                   </div>
                   <div>
                     <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                      ChainLinkPro
+                      GigChain
                     </span>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       Decentralized Professional Network
@@ -75,7 +75,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <div className="flex items-center space-x-6">
                 <div className="flex items-center space-x-4">
                   <a
-                    href="https://twitter.com/chainlinkpro"
+                    href="https://twitter.com/gigchain"
                     className="text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors duration-200"
                     target="_blank"
                     rel="noopener noreferrer"
@@ -86,7 +86,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     </svg>
                   </a>
                   <a
-                    href="https://github.com/chainlinkpro"
+                    href="https://github.com/gigchain"
                     className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200"
                     target="_blank"
                     rel="noopener noreferrer"
@@ -101,7 +101,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     </svg>
                   </a>
                   <a
-                    href="https://discord.gg/chainlinkpro"
+                    href="https://discord.gg/gigchain"
                     className="text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors duration-200"
                     target="_blank"
                     rel="noopener noreferrer"
@@ -113,7 +113,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   </a>
                 </div>
                 <div className="text-xs text-gray-500 dark:text-gray-400">
-                  © 2024 ChainLinkPro. All rights reserved.
+                  © 2024 GigChain. All rights reserved.
                 </div>
               </div>
             </div>

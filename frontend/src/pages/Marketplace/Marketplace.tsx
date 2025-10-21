@@ -372,7 +372,7 @@ const Marketplace: React.FC = () => {
                 {/* Price Range */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Price Range (CLP)
+                    Price Range (GCH)
                   </label>
                   <div className="space-y-2">
                     <input

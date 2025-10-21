@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# ChainLinkPro Update Script
+# GigChain Update Script
 # This script updates the platform with zero downtime
 
 set -e
@@ -204,7 +204,7 @@ rollback() {
             log "Restoring database from backup: $latest_backup"
             docker-compose up -d postgres
             sleep 30
-            docker-compose exec -T postgres psql -U chainlinkpro -d chainlinkpro -f /backups/$(basename $latest_backup)
+            docker-compose exec -T postgres psql -U gigchain -d gigchain -f /backups/$(basename $latest_backup)
         fi
     fi
     
@@ -216,7 +216,7 @@ rollback() {
 
 # Main update function
 main() {
-    log "Starting ChainLinkPro update process..."
+    log "Starting GigChain update process..."
     
     # Create logs directory if it doesn't exist
     mkdir -p ./logs
@@ -237,7 +237,7 @@ main() {
     success "Update completed successfully!"
     
     echo ""
-    echo "🎉 ChainLinkPro has been updated successfully!"
+    echo "🎉 GigChain has been updated successfully!"
     echo ""
     echo "📊 Update Summary:"
     echo "  - Backup created: $BACKUP_DIR"

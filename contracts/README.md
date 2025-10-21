@@ -1,8 +1,8 @@
-# 🌐 ChainLinkPro - Decentralized Social Network for Professionals
+# 🌐 GigChain - Decentralized Social Network for Professionals
 
 > **The future of professional networking is decentralized, tokenized, and community-owned.**
 
-ChainLinkPro is a revolutionary blockchain-based social network designed specifically for professionals. Unlike traditional platforms like LinkedIn, ChainLinkPro puts users in complete control of their data, enables direct monetization through token rewards, and operates as a decentralized autonomous organization (DAO).
+GigChain is a revolutionary blockchain-based social network designed specifically for professionals. Unlike traditional platforms like LinkedIn, GigChain puts users in complete control of their data, enables direct monetization through token rewards, and operates as a decentralized autonomous organization (DAO).
 
 ## 🚀 Key Features
 
@@ -37,7 +37,7 @@ ChainLinkPro is a revolutionary blockchain-based social network designed specifi
 - **Transparent** governance processes
 
 ### 💰 **Token Economics**
-- **CLP Token** for all platform activities
+- **GCH Token** for all platform activities
 - **Social rewards** for engagement
 - **Staking** for premium features
 - **Community treasury** for development
@@ -48,21 +48,21 @@ ChainLinkPro is a revolutionary blockchain-based social network designed specifi
 
 | Contract | Purpose | Key Features |
 |----------|---------|--------------|
-| `ChainLinkProSocial` | Main social network | Profiles, connections, content, rewards |
-| `ChainLinkProToken` | Social token (CLP) | ERC20 with voting, staking, rewards |
-| `ChainLinkProDAO` | Governance | Proposals, voting, treasury management |
+| `GigChainSocial` | Main social network | Profiles, connections, content, rewards |
+| `GigChainToken` | Social token (GCH) | ERC20 with voting, staking, rewards |
+| `GigChainDAO` | Governance | Proposals, voting, treasury management |
 | `ReputationNFT` | Reputation system | Dynamic NFTs for professional reputation |
 | `TimelockController` | Governance security | Time-locked execution of proposals |
 
 ### Token Distribution
 
 ```
-Community Rewards: 40% (400M CLP)
-Team & Advisors:   20% (200M CLP)
-Investors:         15% (150M CLP)
-Ecosystem Dev:     15% (150M CLP)
-DAO Treasury:       5% (50M CLP)
-Reserve:            5% (50M CLP)
+Community Rewards: 40% (400M GCH)
+Team & Advisors:   20% (200M GCH)
+Investors:         15% (150M GCH)
+Ecosystem Dev:     15% (150M GCH)
+DAO Treasury:       5% (50M GCH)
+Reserve:            5% (50M GCH)
 ```
 
 ## 🚀 Getting Started
@@ -78,7 +78,7 @@ Reserve:            5% (50M CLP)
 
 ```bash
 # Clone the repository
-git clone https://github.com/chainlinkpro/social-network.git
+git clone https://github.com/gigchain/social-network.git
 cd social-network
 
 # Install dependencies
@@ -217,13 +217,13 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- **Documentation**: [docs.chainlinkpro.io](https://docs.chainlinkpro.io)
-- **Discord**: [discord.gg/chainlinkpro](https://discord.gg/chainlinkpro)
-- **Twitter**: [@ChainLinkPro](https://twitter.com/ChainLinkPro)
-- **Email**: support@chainlinkpro.io
+- **Documentation**: [docs.gigchain.io](https://docs.gigchain.io)
+- **Discord**: [discord.gg/gigchain](https://discord.gg/gigchain)
+- **Twitter**: [@GigChain](https://twitter.com/GigChain)
+- **Email**: support@gigchain.io
 
 ---
 
-**Built with ❤️ by the ChainLinkPro community**
+**Built with ❤️ by the GigChain community**
 
 *The future of professional networking is decentralized, tokenized, and community-owned.*

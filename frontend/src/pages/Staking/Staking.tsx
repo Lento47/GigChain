@@ -58,69 +58,69 @@ const Staking: React.FC = () => {
     const mockPools: StakingPool[] = [
       {
         id: '1',
-        name: 'CLP Standard Staking',
+        name: 'GCH Standard Staking',
         type: 'standard',
-        stakingToken: { symbol: 'CLP', address: '0x...', decimals: 18 },
-        rewardToken: { symbol: 'CLP', address: '0x...', decimals: 18 },
+        stakingToken: { symbol: 'GCH', address: '0x...', decimals: 18 },
+        rewardToken: { symbol: 'GCH', address: '0x...', decimals: 18 },
         apy: 12.5,
         totalStaked: 2500000,
         lockPeriod: 30,
         minStake: 100,
         maxStake: 1000000,
         isActive: true,
-        description: 'Basic CLP staking with flexible lock periods and competitive rewards.',
+        description: 'Basic GCH staking with flexible lock periods and competitive rewards.',
         features: ['Flexible lock periods', 'Compound rewards', 'Early unstake penalty']
       },
       {
         id: '2',
         name: 'Governance Staking',
         type: 'governance',
-        stakingToken: { symbol: 'CLP', address: '0x...', decimals: 18 },
-        rewardToken: { symbol: 'CLP', address: '0x...', decimals: 18 },
+        stakingToken: { symbol: 'GCH', address: '0x...', decimals: 18 },
+        rewardToken: { symbol: 'GCH', address: '0x...', decimals: 18 },
         apy: 18.0,
         totalStaked: 1800000,
         lockPeriod: 90,
         minStake: 500,
         maxStake: 5000000,
         isActive: true,
-        description: 'Stake CLP to participate in DAO governance and earn higher rewards.',
+        description: 'Stake GCH to participate in DAO governance and earn higher rewards.',
         features: ['DAO voting power', 'Higher APY', 'Governance rewards', 'Longer lock period']
       },
       {
         id: '3',
         name: 'Social Reputation Staking',
         type: 'social',
-        stakingToken: { symbol: 'CLP', address: '0x...', decimals: 18 },
-        rewardToken: { symbol: 'CLP', address: '0x...', decimals: 18 },
+        stakingToken: { symbol: 'GCH', address: '0x...', decimals: 18 },
+        rewardToken: { symbol: 'GCH', address: '0x...', decimals: 18 },
         apy: 15.0,
         totalStaked: 1200000,
         lockPeriod: 60,
         minStake: 200,
         maxStake: 2000000,
         isActive: true,
-        description: 'Stake CLP to boost your social reputation and unlock premium features.',
+        description: 'Stake GCH to boost your social reputation and unlock premium features.',
         features: ['Reputation boost', 'Premium features', 'Social rewards', 'Profile verification']
       },
       {
         id: '4',
-        name: 'CLP-USDC Liquidity Mining',
+        name: 'GCH-USDC Liquidity Mining',
         type: 'liquidity',
-        stakingToken: { symbol: 'CLP-USDC LP', address: '0x...', decimals: 18 },
-        rewardToken: { symbol: 'CLP', address: '0x...', decimals: 18 },
+        stakingToken: { symbol: 'GCH-USDC LP', address: '0x...', decimals: 18 },
+        rewardToken: { symbol: 'GCH', address: '0x...', decimals: 18 },
         apy: 25.0,
         totalStaked: 800000,
         lockPeriod: 0,
         minStake: 50,
         maxStake: 10000000,
         isActive: true,
-        description: 'Provide liquidity for CLP-USDC pair and earn rewards.',
+        description: 'Provide liquidity for GCH-USDC pair and earn rewards.',
         features: ['Liquidity rewards', 'Trading fees', 'No lock period', 'High APY']
       },
       {
         id: '5',
         name: 'Yield Farming Pool',
         type: 'yield',
-        stakingToken: { symbol: 'CLP', address: '0x...', decimals: 18 },
+        stakingToken: { symbol: 'GCH', address: '0x...', decimals: 18 },
         rewardToken: { symbol: 'USDC', address: '0x...', decimals: 6 },
         apy: 22.0,
         totalStaked: 1500000,
@@ -203,7 +203,7 @@ const Staking: React.FC = () => {
             DeFi Staking & Yield Farming
           </h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">
-            Earn rewards by staking your CLP tokens and participating in various DeFi strategies
+            Earn rewards by staking your GCH tokens and participating in various DeFi strategies
           </p>
         </div>
 
@@ -217,7 +217,7 @@ const Staking: React.FC = () => {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Staked</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {totalStaked.toLocaleString()} CLP
+                  {totalStaked.toLocaleString()} GCH
                 </p>
               </div>
             </div>
@@ -231,7 +231,7 @@ const Staking: React.FC = () => {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Rewards</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {totalRewards.toLocaleString()} CLP
+                  {totalRewards.toLocaleString()} GCH
                 </p>
               </div>
             </div>

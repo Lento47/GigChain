@@ -10,12 +10,12 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 /**
- * @title ChainLinkProToken (CLP)
- * @notice Social token for ChainLinkPro decentralized professional network
+ * @title GigChainToken (GCH)
+ * @notice Social token for GigChain decentralized professional network
  * @dev ERC20 with voting, snapshots, burning, and social features
  * 
  * Tokenomics:
- * - Max supply: 1 billion CLP
+ * - Max supply: 1 billion GCH
  * - Community rewards: 40%
  * - Team & Advisors: 20%
  * - Investors: 15%
@@ -31,7 +31,7 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
  * - DAO governance participation
  * - Staking for premium features
  */
-contract ChainLinkProToken is
+contract GigChainToken is
     ERC20,
     ERC20Burnable,
     ERC20Snapshot,
@@ -42,7 +42,7 @@ contract ChainLinkProToken is
 {
     // ============ Constants ============
 
-    /// @notice Maximum token supply (1 billion CLP)
+    /// @notice Maximum token supply (1 billion GCH)
     uint256 public constant MAX_SUPPLY = 1_000_000_000e18;
 
     /// @notice Role for minting new tokens (only during initial distribution)
@@ -81,7 +81,7 @@ contract ChainLinkProToken is
 
     /// @notice Staking parameters
     uint256 public stakingRewardRate = 10; // 10% APY
-    uint256 public minimumStake = 1000e18; // 1000 CLP minimum stake
+    uint256 public minimumStake = 1000e18; // 1000 GCH minimum stake
     uint256 public stakingLockPeriod = 30 days; // 30 days lock period
 
     // ============ Events ============
@@ -109,8 +109,8 @@ contract ChainLinkProToken is
      * @param admin Address to grant admin role
      */
     constructor(address admin)
-        ERC20("ChainLinkPro Token", "CLP")
-        ERC20Permit("ChainLinkPro Token")
+        ERC20("GigChain Token", "GCH")
+        ERC20Permit("GigChain Token")
     {
         require(admin != address(0), "Admin cannot be zero address");
 
@@ -121,7 +121,7 @@ contract ChainLinkProToken is
         _grantRole(PAUSER_ROLE, admin);
         _grantRole(REWARDER_ROLE, admin);
 
-        // Set initial max transfer (1M CLP, can be changed)
+        // Set initial max transfer (1M GCH, can be changed)
         maxTransferAmount = 1_000_000e18;
 
         // Exempt admin and this contract from limits

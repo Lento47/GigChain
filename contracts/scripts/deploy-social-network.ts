@@ -2,19 +2,19 @@ import { ethers } from "hardhat";
 import { Contract } from "ethers";
 
 async function main() {
-  console.log("🌐 Deploying ChainLinkPro Social Network to Polygon Mumbai testnet...");
+  console.log("🌐 Deploying GigChain Social Network to Polygon Mumbai testnet...");
   
   const [deployer] = await ethers.getSigners();
   console.log("Deploying contracts with the account:", deployer.address);
   console.log("Account balance:", (await deployer.getBalance()).toString());
 
-  // Deploy ChainLinkPro Token first
-  console.log("\n🪙 Deploying ChainLinkPro Token (CLP)...");
-  const ChainLinkProToken = await ethers.getContractFactory("ChainLinkProToken");
-  const socialToken = await ChainLinkProToken.deploy(deployer.address);
+  // Deploy GigChain Token first
+  console.log("\n🪙 Deploying GigChain Token (GCH)...");
+  const GigChainToken = await ethers.getContractFactory("GigChainToken");
+  const socialToken = await GigChainToken.deploy(deployer.address);
   await socialToken.waitForDeployment();
   const socialTokenAddress = await socialToken.getAddress();
-  console.log("✅ ChainLinkPro Token deployed to:", socialTokenAddress);
+  console.log("✅ GigChain Token deployed to:", socialTokenAddress);
 
   // Deploy Timelock Controller for DAO
   console.log("\n⏰ Deploying Timelock Controller...");
@@ -29,25 +29,25 @@ async function main() {
   const timelockAddress = await timelock.getAddress();
   console.log("✅ Timelock Controller deployed to:", timelockAddress);
 
-  // Deploy ChainLinkPro DAO
-  console.log("\n🗳️ Deploying ChainLinkPro DAO...");
-  const ChainLinkProDAO = await ethers.getContractFactory("ChainLinkProDAO");
-  const dao = await ChainLinkProDAO.deploy(
+  // Deploy GigChain DAO
+  console.log("\n🗳️ Deploying GigChain DAO...");
+  const GigChainDAO = await ethers.getContractFactory("GigChainDAO");
+  const dao = await GigChainDAO.deploy(
     socialTokenAddress,
     timelockAddress,
     deployer.address
   );
   await dao.waitForDeployment();
   const daoAddress = await dao.getAddress();
-  console.log("✅ ChainLinkPro DAO deployed to:", daoAddress);
+  console.log("✅ GigChain DAO deployed to:", daoAddress);
 
-  // Deploy ChainLinkPro Social Network
-  console.log("\n👥 Deploying ChainLinkPro Social Network...");
-  const ChainLinkProSocial = await ethers.getContractFactory("ChainLinkProSocial");
-  const socialNetwork = await ChainLinkProSocial.deploy(socialTokenAddress);
+  // Deploy GigChain Social Network
+  console.log("\n👥 Deploying GigChain Social Network...");
+  const GigChainSocial = await ethers.getContractFactory("GigChainSocial");
+  const socialNetwork = await GigChainSocial.deploy(socialTokenAddress);
   await socialNetwork.waitForDeployment();
   const socialNetworkAddress = await socialNetwork.getAddress();
-  console.log("✅ ChainLinkPro Social Network deployed to:", socialNetworkAddress);
+  console.log("✅ GigChain Social Network deployed to:", socialNetworkAddress);
 
   // Deploy Reputation NFT contract
   console.log("\n🏆 Deploying Reputation NFT contract...");
@@ -75,14 +75,14 @@ async function main() {
 
   // Mint initial tokens for testing
   console.log("\n🪙 Minting initial tokens for testing...");
-  const mintAmount = ethers.parseEther("1000000"); // 1M CLP tokens
+  const mintAmount = ethers.parseEther("1000000"); // 1M GCH tokens
   await socialToken.mint(deployer.address, mintAmount);
   await mockUSDC.mint(deployer.address, ethers.parseUnits("1000000", 6)); // 1M USDC
   console.log("✅ Initial tokens minted");
 
   // Add initial funds to DAO treasury
   console.log("\n💰 Adding initial funds to DAO treasury...");
-  const treasuryAmount = ethers.parseEther("10000"); // 10K CLP
+  const treasuryAmount = ethers.parseEther("10000"); // 10K GCH
   await socialToken.transfer(daoAddress, treasuryAmount);
   console.log("✅ DAO treasury funded");
 
@@ -91,10 +91,10 @@ async function main() {
     network: "Polygon Mumbai Testnet",
     deployer: deployer.address,
     contracts: {
-      ChainLinkProToken: socialTokenAddress,
+      GigChainToken: socialTokenAddress,
       TimelockController: timelockAddress,
-      ChainLinkProDAO: daoAddress,
-      ChainLinkProSocial: socialNetworkAddress,
+      GigChainDAO: daoAddress,
+      GigChainSocial: socialNetworkAddress,
       ReputationNFT: reputationNFTAddress,
       GigChainEscrow: escrowAddress,
       MockUSDC: mockUSDCAddress
@@ -102,7 +102,7 @@ async function main() {
     features: {
       socialNetwork: "Decentralized professional social network",
       governance: "DAO with voting and proposals",
-      tokenomics: "1B CLP tokens with social rewards",
+      tokenomics: "1B GCH tokens with social rewards",
       nftProfiles: "Soulbound professional profiles",
       reputation: "On-chain reputation system",
       escrow: "Secure payment system"
@@ -111,7 +111,7 @@ async function main() {
     blockNumber: await ethers.provider.getBlockNumber()
   };
 
-  console.log("\n🎉 ChainLinkPro Social Network deployed successfully!");
+  console.log("\n🎉 GigChain Social Network deployed successfully!");
   console.log("\n📋 Deployment Summary:");
   console.log("====================");
   console.log(`Network: ${deploymentInfo.network}`);
@@ -138,7 +138,7 @@ async function main() {
     fs.mkdirSync(deploymentsDir, { recursive: true });
   }
   
-  const filename = `chainlinkpro-social-${deploymentInfo.blockNumber}.json`;
+  const filename = `gigchain-social-${deploymentInfo.blockNumber}.json`;
   const filepath = path.join(deploymentsDir, filename);
   
   fs.writeFileSync(filepath, JSON.stringify(deploymentInfo, null, 2));
@@ -154,12 +154,12 @@ async function main() {
   console.log(`npx hardhat verify --network mumbai ${escrowAddress} "${socialTokenAddress}"`);
   console.log(`npx hardhat verify --network mumbai ${mockUSDCAddress} "Mock USDC" "mUSDC" 6`);
 
-  console.log("\n🌐 ChainLinkPro Social Network is ready!");
+  console.log("\n🌐 GigChain Social Network is ready!");
   console.log("Visit: https://mumbai.polygonscan.com/");
   console.log("\n📱 Next steps:");
   console.log("1. Create your professional profile");
   console.log("2. Connect with other professionals");
-  console.log("3. Share content and earn CLP tokens");
+  console.log("3. Share content and earn GCH tokens");
   console.log("4. Participate in DAO governance");
   console.log("5. Build your professional reputation");
 }

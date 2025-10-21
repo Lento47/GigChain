@@ -144,11 +144,11 @@ const Sidebar: React.FC = () => {
         {!isCollapsed && (
           <div className="flex items-center">
             <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-              <span className="text-white font-bold text-lg">CLP</span>
+              <span className="text-white font-bold text-lg">GCH</span>
             </div>
             <div className="ml-3">
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-                ChainLinkPro
+                GigChain
               </h1>
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 Professional Network
@@ -206,7 +206,7 @@ const Sidebar: React.FC = () => {
             <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
               type="text"
-              placeholder="Search ChainLinkPro..."
+              placeholder="Search GigChain..."
               className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
             />
           </div>
@@ -318,7 +318,7 @@ const Sidebar: React.FC = () => {
             </div>
             <div>
               <p className="text-lg font-bold text-gray-900 dark:text-white">2.4k</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">CLP Earned</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">GCH Earned</p>
             </div>
           </div>
         </div>

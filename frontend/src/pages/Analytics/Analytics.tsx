@@ -375,7 +375,7 @@ const Analytics: React.FC = () => {
                     <CurrencyDollarIcon className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">CLP Earned</p>
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">GCH Earned</p>
                     <p className="text-2xl font-bold text-gray-900 dark:text-white">
                       {analyticsData.overview.clpEarned.toLocaleString()}
                     </p>

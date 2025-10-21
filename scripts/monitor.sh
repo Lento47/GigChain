@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# ChainLinkPro Monitoring Script
+# GigChain Monitoring Script
 # This script monitors the health of all services
 
 set -e
@@ -14,7 +14,7 @@ NC='\033[0m'
 
 # Configuration
 LOG_FILE="./logs/monitor.log"
-ALERT_EMAIL="admin@chainlinkpro.io"
+ALERT_EMAIL="admin@gigchain.io"
 THRESHOLD_CPU=80
 THRESHOLD_MEMORY=85
 THRESHOLD_DISK=90
@@ -105,7 +105,7 @@ check_application_health() {
     fi
     
     # Check database connection
-    if docker-compose exec -T postgres pg_isready -U chainlinkpro > /dev/null 2>&1; then
+    if docker-compose exec -T postgres pg_isready -U gigchain > /dev/null 2>&1; then
         success "Database is healthy"
     else
         error "Database health check failed"
@@ -166,7 +166,7 @@ cleanup_logs() {
 # Send alert
 send_alert() {
     local message="$1"
-    local subject="ChainLinkPro Alert - $(date)"
+    local subject="GigChain Alert - $(date)"
     
     # Send email alert (requires mailutils)
     if command -v mail &> /dev/null; then
@@ -184,7 +184,7 @@ generate_health_report() {
     local report_file="./logs/health_report_$(date +%Y%m%d_%H%M%S).txt"
     
     {
-        echo "ChainLinkPro Health Report - $(date)"
+        echo "GigChain Health Report - $(date)"
         echo "======================================"
         echo ""
         echo "Docker Services:"
@@ -204,7 +204,7 @@ generate_health_report() {
 
 # Main monitoring function
 main() {
-    log "Starting ChainLinkPro monitoring..."
+    log "Starting GigChain monitoring..."
     
     # Create logs directory if it doesn't exist
     mkdir -p ./logs

@@ -34,7 +34,7 @@ const { chains, publicClient, webSocketPublicClient } = configureChains(
 
 // Configure wallets
 const { connectors } = getDefaultWallets({
-  appName: 'ChainLinkPro',
+  appName: 'GigChain',
   projectId: process.env.REACT_APP_WALLET_CONNECT_PROJECT_ID || '',
   chains,
 });

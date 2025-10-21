@@ -1,7 +1,7 @@
 {
-  "name": "chainlinkpro-frontend",
+  "name": "gigchain-frontend",
   "version": "1.0.0",
-  "description": "ChainLinkPro - Decentralized Social Network for Professionals",
+  "description": "GigChain - Decentralized Social Network for Professionals",
   "private": true,
   "dependencies": {
     "@testing-library/jest-dom": "^5.16.4",

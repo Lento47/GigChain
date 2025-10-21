@@ -593,7 +593,7 @@ const Feed: React.FC = () => {
 
                       <div className="flex items-center space-x-1 text-sm font-medium text-green-600 dark:text-green-400">
                         <CurrencyDollarIcon className="h-4 w-4" />
-                        <span>{post.clpEarned} CLP</span>
+                        <span>{post.clpEarned} GCH</span>
                       </div>
                     </div>
                   </div>

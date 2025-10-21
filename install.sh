@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# ChainLinkPro Complete Installation Script
-# This script installs and configures the entire ChainLinkPro platform
+# GigChain Complete Installation Script
+# This script installs and configures the entire GigChain platform
 
 set -e
 
@@ -14,16 +14,16 @@ PURPLE='\033[0;35m'
 NC='\033[0m'
 
 # Configuration
-PROJECT_NAME="chainlinkpro"
-DOMAIN="chainlinkpro.io"
-EMAIL="admin@chainlinkpro.io"
-INSTALL_DIR="/opt/chainlinkpro"
+PROJECT_NAME="gigchain"
+DOMAIN="gigchain.io"
+EMAIL="admin@gigchain.io"
+INSTALL_DIR="/opt/gigchain"
 
 # Functions
 print_banner() {
     echo -e "${PURPLE}"
     echo "╔══════════════════════════════════════════════════════════════╗"
-    echo "║                    ChainLinkPro Platform                     ║"
+    echo "║                    GigChain Platform                     ║"
     echo "║              Decentralized Professional Network              ║"
     echo "║                                                              ║"
     echo "║  🌐 Social Network    🛒 Marketplace    💰 DeFi            ║"
@@ -136,7 +136,7 @@ create_project_directory() {
     
     # Clone repository (if not already present)
     if [ ! -d ".git" ]; then
-        git clone https://github.com/chainlinkpro/chainlinkpro.git .
+        git clone https://github.com/gigchain/gigchain.git .
     fi
     
     success "Project directory created"
@@ -171,9 +171,9 @@ configure_firewall() {
 create_systemd_service() {
     log "Creating systemd service..."
     
-    cat > /etc/systemd/system/chainlinkpro.service << EOF
+    cat > /etc/systemd/system/gigchain.service << EOF
 [Unit]
-Description=ChainLinkPro Platform
+Description=GigChain Platform
 Requires=docker.service
 After=docker.service
 
@@ -191,7 +191,7 @@ EOF
 
     # Reload systemd and enable service
     systemctl daemon-reload
-    systemctl enable chainlinkpro.service
+    systemctl enable gigchain.service
     
     success "Systemd service created"
 }
@@ -201,16 +201,16 @@ create_monitoring_cron() {
     log "Creating monitoring cron job..."
     
     # Create monitoring script
-    cat > /usr/local/bin/chainlinkpro-monitor << 'EOF'
+    cat > /usr/local/bin/gigchain-monitor << 'EOF'
 #!/bin/bash
-cd /opt/chainlinkpro
+cd /opt/gigchain
 ./scripts/monitor.sh
 EOF
 
-    chmod +x /usr/local/bin/chainlinkpro-monitor
+    chmod +x /usr/local/bin/gigchain-monitor
     
     # Add to crontab
-    (crontab -l 2>/dev/null; echo "*/5 * * * * /usr/local/bin/chainlinkpro-monitor") | crontab -
+    (crontab -l 2>/dev/null; echo "*/5 * * * * /usr/local/bin/gigchain-monitor") | crontab -
     
     success "Monitoring cron job created"
 }
@@ -220,23 +220,23 @@ create_backup_cron() {
     log "Creating backup cron job..."
     
     # Create backup script
-    cat > /usr/local/bin/chainlinkpro-backup << 'EOF'
+    cat > /usr/local/bin/gigchain-backup << 'EOF'
 #!/bin/bash
-cd /opt/chainlinkpro
+cd /opt/gigchain
 ./scripts/backup.sh
 EOF
 
-    chmod +x /usr/local/bin/chainlinkpro-backup
+    chmod +x /usr/local/bin/gigchain-backup
     
     # Add to crontab (daily at 2 AM)
-    (crontab -l 2>/dev/null; echo "0 2 * * * /usr/local/bin/chainlinkpro-backup") | crontab -
+    (crontab -l 2>/dev/null; echo "0 2 * * * /usr/local/bin/gigchain-backup") | crontab -
     
     success "Backup cron job created"
 }
 
 # Deploy the application
 deploy_application() {
-    log "Deploying ChainLinkPro application..."
+    log "Deploying GigChain application..."
     
     cd $INSTALL_DIR
     
@@ -253,40 +253,40 @@ deploy_application() {
 create_management_script() {
     log "Creating management script..."
     
-    cat > /usr/local/bin/chainlinkpro << 'EOF'
+    cat > /usr/local/bin/gigchain << 'EOF'
 #!/bin/bash
 
-# ChainLinkPro Management Script
-PROJECT_DIR="/opt/chainlinkpro"
+# GigChain Management Script
+PROJECT_DIR="/opt/gigchain"
 
 case "$1" in
     start)
-        echo "Starting ChainLinkPro..."
+        echo "Starting GigChain..."
         cd $PROJECT_DIR
         docker-compose up -d
         ;;
     stop)
-        echo "Stopping ChainLinkPro..."
+        echo "Stopping GigChain..."
         cd $PROJECT_DIR
         docker-compose down
         ;;
     restart)
-        echo "Restarting ChainLinkPro..."
+        echo "Restarting GigChain..."
         cd $PROJECT_DIR
         docker-compose restart
         ;;
     status)
-        echo "ChainLinkPro Status:"
+        echo "GigChain Status:"
         cd $PROJECT_DIR
         docker-compose ps
         ;;
     logs)
-        echo "ChainLinkPro Logs:"
+        echo "GigChain Logs:"
         cd $PROJECT_DIR
         docker-compose logs -f
         ;;
     update)
-        echo "Updating ChainLinkPro..."
+        echo "Updating GigChain..."
         cd $PROJECT_DIR
         ./scripts/update.sh
         ;;
@@ -301,13 +301,13 @@ case "$1" in
         ./scripts/monitor.sh
         ;;
     *)
-        echo "Usage: chainlinkpro {start|stop|restart|status|logs|update|backup|monitor}"
+        echo "Usage: gigchain {start|stop|restart|status|logs|update|backup|monitor}"
         exit 1
         ;;
 esac
 EOF
 
-    chmod +x /usr/local/bin/chainlinkpro
+    chmod +x /usr/local/bin/gigchain
     
     success "Management script created"
 }
@@ -316,7 +316,7 @@ EOF
 main() {
     print_banner
     
-    log "Starting ChainLinkPro installation..."
+    log "Starting GigChain installation..."
     
     check_root
     update_system
@@ -331,13 +331,13 @@ main() {
     create_management_script
     deploy_application
     
-    success "ChainLinkPro installation completed successfully!"
+    success "GigChain installation completed successfully!"
     
     echo ""
     echo "🎉 Installation Complete!"
     echo ""
     echo "📋 Summary:"
-    echo "  - Platform: ChainLinkPro"
+    echo "  - Platform: GigChain"
     echo "  - Installation: $INSTALL_DIR"
     echo "  - Domain: $DOMAIN"
     echo "  - Services: All running"
@@ -349,13 +349,13 @@ main() {
     echo "  - Logs: https://$DOMAIN:5601"
     echo ""
     echo "🔧 Management Commands:"
-    echo "  - Start: chainlinkpro start"
-    echo "  - Stop: chainlinkpro stop"
-    echo "  - Status: chainlinkpro status"
-    echo "  - Logs: chainlinkpro logs"
-    echo "  - Update: chainlinkpro update"
-    echo "  - Backup: chainlinkpro backup"
-    echo "  - Monitor: chainlinkpro monitor"
+    echo "  - Start: gigchain start"
+    echo "  - Stop: gigchain stop"
+    echo "  - Status: gigchain status"
+    echo "  - Logs: gigchain logs"
+    echo "  - Update: gigchain update"
+    echo "  - Backup: gigchain backup"
+    echo "  - Monitor: gigchain monitor"
     echo ""
     echo "📝 Next Steps:"
     echo "  1. Configure your domain DNS"
@@ -364,7 +364,7 @@ main() {
     echo "  4. Configure monitoring alerts"
     echo "  5. Launch marketing campaign"
     echo ""
-    echo "🚀 ChainLinkPro is ready to revolutionize professional networking!"
+    echo "🚀 GigChain is ready to revolutionize professional networking!"
 }
 
 # Run main function

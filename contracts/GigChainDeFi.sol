@@ -5,22 +5,22 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./ChainLinkProToken.sol";
+import "./GigChainToken.sol";
 
 /**
- * @title ChainLinkProDeFi
- * @notice DeFi integration for ChainLinkPro including staking, yield farming, and liquidity mining
+ * @title GigChainDeFi
+ * @notice DeFi integration for GigChain including staking, yield farming, and liquidity mining
  * @dev Handles various DeFi strategies and reward mechanisms
  * 
  * Features:
- * - CLP token staking with flexible lock periods
+ * - GCH token staking with flexible lock periods
  * - Yield farming with multiple reward tokens
  * - Liquidity mining for LP token holders
  * - Governance staking for voting power
  * - Social staking for reputation rewards
  * - Automated compound rewards
  */
-contract ChainLinkProDeFi is Ownable, ReentrancyGuard {
+contract GigChainDeFi is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
     
     // Staking pool types
@@ -79,7 +79,7 @@ contract ChainLinkProDeFi is Ownable, ReentrancyGuard {
     uint256 private _poolCounter;
     
     // State variables
-    ChainLinkProToken public clpToken;
+    GigChainToken public clpToken;
     IERC20 public usdcToken;
     IERC20 public wethToken;
     
@@ -125,7 +125,7 @@ contract ChainLinkProDeFi is Ownable, ReentrancyGuard {
         address _usdcToken,
         address _wethToken
     ) Ownable(msg.sender) {
-        clpToken = ChainLinkProToken(_clpToken);
+        clpToken = GigChainToken(_clpToken);
         usdcToken = IERC20(_usdcToken);
         wethToken = IERC20(_wethToken);
     }

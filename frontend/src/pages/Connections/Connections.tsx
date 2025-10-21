@@ -541,7 +541,7 @@ const Connections: React.FC = () => {
                       <div className="text-sm font-semibold text-gray-900 dark:text-white">
                         {connection.stats.clpEarned.toLocaleString()}
                       </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">CLP</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">GCH</div>
                     </div>
                   </div>
 

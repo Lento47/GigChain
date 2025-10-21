@@ -3,14 +3,14 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "./ChainLinkProProfile.sol";
+import "./GigChainProfile.sol";
 
 /**
- * @title ChainLinkProConnections
- * @notice Manages professional connections and networking on ChainLinkPro
+ * @title GigChainConnections
+ * @notice Manages professional connections and networking on GigChain
  * @dev Handles connection requests, approvals, and networking features
  */
-contract ChainLinkProConnections is Ownable, ReentrancyGuard {
+contract GigChainConnections is Ownable, ReentrancyGuard {
     
     // Connection request status
     enum ConnectionStatus {
@@ -75,7 +75,7 @@ contract ChainLinkProConnections is Ownable, ReentrancyGuard {
     
     // Modifiers
     modifier onlyProfileOwner() {
-        require(profileContract.hasProfile(msg.sender), "Must have ChainLinkPro profile");
+        require(profileContract.hasProfile(msg.sender), "Must have GigChain profile");
         _;
     }
     
@@ -86,10 +86,10 @@ contract ChainLinkProConnections is Ownable, ReentrancyGuard {
     }
     
     // State variables
-    ChainLinkProProfile public profileContract;
+    GigChainProfile public profileContract;
     
     constructor(address _profileContract) Ownable(msg.sender) {
-        profileContract = ChainLinkProProfile(_profileContract);
+        profileContract = GigChainProfile(_profileContract);
     }
     
     /**
@@ -372,6 +372,6 @@ contract ChainLinkProConnections is Ownable, ReentrancyGuard {
      */
     function updateProfileContract(address _profileContract) external onlyOwner {
         require(_profileContract != address(0), "Invalid address");
-        profileContract = ChainLinkProProfile(_profileContract);
+        profileContract = GigChainProfile(_profileContract);
     }
 }

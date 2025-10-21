@@ -8,23 +8,21 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/Base64.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
- * @title ChainLinkProSocial
- * @notice Decentralized social network for professionals on blockchain
- * @dev Main contract for ChainLinkPro social network with profiles, connections, and content
+ * @title GigChainProfile
+ * @notice NFT representing professional profiles on GigChain
+ * @dev Each professional gets a unique NFT with their skills, experience, and social data
  * 
  * Features:
- * - Professional profiles as NFTs (soulbound)
- * - On-chain connections and networking
- * - Decentralized content feed
- * - Skill verification and endorsement
- * - Token rewards for engagement
- * - DAO governance participation
- * - Cross-platform interoperability
+ * - Professional profile as NFT
+ * - Skills verification and tokenization
+ * - Social connections on-chain
+ * - Reputation and experience tracking
+ * - Bounty and referral system integration
+ * - Soulbound (non-transferable) profiles
  */
-contract ChainLinkProSocial is ERC721URIStorage, Ownable, ReentrancyGuard {
+contract GigChainProfile is ERC721URIStorage, Ownable, ReentrancyGuard {
     using Counters for Counters.Counter;
     using Strings for uint256;
     
@@ -40,20 +38,7 @@ contract ChainLinkProSocial is ERC721URIStorage, Ownable, ReentrancyGuard {
         Expert        // Industry recognized expert
     }
     
-    // Content types
-    enum ContentType {
-        Post,           // 0
-        Article,        // 1
-        Video,          // 2
-        Image,          // 3
-        Poll,           // 4
-        Event,          // 5
-        Job,            // 6
-        Achievement,    // 7
-        SkillShowcase   // 8
-    }
-    
-    // Professional profile
+    // Professional profile data
     struct Profile {
         string name;
         string title;
@@ -66,68 +51,39 @@ contract ChainLinkProSocial is ERC721URIStorage, Ownable, ReentrancyGuard {
         uint256 experienceYears;
         uint256 hourlyRate; // in wei
         uint256 totalEarned; // in wei
-        uint256 postsCount;
+        uint256 projectsCompleted;
         uint256 connectionsCount;
-        uint256 followersCount;
-        uint256 followingCount;
+        uint256 referralsGiven;
+        uint256 referralsReceived;
         uint256 reputationScore;
-        uint256 engagementScore;
         ProfessionalLevel level;
         bool isVerified;
         bool isActive;
         uint256 createdAt;
-        uint256 lastActiveAt;
+        uint256 lastUpdated;
     }
     
-    // Social connection
+    // Connection system
     struct Connection {
         address user;
         address connectedTo;
         uint256 connectedAt;
         bool isActive;
         string message;
-        bool isMutual;
     }
     
-    // Content post
-    struct Content {
-        uint256 contentId;
-        address author;
-        string content;
-        string mediaUrl;
-        ContentType contentType;
-        string[] tags;
-        uint256 likes;
-        uint256 comments;
-        uint256 shares;
-        uint256 views;
-        uint256 timestamp;
+    // Bounty system
+    struct Bounty {
+        uint256 bountyId;
+        address creator;
+        string title;
+        string description;
+        uint256 reward; // in wei
+        string[] requiredSkills;
+        uint256 deadline;
         bool isActive;
-        uint256 tipAmount; // in wei
-        mapping(address => bool) hasLiked;
-        mapping(address => bool) hasShared;
-    }
-    
-    // Comment
-    struct Comment {
-        uint256 commentId;
-        uint256 contentId;
-        address author;
-        string content;
-        uint256 likes;
-        uint256 timestamp;
-        bool isActive;
-        mapping(address => bool) hasLiked;
-    }
-    
-    // Skill endorsement
-    struct SkillEndorsement {
-        address endorser;
-        address endorsed;
-        string skill;
-        string message;
-        uint256 timestamp;
-        bool isVerified;
+        address winner;
+        uint256 createdAt;
     }
     
     // Mappings
@@ -136,48 +92,25 @@ contract ChainLinkProSocial is ERC721URIStorage, Ownable, ReentrancyGuard {
     mapping(address => bool) public hasProfile;
     mapping(uint256 => Connection[]) public userConnections;
     mapping(address => mapping(address => bool)) public isConnected;
-    mapping(address => mapping(address => bool)) public isFollowing;
-    mapping(address => uint256) public connectionCount;
-    mapping(address => uint256) public followersCount;
-    mapping(address => uint256) public followingCount;
-    
-    // Content mappings
-    mapping(uint256 => Content) public contents;
-    mapping(uint256 => Comment[]) public contentComments;
-    mapping(address => uint256[]) public userContents;
-    mapping(string => uint256[]) public tagContents;
-    
-    // Skill mappings
-    mapping(address => SkillEndorsement[]) public userEndorsements;
-    mapping(address => mapping(string => uint256)) public skillEndorsementCount;
-    mapping(address => mapping(string => bool)) public verifiedSkills;
+    mapping(uint256 => Bounty) public bounties;
+    mapping(address => uint256[]) public userBounties;
     
     // Counters
-    Counters.Counter private _contentCounter;
-    Counters.Counter private _commentCounter;
-    
-    // State variables
-    IERC20 public socialToken;
-    uint256 public engagementRewardRate = 1; // 1 token per engagement
-    uint256 public contentCreationReward = 10; // 10 tokens per content
-    uint256 public connectionReward = 5; // 5 tokens per connection
+    Counters.Counter private _bountyCounter;
     
     // Events
     event ProfileCreated(address indexed user, uint256 indexed tokenId, string name);
     event ProfileUpdated(uint256 indexed tokenId, string field, string value);
     event ConnectionMade(address indexed from, address indexed to, uint256 timestamp);
     event ConnectionRemoved(address indexed from, address indexed to);
-    event ContentCreated(uint256 indexed contentId, address indexed author, ContentType contentType);
-    event ContentLiked(uint256 indexed contentId, address indexed user, uint256 totalLikes);
-    event ContentShared(uint256 indexed contentId, address indexed user, uint256 totalShares);
-    event CommentAdded(uint256 indexed contentId, uint256 indexed commentId, address indexed author);
-    event SkillEndorsed(address indexed endorser, address indexed endorsed, string skill);
-    event EngagementRewarded(address indexed user, uint256 amount, string reason);
-    event ContentTipped(uint256 indexed contentId, address indexed tipper, uint256 amount);
+    event BountyCreated(uint256 indexed bountyId, address indexed creator, uint256 reward);
+    event BountyCompleted(uint256 indexed bountyId, address indexed winner, uint256 reward);
+    event ReferralMade(address indexed referrer, address indexed referred, uint256 reward);
+    event SkillVerified(uint256 indexed tokenId, string skill, bool verified);
     
     // Modifiers
-    modifier onlyProfileOwner() {
-        require(hasProfile[msg.sender], "Must have ChainLinkPro profile");
+    modifier onlyProfileOwner(uint256 tokenId) {
+        require(ownerOf(tokenId) == msg.sender, "Not profile owner");
         _;
     }
     
@@ -186,14 +119,7 @@ contract ChainLinkProSocial is ERC721URIStorage, Ownable, ReentrancyGuard {
         _;
     }
     
-    modifier contentExists(uint256 contentId) {
-        require(contents[contentId].isActive, "Content does not exist");
-        _;
-    }
-    
-    constructor(address _socialToken) ERC721("ChainLinkPro Profile", "CLPP") Ownable(msg.sender) {
-        socialToken = IERC20(_socialToken);
-    }
+    constructor() ERC721("GigChain Profile", "GCHP") Ownable(msg.sender) {}
     
     /**
      * @notice Create a new professional profile
@@ -236,26 +162,22 @@ contract ChainLinkProSocial is ERC721URIStorage, Ownable, ReentrancyGuard {
         profile.experienceYears = experienceYears;
         profile.hourlyRate = hourlyRate;
         profile.totalEarned = 0;
-        profile.postsCount = 0;
+        profile.projectsCompleted = 0;
         profile.connectionsCount = 0;
-        profile.followersCount = 0;
-        profile.followingCount = 0;
+        profile.referralsGiven = 0;
+        profile.referralsReceived = 0;
         profile.reputationScore = 50; // Start at neutral
-        profile.engagementScore = 0;
         profile.level = _calculateLevel(experienceYears);
         profile.isVerified = false;
         profile.isActive = true;
         profile.createdAt = block.timestamp;
-        profile.lastActiveAt = block.timestamp;
+        profile.lastUpdated = block.timestamp;
         
         userToTokenId[msg.sender] = tokenId;
         hasProfile[msg.sender] = true;
         
         // Set initial metadata
         _setTokenURI(tokenId, _generateTokenURI(tokenId));
-        
-        // Reward for profile creation
-        _rewardUser(msg.sender, contentCreationReward, "Profile creation");
         
         emit ProfileCreated(msg.sender, tokenId, name);
         
@@ -272,9 +194,7 @@ contract ChainLinkProSocial is ERC721URIStorage, Ownable, ReentrancyGuard {
         uint256 tokenId,
         string memory field,
         string memory value
-    ) external onlyProfileOwner {
-        require(ownerOf(tokenId) == msg.sender, "Not profile owner");
-        
+    ) external onlyProfileOwner(tokenId) {
         Profile storage profile = tokenIdToProfile[tokenId];
         
         if (keccak256(bytes(field)) == keccak256("name")) {
@@ -293,7 +213,7 @@ contract ChainLinkProSocial is ERC721URIStorage, Ownable, ReentrancyGuard {
             revert("Invalid field");
         }
         
-        profile.lastActiveAt = block.timestamp;
+        profile.lastUpdated = block.timestamp;
         
         // Update metadata
         _setTokenURI(tokenId, _generateTokenURI(tokenId));
@@ -306,17 +226,31 @@ contract ChainLinkProSocial is ERC721URIStorage, Ownable, ReentrancyGuard {
      * @param tokenId Profile token ID
      * @param skill Skill to add
      */
-    function addSkill(uint256 tokenId, string memory skill) external onlyProfileOwner {
-        require(ownerOf(tokenId) == msg.sender, "Not profile owner");
-        
+    function addSkill(uint256 tokenId, string memory skill) external onlyProfileOwner(tokenId) {
         Profile storage profile = tokenIdToProfile[tokenId];
         profile.skills.push(skill);
-        profile.lastActiveAt = block.timestamp;
+        profile.lastUpdated = block.timestamp;
         
         // Update metadata
         _setTokenURI(tokenId, _generateTokenURI(tokenId));
         
         emit ProfileUpdated(tokenId, "skills", skill);
+    }
+    
+    /**
+     * @notice Add social link to profile
+     * @param tokenId Profile token ID
+     * @param socialLink Social media link
+     */
+    function addSocialLink(uint256 tokenId, string memory socialLink) external onlyProfileOwner(tokenId) {
+        Profile storage profile = tokenIdToProfile[tokenId];
+        profile.socialLinks.push(socialLink);
+        profile.lastUpdated = block.timestamp;
+        
+        // Update metadata
+        _setTokenURI(tokenId, _generateTokenURI(tokenId));
+        
+        emit ProfileUpdated(tokenId, "socialLinks", socialLink);
     }
     
     /**
@@ -337,8 +271,7 @@ contract ChainLinkProSocial is ERC721URIStorage, Ownable, ReentrancyGuard {
             connectedTo: to,
             connectedAt: block.timestamp,
             isActive: true,
-            message: message,
-            isMutual: false
+            message: message
         });
         
         userConnections[fromTokenId].push(newConnection);
@@ -346,10 +279,7 @@ contract ChainLinkProSocial is ERC721URIStorage, Ownable, ReentrancyGuard {
         
         // Update connection counts
         tokenIdToProfile[fromTokenId].connectionsCount++;
-        tokenIdToProfile[fromTokenId].lastActiveAt = block.timestamp;
-        
-        // Reward for connection
-        _rewardUser(msg.sender, connectionReward, "New connection");
+        tokenIdToProfile[fromTokenId].lastUpdated = block.timestamp;
         
         // Update metadata
         _setTokenURI(fromTokenId, _generateTokenURI(fromTokenId));
@@ -358,194 +288,132 @@ contract ChainLinkProSocial is ERC721URIStorage, Ownable, ReentrancyGuard {
     }
     
     /**
-     * @notice Follow another user
-     * @param to Address to follow
+     * @notice Remove connection
+     * @param to Address to disconnect from
      */
-    function followUser(address to) external profileExists(msg.sender) profileExists(to) {
-        require(to != msg.sender, "Cannot follow self");
-        require(!isFollowing[msg.sender][to], "Already following");
+    function disconnectFrom(address to) external profileExists(msg.sender) {
+        require(isConnected[msg.sender][to], "Not connected");
         
-        isFollowing[msg.sender][to] = true;
-        followingCount[msg.sender]++;
-        followersCount[to]++;
-        
-        // Update profile counts
         uint256 fromTokenId = userToTokenId[msg.sender];
-        uint256 toTokenId = userToTokenId[to];
         
-        tokenIdToProfile[fromTokenId].followingCount++;
-        tokenIdToProfile[toTokenId].followersCount++;
+        // Find and deactivate connection
+        for (uint256 i = 0; i < userConnections[fromTokenId].length; i++) {
+            if (userConnections[fromTokenId][i].connectedTo == to) {
+                userConnections[fromTokenId][i].isActive = false;
+                break;
+            }
+        }
         
-        // Reward for following
-        _rewardUser(msg.sender, connectionReward, "Following user");
+        isConnected[msg.sender][to] = false;
+        
+        // Update connection count
+        if (tokenIdToProfile[fromTokenId].connectionsCount > 0) {
+            tokenIdToProfile[fromTokenId].connectionsCount--;
+        }
+        tokenIdToProfile[fromTokenId].lastUpdated = block.timestamp;
         
         // Update metadata
         _setTokenURI(fromTokenId, _generateTokenURI(fromTokenId));
-        _setTokenURI(toTokenId, _generateTokenURI(toTokenId));
+        
+        emit ConnectionRemoved(msg.sender, to);
     }
     
     /**
-     * @notice Create content (post, article, etc.)
-     * @param content Content text
-     * @param mediaUrl Media URL (optional)
-     * @param contentType Type of content
-     * @param tags Array of tags
+     * @notice Create a bounty for referrals
+     * @param title Bounty title
+     * @param description Bounty description
+     * @param requiredSkills Required skills
+     * @param reward Reward amount in wei
+     * @param deadline Deadline timestamp
      */
-    function createContent(
-        string memory content,
-        string memory mediaUrl,
-        ContentType contentType,
-        string[] memory tags
-    ) external onlyProfileOwner nonReentrant {
-        require(bytes(content).length > 0, "Content cannot be empty");
-        require(bytes(content).length <= 2000, "Content too long");
+    function createBounty(
+        string memory title,
+        string memory description,
+        string[] memory requiredSkills,
+        uint256 reward,
+        uint256 deadline
+    ) external payable profileExists(msg.sender) nonReentrant {
+        require(msg.value >= reward, "Insufficient payment");
+        require(deadline > block.timestamp, "Invalid deadline");
+        require(bytes(title).length > 0, "Title cannot be empty");
         
-        uint256 contentId = _contentCounter.current();
-        _contentCounter.increment();
+        uint256 bountyId = _bountyCounter.current();
+        _bountyCounter.increment();
         
-        Content storage newContent = contents[contentId];
-        newContent.contentId = contentId;
-        newContent.author = msg.sender;
-        newContent.content = content;
-        newContent.mediaUrl = mediaUrl;
-        newContent.contentType = contentType;
-        newContent.tags = tags;
-        newContent.likes = 0;
-        newContent.comments = 0;
-        newContent.shares = 0;
-        newContent.views = 0;
-        newContent.timestamp = block.timestamp;
-        newContent.isActive = true;
-        newContent.tipAmount = 0;
-        
-        userContents[msg.sender].push(contentId);
-        
-        // Add to tag mappings
-        for (uint256 i = 0; i < tags.length; i++) {
-            tagContents[tags[i]].push(contentId);
-        }
-        
-        // Update profile
-        uint256 tokenId = userToTokenId[msg.sender];
-        tokenIdToProfile[tokenId].postsCount++;
-        tokenIdToProfile[tokenId].lastActiveAt = block.timestamp;
-        
-        // Reward for content creation
-        _rewardUser(msg.sender, contentCreationReward, "Content creation");
-        
-        // Update metadata
-        _setTokenURI(tokenId, _generateTokenURI(tokenId));
-        
-        emit ContentCreated(contentId, msg.sender, contentType);
-    }
-    
-    /**
-     * @notice Like content
-     * @param contentId Content ID
-     */
-    function likeContent(uint256 contentId) external onlyProfileOwner contentExists(contentId) {
-        require(!contents[contentId].hasLiked[msg.sender], "Already liked");
-        
-        contents[contentId].hasLiked[msg.sender] = true;
-        contents[contentId].likes++;
-        
-        // Reward for engagement
-        _rewardUser(msg.sender, engagementRewardRate, "Content like");
-        
-        emit ContentLiked(contentId, msg.sender, contents[contentId].likes);
-    }
-    
-    /**
-     * @notice Share content
-     * @param contentId Content ID
-     */
-    function shareContent(uint256 contentId) external onlyProfileOwner contentExists(contentId) {
-        require(!contents[contentId].hasShared[msg.sender], "Already shared");
-        
-        contents[contentId].hasShared[msg.sender] = true;
-        contents[contentId].shares++;
-        
-        // Reward for engagement
-        _rewardUser(msg.sender, engagementRewardRate, "Content share");
-        
-        emit ContentShared(contentId, msg.sender, contents[contentId].shares);
-    }
-    
-    /**
-     * @notice Add comment to content
-     * @param contentId Content ID
-     * @param commentContent Comment content
-     */
-    function addComment(uint256 contentId, string memory commentContent) external onlyProfileOwner contentExists(contentId) {
-        require(bytes(commentContent).length > 0, "Comment cannot be empty");
-        require(bytes(commentContent).length <= 500, "Comment too long");
-        
-        uint256 commentId = _commentCounter.current();
-        _commentCounter.increment();
-        
-        Comment storage newComment = contentComments[contentId].push();
-        newComment.commentId = commentId;
-        newComment.contentId = contentId;
-        newComment.author = msg.sender;
-        newComment.content = commentContent;
-        newComment.likes = 0;
-        newComment.timestamp = block.timestamp;
-        newComment.isActive = true;
-        
-        contents[contentId].comments++;
-        
-        // Reward for engagement
-        _rewardUser(msg.sender, engagementRewardRate, "Comment");
-        
-        emit CommentAdded(contentId, commentId, msg.sender);
-    }
-    
-    /**
-     * @notice Endorse a skill
-     * @param endorsed Address being endorsed
-     * @param skill Skill being endorsed
-     * @param message Endorsement message
-     */
-    function endorseSkill(
-        address endorsed,
-        string memory skill,
-        string memory message
-    ) external onlyProfileOwner {
-        require(isConnected[msg.sender][endorsed], "Must be connected to endorse");
-        require(bytes(skill).length > 0, "Skill cannot be empty");
-        
-        SkillEndorsement memory endorsement = SkillEndorsement({
-            endorser: msg.sender,
-            endorsed: endorsed,
-            skill: skill,
-            message: message,
-            timestamp: block.timestamp,
-            isVerified: false
+        bounties[bountyId] = Bounty({
+            bountyId: bountyId,
+            creator: msg.sender,
+            title: title,
+            description: description,
+            reward: reward,
+            requiredSkills: requiredSkills,
+            deadline: deadline,
+            isActive: true,
+            winner: address(0),
+            createdAt: block.timestamp
         });
         
-        userEndorsements[endorsed].push(endorsement);
-        skillEndorsementCount[endorsed][skill]++;
+        userBounties[msg.sender].push(bountyId);
         
-        // Reward for endorsement
-        _rewardUser(msg.sender, engagementRewardRate, "Skill endorsement");
-        
-        emit SkillEndorsed(msg.sender, endorsed, skill);
+        emit BountyCreated(bountyId, msg.sender, reward);
     }
     
     /**
-     * @notice Tip content creator
-     * @param contentId Content ID
+     * @notice Complete a bounty
+     * @param bountyId Bounty ID
+     * @param winner Address of the winner
      */
-    function tipContent(uint256 contentId) external payable onlyProfileOwner contentExists(contentId) {
-        require(msg.value > 0, "Tip amount must be greater than 0");
+    function completeBounty(uint256 bountyId, address winner) external onlyOwner {
+        Bounty storage bounty = bounties[bountyId];
+        require(bounty.isActive, "Bounty not active");
+        require(block.timestamp <= bounty.deadline, "Bounty expired");
+        require(hasProfile[winner], "Winner must have profile");
         
-        Content storage content = contents[contentId];
-        content.tipAmount += msg.value;
+        bounty.isActive = false;
+        bounty.winner = winner;
         
-        // Transfer tip to content author
-        payable(content.author).transfer(msg.value);
+        // Transfer reward
+        payable(winner).transfer(bounty.reward);
         
-        emit ContentTipped(contentId, msg.sender, msg.value);
+        // Update winner's profile
+        uint256 winnerTokenId = userToTokenId[winner];
+        tokenIdToProfile[winnerTokenId].totalEarned += bounty.reward;
+        tokenIdToProfile[winnerTokenId].reputationScore += 10; // Bonus for completing bounty
+        tokenIdToProfile[winnerTokenId].lastUpdated = block.timestamp;
+        
+        // Update metadata
+        _setTokenURI(winnerTokenId, _generateTokenURI(winnerTokenId));
+        
+        emit BountyCompleted(bountyId, winner, bounty.reward);
+    }
+    
+    /**
+     * @notice Make a referral
+     * @param referred Address being referred
+     * @param reward Referral reward in wei
+     */
+    function makeReferral(address referred, uint256 reward) external payable profileExists(msg.sender) nonReentrant {
+        require(msg.value >= reward, "Insufficient payment");
+        require(hasProfile[referred], "Referred must have profile");
+        require(referred != msg.sender, "Cannot refer self");
+        
+        // Transfer reward
+        payable(referred).transfer(reward);
+        
+        // Update profiles
+        uint256 referrerTokenId = userToTokenId[msg.sender];
+        uint256 referredTokenId = userToTokenId[referred];
+        
+        tokenIdToProfile[referrerTokenId].referralsGiven++;
+        tokenIdToProfile[referredTokenId].referralsReceived++;
+        tokenIdToProfile[referredTokenId].totalEarned += reward;
+        tokenIdToProfile[referredTokenId].reputationScore += 5; // Bonus for being referred
+        
+        // Update metadata
+        _setTokenURI(referrerTokenId, _generateTokenURI(referrerTokenId));
+        _setTokenURI(referredTokenId, _generateTokenURI(referredTokenId));
+        
+        emit ReferralMade(msg.sender, referred, reward);
     }
     
     /**
@@ -557,19 +425,6 @@ contract ChainLinkProSocial is ERC721URIStorage, Ownable, ReentrancyGuard {
         if (experienceYears >= 5) return ProfessionalLevel.Senior;
         if (experienceYears >= 2) return ProfessionalLevel.Mid;
         return ProfessionalLevel.Junior;
-    }
-    
-    /**
-     * @notice Reward user with tokens
-     * @param user User address
-     * @param amount Reward amount
-     * @param reason Reward reason
-     */
-    function _rewardUser(address user, uint256 amount, string memory reason) internal {
-        if (address(socialToken) != address(0)) {
-            socialToken.transfer(user, amount);
-            emit EngagementRewarded(user, amount, reason);
-        }
     }
     
     /**
@@ -596,10 +451,10 @@ contract ChainLinkProSocial is ERC721URIStorage, Ownable, ReentrancyGuard {
             bytes(
                 string(
                     abi.encodePacked(
-                        '{"name": "ChainLinkPro Profile #',
+                        '{"name": "GigChain Profile #',
                         tokenId.toString(),
                         '",',
-                        '"description": "Professional profile NFT on ChainLinkPro - the decentralized social network for professionals",',
+                        '"description": "Professional profile NFT on GigChain - the decentralized social network for professionals",',
                         '"image": "data:image/svg+xml;base64,',
                         Base64.encode(bytes(svg)),
                         '",',
@@ -610,10 +465,8 @@ contract ChainLinkProSocial is ERC721URIStorage, Ownable, ReentrancyGuard {
                         '{"trait_type": "Experience", "value": ', profile.experienceYears.toString(), '},',
                         '{"trait_type": "Location", "value": "', profile.location, '"},',
                         '{"trait_type": "Connections", "value": ', profile.connectionsCount.toString(), '},',
-                        '{"trait_type": "Followers", "value": ', profile.followersCount.toString(), '},',
-                        '{"trait_type": "Posts", "value": ', profile.postsCount.toString(), '},',
+                        '{"trait_type": "Projects Completed", "value": ', profile.projectsCompleted.toString(), '},',
                         '{"trait_type": "Reputation Score", "value": ', profile.reputationScore.toString(), '},',
-                        '{"trait_type": "Engagement Score", "value": ', profile.engagementScore.toString(), '},',
                         '{"trait_type": "Skills", "value": ', skillsJson, '},',
                         '{"trait_type": "Verified", "value": ', profile.isVerified ? 'true' : 'false', '}',
                         ']}'
@@ -659,9 +512,6 @@ contract ChainLinkProSocial is ERC721URIStorage, Ownable, ReentrancyGuard {
                 profile.connectionsCount.toString(), ' connections',
                 '</text>',
                 '<text x="200" y="320" text-anchor="middle" font-size="14" fill="white">',
-                profile.followersCount.toString(), ' followers',
-                '</text>',
-                '<text x="200" y="350" text-anchor="middle" font-size="14" fill="white">',
                 'Score: ', profile.reputationScore.toString(),
                 '</text>',
                 '</svg>'
@@ -726,32 +576,31 @@ contract ChainLinkProSocial is ERC721URIStorage, Ownable, ReentrancyGuard {
     }
     
     /**
-     * @notice Get user contents
+     * @notice Get active bounties
      */
-    function getUserContents(address user) external view returns (uint256[] memory) {
-        return userContents[user];
-    }
-    
-    /**
-     * @notice Get content by ID
-     */
-    function getContent(uint256 contentId) external view returns (Content memory) {
-        require(contents[contentId].isActive, "Content does not exist");
-        return contents[contentId];
-    }
-    
-    /**
-     * @notice Get content comments
-     */
-    function getContentComments(uint256 contentId) external view returns (Comment[] memory) {
-        return contentComments[contentId];
-    }
-    
-    /**
-     * @notice Get skill endorsements
-     */
-    function getSkillEndorsements(address user) external view returns (SkillEndorsement[] memory) {
-        return userEndorsements[user];
+    function getActiveBounties() external view returns (Bounty[] memory) {
+        uint256 totalBounties = _bountyCounter.current();
+        uint256 activeCount = 0;
+        
+        // Count active bounties
+        for (uint256 i = 0; i < totalBounties; i++) {
+            if (bounties[i].isActive && block.timestamp <= bounties[i].deadline) {
+                activeCount++;
+            }
+        }
+        
+        // Create array with active bounties
+        Bounty[] memory activeBounties = new Bounty[](activeCount);
+        uint256 index = 0;
+        
+        for (uint256 i = 0; i < totalBounties; i++) {
+            if (bounties[i].isActive && block.timestamp <= bounties[i].deadline) {
+                activeBounties[index] = bounties[i];
+                index++;
+            }
+        }
+        
+        return activeBounties;
     }
     
     /**
@@ -762,7 +611,7 @@ contract ChainLinkProSocial is ERC721URIStorage, Ownable, ReentrancyGuard {
         
         // Allow minting and burning, but prevent transfers
         if (from != address(0) && to != address(0)) {
-            revert("ChainLinkPro profiles are soulbound and cannot be transferred");
+            revert("GigChain profiles are soulbound and cannot be transferred");
         }
         
         return super._update(to, tokenId, auth);
@@ -773,31 +622,6 @@ contract ChainLinkProSocial is ERC721URIStorage, Ownable, ReentrancyGuard {
      */
     function totalSupply() external view returns (uint256) {
         return _tokenIdCounter.current();
-    }
-    
-    /**
-     * @notice Update social token address
-     * @param _socialToken New token address
-     */
-    function updateSocialToken(address _socialToken) external onlyOwner {
-        require(_socialToken != address(0), "Invalid address");
-        socialToken = IERC20(_socialToken);
-    }
-    
-    /**
-     * @notice Update reward rates
-     * @param _engagementRewardRate New engagement reward rate
-     * @param _contentCreationReward New content creation reward
-     * @param _connectionReward New connection reward
-     */
-    function updateRewardRates(
-        uint256 _engagementRewardRate,
-        uint256 _contentCreationReward,
-        uint256 _connectionReward
-    ) external onlyOwner {
-        engagementRewardRate = _engagementRewardRate;
-        contentCreationReward = _contentCreationReward;
-        connectionReward = _connectionReward;
     }
     
     /**

@@ -28,7 +28,7 @@ const Home: React.FC = () => {
     },
     {
       name: 'Token Rewards',
-      description: 'Earn CLP tokens for engagement, content creation, and valuable contributions.',
+      description: 'Earn GCH tokens for engagement, content creation, and valuable contributions.',
       icon: CurrencyDollarIcon,
     },
     {
@@ -51,7 +51,7 @@ const Home: React.FC = () => {
   const stats = [
     { name: 'Active Professionals', value: '12,345', change: '+12%' },
     { name: 'Total Connections', value: '45,678', change: '+8%' },
-    { name: 'CLP Tokens Earned', value: '2.4M', change: '+15%' },
+    { name: 'GCH Tokens Earned', value: '2.4M', change: '+15%' },
     { name: 'DAO Proposals', value: '23', change: '+3' },
   ];
 
@@ -70,7 +70,7 @@ const Home: React.FC = () => {
                   </span>
                 </h1>
                 <p className="mt-3 text-base text-gray-500 dark:text-gray-400 sm:mt-5 sm:text-lg sm:max-w-xl sm:mx-auto md:mt-5 md:text-xl lg:mx-0">
-                  ChainLinkPro is a decentralized social network where professionals own their data, 
+                  GigChain is a decentralized social network where professionals own their data, 
                   earn tokens for engagement, and participate in community governance. 
                   Build your reputation, connect with peers, and shape the future of work.
                 </p>
@@ -138,7 +138,7 @@ const Home: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white sm:text-4xl">
-              Why ChainLinkPro?
+              Why GigChain?
             </h2>
             <p className="mt-4 text-lg text-gray-500 dark:text-gray-400">
               Experience the next generation of professional networking with blockchain technology.

@@ -2,7 +2,7 @@ import { ethers } from "hardhat";
 import { Contract } from "ethers";
 
 async function main() {
-  console.log("🚀 Deploying ChainLinkPro contracts to Polygon Mumbai testnet...");
+  console.log("🚀 Deploying GigChain contracts to Polygon Mumbai testnet...");
   
   const [deployer] = await ethers.getSigners();
   console.log("Deploying contracts with the account:", deployer.address);
@@ -16,37 +16,37 @@ async function main() {
   const gigsTokenAddress = await gigsToken.getAddress();
   console.log("✅ GIGS Token deployed to:", gigsTokenAddress);
 
-  // Deploy ChainLinkPro Profile contract
-  console.log("\n👤 Deploying ChainLinkPro Profile contract...");
-  const ChainLinkProProfile = await ethers.getContractFactory("ChainLinkProProfile");
-  const profileContract = await ChainLinkProProfile.deploy();
+  // Deploy GigChain Profile contract
+  console.log("\n👤 Deploying GigChain Profile contract...");
+  const GigChainProfile = await ethers.getContractFactory("GigChainProfile");
+  const profileContract = await GigChainProfile.deploy();
   await profileContract.waitForDeployment();
   const profileAddress = await profileContract.getAddress();
-  console.log("✅ ChainLinkPro Profile deployed to:", profileAddress);
+  console.log("✅ GigChain Profile deployed to:", profileAddress);
 
-  // Deploy ChainLinkPro Connections contract
-  console.log("\n🔗 Deploying ChainLinkPro Connections contract...");
-  const ChainLinkProConnections = await ethers.getContractFactory("ChainLinkProConnections");
-  const connectionsContract = await ChainLinkProConnections.deploy(profileAddress);
+  // Deploy GigChain Connections contract
+  console.log("\n🔗 Deploying GigChain Connections contract...");
+  const GigChainConnections = await ethers.getContractFactory("GigChainConnections");
+  const connectionsContract = await GigChainConnections.deploy(profileAddress);
   await connectionsContract.waitForDeployment();
   const connectionsAddress = await connectionsContract.getAddress();
-  console.log("✅ ChainLinkPro Connections deployed to:", connectionsAddress);
+  console.log("✅ GigChain Connections deployed to:", connectionsAddress);
 
-  // Deploy ChainLinkPro Feed contract
-  console.log("\n📰 Deploying ChainLinkPro Feed contract...");
-  const ChainLinkProFeed = await ethers.getContractFactory("ChainLinkProFeed");
-  const feedContract = await ChainLinkProFeed.deploy(profileAddress, connectionsAddress);
+  // Deploy GigChain Feed contract
+  console.log("\n📰 Deploying GigChain Feed contract...");
+  const GigChainFeed = await ethers.getContractFactory("GigChainFeed");
+  const feedContract = await GigChainFeed.deploy(profileAddress, connectionsAddress);
   await feedContract.waitForDeployment();
   const feedAddress = await feedContract.getAddress();
-  console.log("✅ ChainLinkPro Feed deployed to:", feedAddress);
+  console.log("✅ GigChain Feed deployed to:", feedAddress);
 
-  // Deploy ChainLinkPro Bounties contract
-  console.log("\n🎯 Deploying ChainLinkPro Bounties contract...");
-  const ChainLinkProBounties = await ethers.getContractFactory("ChainLinkProBounties");
-  const bountiesContract = await ChainLinkProBounties.deploy(profileAddress, connectionsAddress, gigsTokenAddress);
+  // Deploy GigChain Bounties contract
+  console.log("\n🎯 Deploying GigChain Bounties contract...");
+  const GigChainBounties = await ethers.getContractFactory("GigChainBounties");
+  const bountiesContract = await GigChainBounties.deploy(profileAddress, connectionsAddress, gigsTokenAddress);
   await bountiesContract.waitForDeployment();
   const bountiesAddress = await bountiesContract.getAddress();
-  console.log("✅ ChainLinkPro Bounties deployed to:", bountiesAddress);
+  console.log("✅ GigChain Bounties deployed to:", bountiesAddress);
 
   // Deploy Reputation NFT contract
   console.log("\n🏆 Deploying Reputation NFT contract...");
@@ -85,10 +85,10 @@ async function main() {
     deployer: deployer.address,
     contracts: {
       GigsToken: gigsTokenAddress,
-      ChainLinkProProfile: profileAddress,
-      ChainLinkProConnections: connectionsAddress,
-      ChainLinkProFeed: feedAddress,
-      ChainLinkProBounties: bountiesAddress,
+      GigChainProfile: profileAddress,
+      GigChainConnections: connectionsAddress,
+      GigChainFeed: feedAddress,
+      GigChainBounties: bountiesAddress,
       ReputationNFT: reputationNFTAddress,
       GigChainEscrow: escrowAddress,
       MockERC20: mockERC20Address
@@ -118,7 +118,7 @@ async function main() {
     fs.mkdirSync(deploymentsDir, { recursive: true });
   }
   
-  const filename = `chainlinkpro-${deploymentInfo.blockNumber}.json`;
+  const filename = `gigchain-${deploymentInfo.blockNumber}.json`;
   const filepath = path.join(deploymentsDir, filename);
   
   fs.writeFileSync(filepath, JSON.stringify(deploymentInfo, null, 2));
@@ -135,7 +135,7 @@ async function main() {
   console.log(`npx hardhat verify --network mumbai ${escrowAddress} "${gigsTokenAddress}"`);
   console.log(`npx hardhat verify --network mumbai ${mockERC20Address} "Mock USDC" "mUSDC" 6`);
 
-  console.log("\n🚀 ChainLinkPro is ready for testing on Polygon Mumbai!");
+  console.log("\n🚀 GigChain is ready for testing on Polygon Mumbai!");
   console.log("Visit: https://mumbai.polygonscan.com/");
 }
 

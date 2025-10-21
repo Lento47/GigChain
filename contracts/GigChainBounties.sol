@@ -4,15 +4,15 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./ChainLinkProProfile.sol";
-import "./ChainLinkProConnections.sol";
+import "./GigChainProfile.sol";
+import "./GigChainConnections.sol";
 
 /**
- * @title ChainLinkProBounties
- * @notice Bounty and referral system for ChainLinkPro
+ * @title GigChainBounties
+ * @notice Bounty and referral system for GigChain
  * @dev Handles skill bounties, referrals, and token rewards
  */
-contract ChainLinkProBounties is Ownable, ReentrancyGuard {
+contract GigChainBounties is Ownable, ReentrancyGuard {
     
     // Bounty status
     enum BountyStatus {
@@ -85,8 +85,8 @@ contract ChainLinkProBounties is Ownable, ReentrancyGuard {
     uint256 private _referralCounter;
     
     // State variables
-    ChainLinkProProfile public profileContract;
-    ChainLinkProConnections public connectionsContract;
+    GigChainProfile public profileContract;
+    GigChainConnections public connectionsContract;
     IERC20 public gigsToken;
     
     // Bounty fees (in basis points, 100 = 1%)
@@ -106,7 +106,7 @@ contract ChainLinkProBounties is Ownable, ReentrancyGuard {
     
     // Modifiers
     modifier onlyProfileOwner() {
-        require(profileContract.hasProfile(msg.sender), "Must have ChainLinkPro profile");
+        require(profileContract.hasProfile(msg.sender), "Must have GigChain profile");
         _;
     }
     
@@ -125,8 +125,8 @@ contract ChainLinkProBounties is Ownable, ReentrancyGuard {
         address _connectionsContract,
         address _gigsToken
     ) Ownable(msg.sender) {
-        profileContract = ChainLinkProProfile(_profileContract);
-        connectionsContract = ChainLinkProConnections(_connectionsContract);
+        profileContract = GigChainProfile(_profileContract);
+        connectionsContract = GigChainConnections(_connectionsContract);
         gigsToken = IERC20(_gigsToken);
     }
     
@@ -439,7 +439,7 @@ contract ChainLinkProBounties is Ownable, ReentrancyGuard {
      */
     function updateProfileContract(address _profileContract) external onlyOwner {
         require(_profileContract != address(0), "Invalid address");
-        profileContract = ChainLinkProProfile(_profileContract);
+        profileContract = GigChainProfile(_profileContract);
     }
     
     /**
@@ -448,7 +448,7 @@ contract ChainLinkProBounties is Ownable, ReentrancyGuard {
      */
     function updateConnectionsContract(address _connectionsContract) external onlyOwner {
         require(_connectionsContract != address(0), "Invalid address");
-        connectionsContract = ChainLinkProConnections(_connectionsContract);
+        connectionsContract = GigChainConnections(_connectionsContract);
     }
     
     /**

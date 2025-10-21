@@ -1,4 +1,4 @@
-# Multi-stage build for ChainLinkPro Backend
+# Multi-stage build for GigChain Backend
 FROM python:3.11-slim as builder
 
 # Set working directory
@@ -28,23 +28,23 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
-RUN groupadd -r chainlinkpro && useradd -r -g chainlinkpro chainlinkpro
+RUN groupadd -r gigchain && useradd -r -g gigchain gigchain
 
 # Copy Python dependencies from builder
-COPY --from=builder /root/.local /home/chainlinkpro/.local
+COPY --from=builder /root/.local /home/gigchain/.local
 
 # Copy application code
 COPY . .
 
 # Create necessary directories
 RUN mkdir -p /app/logs /app/uploads /app/backups && \
-    chown -R chainlinkpro:chainlinkpro /app
+    chown -R gigchain:gigchain /app
 
 # Switch to non-root user
-USER chainlinkpro
+USER gigchain
 
 # Add local bin to PATH
-ENV PATH=/home/chainlinkpro/.local/bin:$PATH
+ENV PATH=/home/gigchain/.local/bin:$PATH
 
 # Expose port
 EXPOSE 5000

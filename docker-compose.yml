@@ -17,7 +17,7 @@ services:
     depends_on:
       - backend
     networks:
-      - chainlinkpro-network
+      - gigchain-network
     restart: unless-stopped
 
   # Backend FastAPI
@@ -28,7 +28,7 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - DATABASE_URL=postgresql://chainlinkpro:${DB_PASSWORD}@postgres:5432/chainlinkpro
+      - DATABASE_URL=postgresql://gigchain:${DB_PASSWORD}@postgres:5432/gigchain
       - REDIS_URL=redis://redis:6379
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - JWT_SECRET=${JWT_SECRET}
@@ -40,7 +40,7 @@ services:
       - postgres
       - redis
     networks:
-      - chainlinkpro-network
+      - gigchain-network
     restart: unless-stopped
     volumes:
       - ./logs:/app/logs
@@ -50,8 +50,8 @@ services:
   postgres:
     image: postgres:15-alpine
     environment:
-      - POSTGRES_DB=chainlinkpro
-      - POSTGRES_USER=chainlinkpro
+      - POSTGRES_DB=gigchain
+      - POSTGRES_USER=gigchain
       - POSTGRES_PASSWORD=${DB_PASSWORD}
     ports:
       - "5432:5432"
@@ -59,7 +59,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
-      - chainlinkpro-network
+      - gigchain-network
     restart: unless-stopped
 
   # Redis Cache
@@ -70,7 +70,7 @@ services:
     volumes:
       - redis_data:/data
     networks:
-      - chainlinkpro-network
+      - gigchain-network
     restart: unless-stopped
     command: redis-server --appendonly yes
 
@@ -89,7 +89,7 @@ services:
       - frontend
       - backend
     networks:
-      - chainlinkpro-network
+      - gigchain-network
     restart: unless-stopped
 
   # IPFS Node
@@ -102,7 +102,7 @@ services:
     volumes:
       - ipfs_data:/data/ipfs
     networks:
-      - chainlinkpro-network
+      - gigchain-network
     restart: unless-stopped
     command: daemon --migrate=true --enable-gc
 
@@ -115,7 +115,7 @@ services:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
     networks:
-      - chainlinkpro-network
+      - gigchain-network
     restart: unless-stopped
 
   # Monitoring - Grafana
@@ -130,7 +130,7 @@ services:
       - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
       - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
     networks:
-      - chainlinkpro-network
+      - gigchain-network
     restart: unless-stopped
 
   # Log Management - ELK Stack
@@ -145,7 +145,7 @@ services:
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
     networks:
-      - chainlinkpro-network
+      - gigchain-network
     restart: unless-stopped
 
   logstash:
@@ -158,7 +158,7 @@ services:
     depends_on:
       - elasticsearch
     networks:
-      - chainlinkpro-network
+      - gigchain-network
     restart: unless-stopped
 
   kibana:
@@ -170,7 +170,7 @@ services:
     depends_on:
       - elasticsearch
     networks:
-      - chainlinkpro-network
+      - gigchain-network
     restart: unless-stopped
 
   # Blockchain Node (Polygon Mumbai)
@@ -181,7 +181,7 @@ services:
     volumes:
       - polygon_data:/root/.ethereum
     networks:
-      - chainlinkpro-network
+      - gigchain-network
     restart: unless-stopped
     command: >
       --mumbai
@@ -205,12 +205,12 @@ services:
     environment:
       - PGPASSWORD=${DB_PASSWORD}
     networks:
-      - chainlinkpro-network
+      - gigchain-network
     restart: unless-stopped
     command: >
       sh -c "
         while true; do
-          pg_dump -h postgres -U chainlinkpro chainlinkpro > /backups/backup_$$(date +%Y%m%d_%H%M%S).sql
+          pg_dump -h postgres -U gigchain gigchain > /backups/backup_$$(date +%Y%m%d_%H%M%S).sql
           find /backups -name 'backup_*.sql' -mtime +7 -delete
           sleep 86400
         done
@@ -226,5 +226,5 @@ volumes:
   polygon_data:
 
 networks:
-  chainlinkpro-network:
+  gigchain-network:
     driver: bridge

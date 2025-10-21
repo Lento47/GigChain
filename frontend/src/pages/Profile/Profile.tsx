@@ -106,7 +106,7 @@ const Profile: React.FC = () => {
       bio: 'Passionate about building the future of finance through decentralized technologies. 5+ years experience in smart contract development, DeFi protocols, and Web3 applications. Always learning, always building.',
       location: 'San Francisco, CA',
       website: 'https://alexchen.dev',
-      email: 'alex@chainlinkpro.io',
+      email: 'alex@gigchain.io',
       avatar: '/avatars/alex.jpg',
       coverImage: '/covers/alex-cover.jpg',
       verified: true,
@@ -426,7 +426,7 @@ const Profile: React.FC = () => {
             <div className="text-2xl font-bold text-gray-900 dark:text-white">
               {profile.stats.clpEarned.toLocaleString()}
             </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">CLP Earned</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">GCH Earned</div>
           </div>
         </div>
 
@@ -488,7 +488,7 @@ const Profile: React.FC = () => {
                       </div>
                       <div className="flex items-center space-x-1 text-green-600 dark:text-green-400">
                         <CurrencyDollarIcon className="h-4 w-4" />
-                        <span>{post.clpEarned} CLP</span>
+                        <span>{post.clpEarned} GCH</span>
                       </div>
                     </div>
                   </div>

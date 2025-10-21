@@ -1,8 +1,8 @@
-# 🏗️ ChainLinkPro Infrastructure
+# 🏗️ GigChain Infrastructure
 
 ## Overview
 
-ChainLinkPro utiliza una infraestructura completamente independiente y descentralizada, sin depender de servicios externos como Vercel o Netlify. Todo el sistema está diseñado para ser auto-suficiente y escalable.
+GigChain utiliza una infraestructura completamente independiente y descentralizada, sin depender de servicios externos como Vercel o Netlify. Todo el sistema está diseñado para ser auto-suficiente y escalable.
 
 ## 🏛️ Arquitectura
 
@@ -10,7 +10,7 @@ ChainLinkPro utiliza una infraestructura completamente independiente y descentra
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    ChainLinkPro Platform                    │
+│                    GigChain Platform                    │
 ├─────────────────────────────────────────────────────────────┤
 │  Frontend (React)     │  Backend (FastAPI)  │  Database     │
 │  - Next.js SSR        │  - Python 3.11      │  - PostgreSQL │
@@ -42,8 +42,8 @@ ChainLinkPro utiliza una infraestructura completamente independiente y descentra
 
 ```bash
 # Clonar el repositorio
-git clone https://github.com/chainlinkpro/chainlinkpro.git
-cd chainlinkpro
+git clone https://github.com/gigchain/gigchain.git
+cd gigchain
 
 # Ejecutar instalación completa
 sudo chmod +x install.sh
@@ -58,8 +58,8 @@ sudo apt update && sudo apt upgrade -y
 sudo apt install -y docker.io docker-compose git curl wget
 
 # 2. Clonar y configurar
-git clone https://github.com/chainlinkpro/chainlinkpro.git
-cd chainlinkpro
+git clone https://github.com/gigchain/gigchain.git
+cd gigchain
 
 # 3. Configurar variables de entorno
 cp .env.example .env
@@ -91,23 +91,23 @@ OPENAI_API_KEY=your_openai_key
 PRIVATE_KEY=your_private_key
 
 # Domain Configuration
-DOMAIN=chainlinkpro.io
-EMAIL=admin@chainlinkpro.io
+DOMAIN=gigchain.io
+EMAIL=admin@gigchain.io
 ```
 
 ### **Configuración de Dominio**
 
 1. **DNS Records**:
    ```
-   A     chainlinkpro.io     → YOUR_SERVER_IP
-   A     www.chainlinkpro.io → YOUR_SERVER_IP
+   A     gigchain.io     → YOUR_SERVER_IP
+   A     www.gigchain.io → YOUR_SERVER_IP
    ```
 
 2. **SSL Certificates**:
    ```bash
    # Let's Encrypt (recomendado)
    sudo apt install certbot
-   sudo certbot certonly --standalone -d chainlinkpro.io -d www.chainlinkpro.io
+   sudo certbot certonly --standalone -d gigchain.io -d www.gigchain.io
    ```
 
 ## 📊 Monitoreo
@@ -137,28 +137,28 @@ EMAIL=admin@chainlinkpro.io
 
 ```bash
 # Iniciar servicios
-chainlinkpro start
+gigchain start
 
 # Detener servicios
-chainlinkpro stop
+gigchain stop
 
 # Reiniciar servicios
-chainlinkpro restart
+gigchain restart
 
 # Ver estado
-chainlinkpro status
+gigchain status
 
 # Ver logs
-chainlinkpro logs
+gigchain logs
 
 # Actualizar plataforma
-chainlinkpro update
+gigchain update
 
 # Crear backup
-chainlinkpro backup
+gigchain backup
 
 # Verificar salud
-chainlinkpro monitor
+gigchain monitor
 ```
 
 ### **Backup Automático**
@@ -219,7 +219,7 @@ chainlinkpro monitor
 ### **Estructura del Proyecto**
 
 ```
-chainlinkpro/
+gigchain/
 ├── frontend/              # React frontend
 ├── contracts/             # Smart contracts
 ├── scripts/               # Deployment scripts
@@ -235,8 +235,8 @@ chainlinkpro/
 
 ```bash
 # Clonar repositorio
-git clone https://github.com/chainlinkpro/chainlinkpro.git
-cd chainlinkpro
+git clone https://github.com/gigchain/gigchain.git
+cd gigchain
 
 # Configurar entorno
 cp .env.example .env
@@ -261,7 +261,7 @@ docker-compose logs -f
 
 2. **Base de datos no conecta**:
    ```bash
-   docker-compose exec postgres psql -U chainlinkpro -d chainlinkpro
+   docker-compose exec postgres psql -U gigchain -d gigchain
    ```
 
 3. **SSL no funciona**:
@@ -286,10 +286,10 @@ docker-compose logs -f
 
 ### **Recursos de Ayuda**
 
-- **Documentación**: [docs.chainlinkpro.io](https://docs.chainlinkpro.io)
-- **GitHub Issues**: [github.com/chainlinkpro/issues](https://github.com/chainlinkpro/issues)
-- **Discord**: [discord.gg/chainlinkpro](https://discord.gg/chainlinkpro)
-- **Email**: support@chainlinkpro.io
+- **Documentación**: [docs.gigchain.io](https://docs.gigchain.io)
+- **GitHub Issues**: [github.com/gigchain/issues](https://github.com/gigchain/issues)
+- **Discord**: [discord.gg/gigchain](https://discord.gg/gigchain)
+- **Email**: support@gigchain.io
 
 ### **Contribuir**
 
@@ -301,4 +301,4 @@ docker-compose logs -f
 
 ---
 
-**ChainLinkPro** - La red social blockchain para profesionales del futuro 🚀
+**GigChain** - La red social blockchain para profesionales del futuro 🚀
