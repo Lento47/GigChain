@@ -1,239 +1,229 @@
-# GigChain Smart Contracts
+# 🌐 GigChain - Decentralized Social Network for Professionals
 
-Solidity smart contracts for GigChain.io escrow system on Polygon network.
+> **The future of professional networking is decentralized, tokenized, and community-owned.**
 
-## 📋 Overview
+GigChain is a revolutionary blockchain-based social network designed specifically for professionals. Unlike traditional platforms like LinkedIn, GigChain puts users in complete control of their data, enables direct monetization through token rewards, and operates as a decentralized autonomous organization (DAO).
 
-The GigChain escrow contract enables trustless milestone-based payments for gig economy transactions using USDC on Polygon. It supports:
+## 🚀 Key Features
 
-- **Milestone-based payments**: Break projects into multiple deliverable milestones
-- **Escrow protection**: Funds locked in contract until milestones approved
-- **Dispute resolution**: On-chain dispute mechanism (future AI integration)
-- **Multi-party security**: Client and freelancer access controls
-- **USDC payments**: ERC-20 token standard (USDC on Polygon)
+### 👤 **Professional Profiles as NFTs**
+- **Soulbound NFTs** representing your professional identity
+- **Dynamic metadata** that updates with your achievements
+- **Cross-platform interoperability** - your profile works across dApps
+- **Complete data ownership** - you control your information
 
-## 🚀 Quick Start
+### 🔗 **On-Chain Networking**
+- **Decentralized connections** stored on blockchain
+- **Skill endorsements** verified by the community
+- **Professional recommendations** with token rewards
+- **Trustless verification** system
+
+### 📱 **Decentralized Content Feed**
+- **Censorship-resistant** content sharing
+- **Token rewards** for engagement (likes, shares, comments)
+- **Content monetization** through tips and bounties
+- **Community-driven** content moderation
+
+### 🏆 **Reputation & Skills System**
+- **On-chain reputation** that follows you everywhere
+- **Skill verification** through community endorsements
+- **Achievement tracking** with NFT badges
+- **Professional level** progression system
+
+### 🗳️ **DAO Governance**
+- **Community-driven** decision making
+- **Proposal and voting** system
+- **Treasury management** for platform development
+- **Transparent** governance processes
+
+### 💰 **Token Economics**
+- **GCH Token** for all platform activities
+- **Social rewards** for engagement
+- **Staking** for premium features
+- **Community treasury** for development
+
+## 🏗️ Architecture
+
+### Smart Contracts
+
+| Contract | Purpose | Key Features |
+|----------|---------|--------------|
+| `GigChainSocial` | Main social network | Profiles, connections, content, rewards |
+| `GigChainToken` | Social token (GCH) | ERC20 with voting, staking, rewards |
+| `GigChainDAO` | Governance | Proposals, voting, treasury management |
+| `ReputationNFT` | Reputation system | Dynamic NFTs for professional reputation |
+| `TimelockController` | Governance security | Time-locked execution of proposals |
+
+### Token Distribution
+
+```
+Community Rewards: 40% (400M GCH)
+Team & Advisors:   20% (200M GCH)
+Investors:         15% (150M GCH)
+Ecosystem Dev:     15% (150M GCH)
+DAO Treasury:       5% (50M GCH)
+Reserve:            5% (50M GCH)
+```
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js 16+
+- Hardhat
+- MetaMask wallet
+- Polygon Mumbai testnet ETH
 
 ### Installation
 
 ```bash
-cd contracts
+# Clone the repository
+git clone https://github.com/gigchain/social-network.git
+cd social-network
+
+# Install dependencies
 npm install
+
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your private key and API keys
 ```
 
-### Configuration
-
-1. Copy environment variables:
-```bash
-cp ../.env.example ../.env
-```
-
-2. Set required variables in `.env`:
-```env
-DEPLOYER_PRIVATE_KEY=0x...           # Your deployer wallet private key
-RPC_URL=https://rpc-amoy.polygon.technology  # Polygon Amoy testnet
-POLYGONSCAN_API_KEY=...              # For contract verification
-```
-
-### Compile Contracts
+### Deployment
 
 ```bash
-npm run compile
+# Deploy to Polygon Mumbai testnet
+npx hardhat run scripts/deploy-social-network.ts --network mumbai
+
+# Verify contracts
+npx hardhat verify --network mumbai <CONTRACT_ADDRESS>
 ```
 
-### Run Tests
+### Usage
+
+1. **Create Profile**: Mint your professional NFT profile
+2. **Connect**: Build your professional network on-chain
+3. **Share Content**: Post articles, updates, and achievements
+4. **Earn Tokens**: Get rewarded for engagement and quality content
+5. **Participate**: Vote on DAO proposals and shape the platform
+
+## 💡 Use Cases
+
+### For Professionals
+- **Build reputation** that's portable across platforms
+- **Monetize expertise** through content and endorsements
+- **Network** with like-minded professionals
+- **Earn tokens** for valuable contributions
+
+### For Companies
+- **Find talent** through verified skills and reputation
+- **Post jobs** with token rewards for referrals
+- **Build employer brand** through community engagement
+- **Access** a global pool of verified professionals
+
+### For Communities
+- **Govern platform** development through DAO voting
+- **Shape features** based on community needs
+- **Earn rewards** for platform contributions
+- **Build** the future of professional networking
+
+## 🔧 Technical Details
+
+### Blockchain
+- **Network**: Polygon (Mumbai testnet for development)
+- **Consensus**: Proof of Stake
+- **Gas Fees**: Low-cost transactions
+- **Scalability**: High throughput for social interactions
+
+### Smart Contract Features
+- **Upgradeable**: Modular architecture for easy updates
+- **Gas Optimized**: Efficient storage and computation
+- **Secure**: Multiple security audits and best practices
+- **Interoperable**: Works with other DeFi and social protocols
+
+### Frontend
+- **React**: Modern, responsive UI
+- **Web3 Integration**: MetaMask and WalletConnect
+- **Real-time Updates**: WebSocket connections
+- **Mobile Responsive**: Works on all devices
+
+## 🛡️ Security
+
+### Audits
+- [ ] Smart contract security audit
+- [ ] Penetration testing
+- [ ] Code review by security experts
+
+### Best Practices
+- **Access Control**: Role-based permissions
+- **Reentrancy Protection**: Secure external calls
+- **Input Validation**: Comprehensive data validation
+- **Emergency Pauses**: Circuit breakers for critical functions
+
+## 📊 Roadmap
+
+### Phase 1: Foundation (Q1 2025)
+- [x] Core smart contracts
+- [x] Basic social features
+- [x] Token economics
+- [x] DAO governance
+
+### Phase 2: Growth (Q2 2025)
+- [ ] Mobile app
+- [ ] Advanced features
+- [ ] Integration partnerships
+- [ ] Community expansion
+
+### Phase 3: Scale (Q3 2025)
+- [ ] Multi-chain support
+- [ ] Enterprise features
+- [ ] API marketplace
+- [ ] Global adoption
+
+## 🤝 Contributing
+
+We welcome contributions from the community! Here's how you can help:
+
+1. **Code**: Submit pull requests for bug fixes and features
+2. **Testing**: Help test the platform and report issues
+3. **Documentation**: Improve docs and tutorials
+4. **Community**: Participate in discussions and governance
+5. **Content**: Create valuable content for the platform
+
+### Development Setup
 
 ```bash
-npm test
-```
-
-### Deploy to Polygon Amoy (Testnet)
-
-```bash
-npm run deploy:amoy
-```
-
-### Deploy to Polygon Mainnet
-
-```bash
-npm run deploy:polygon
-```
-
-### Verify Contract
-
-```bash
-npm run verify:amoy -- <CONTRACT_ADDRESS>
-```
-
-## 📄 Contract Architecture
-
-### GigChainEscrow.sol
-
-Main escrow contract with the following features:
-
-#### Contract States
-- `CREATED`: Contract created, awaiting funding
-- `FUNDED`: Client funded the escrow
-- `ACTIVE`: Freelancer started work
-- `COMPLETED`: All milestones paid
-- `DISPUTED`: Dispute raised by either party
-- `CANCELLED`: Contract cancelled
-
-#### Milestone States
-- `PENDING`: Waiting for freelancer submission
-- `SUBMITTED`: Deliverable submitted
-- `APPROVED`: Client approved
-- `REJECTED`: Client rejected
-- `PAID`: Payment released
-
-#### Key Functions
-
-**Client Functions:**
-- `createContract()`: Create new contract with milestones
-- `fundContract()`: Fund contract with USDC
-- `approveMilestone()`: Approve and release payment
-- `rejectMilestone()`: Reject deliverable
-- `cancelContract()`: Cancel and refund
-
-**Freelancer Functions:**
-- `submitMilestone()`: Submit deliverable with IPFS hash
-
-**Shared Functions:**
-- `raiseDispute()`: Raise dispute (both parties)
-
-## 🧪 Testing
-
-The test suite covers:
-
-- ✅ Contract creation with milestones
-- ✅ Funding with USDC tokens
-- ✅ Milestone submission by freelancer
-- ✅ Milestone approval and payment
-- ✅ Milestone rejection
-- ✅ Dispute raising
-- ✅ Contract cancellation and refunds
-- ✅ Access control (client/freelancer roles)
-- ✅ Reentrancy protection
-- ✅ Edge cases and error conditions
-
-Run with coverage:
-```bash
-npm run coverage
-```
-
-## 🔐 Security Features
-
-1. **OpenZeppelin Libraries**:
-   - `ReentrancyGuard`: Prevents reentrancy attacks
-   - `Ownable`: Access control
-   - `SafeERC20`: Safe token transfers
-
-2. **Access Control**:
-   - Role-based modifiers (client, freelancer, parties)
-   - State-based transitions
-
-3. **Input Validation**:
-   - Non-zero amounts
-   - Future deadlines
-   - Valid addresses
-
-4. **Audited Dependencies**:
-   - OpenZeppelin Contracts v5.1.0
-
-## 📊 Gas Optimization
-
-The contract is optimized for gas efficiency:
-- Storage packing for structs
-- Batch operations where possible
-- Minimal storage writes
-- Compiler optimization enabled (200 runs)
-
-## 🌐 Network Configurations
-
-### Polygon Amoy (Testnet)
-- **Chain ID**: 80002
-- **RPC**: https://rpc-amoy.polygon.technology
-- **Explorer**: https://amoy.polygonscan.com
-- **Faucet**: https://faucet.polygon.technology
-
-### Polygon Mainnet
-- **Chain ID**: 137
-- **RPC**: https://polygon-rpc.com
-- **Explorer**: https://polygonscan.com
-- **USDC Contract**: `0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174`
-
-## 📝 Deployment Process
-
-1. **Pre-deployment**:
-   - Ensure wallet has MATIC for gas
-   - Verify RPC connection
-   - Double-check contract parameters
-
-2. **Deploy**:
-   ```bash
-   npm run deploy:amoy
-   ```
-
-3. **Post-deployment**:
-   - Save contract address (auto-saved to `../env`)
-   - Verify on PolygonScan
-   - Update frontend with ABI and address
-   - Test with small transaction
-
-4. **Integration**:
-   - Export ABI: `artifacts/contracts/GigChainEscrow.sol/GigChainEscrow.json`
-   - Copy to frontend: `../frontend/src/abis/`
-   - Update backend `.env` with `ESCROW_CONTRACT_ADDRESS`
-
-## 🔗 Integration with Backend
-
-The contract address is automatically added to `../.env` after deployment:
-
-```env
-ESCROW_CONTRACT_ADDRESS=0x...
-```
-
-Backend integration example:
-```python
-from web3 import Web3
-
-w3 = Web3(Web3.HTTPProvider(os.getenv('RPC_URL')))
-contract_address = os.getenv('ESCROW_CONTRACT_ADDRESS')
-contract = w3.eth.contract(address=contract_address, abi=ABI)
-```
-
-## 🛠️ Development Workflow
-
-```bash
-# Start local hardhat node
-npm run node
-
-# In another terminal, deploy to localhost
-npx hardhat run scripts/deploy.ts --network localhost
+# Install dependencies
+npm install
 
 # Run tests
 npm test
 
-# Gas report
-REPORT_GAS=true npm test
+# Deploy locally
+npx hardhat node
+npx hardhat run scripts/deploy-social-network.ts --network localhost
 ```
-
-## 📚 Resources
-
-- [Hardhat Documentation](https://hardhat.org/docs)
-- [OpenZeppelin Contracts](https://docs.openzeppelin.com/contracts/)
-- [Polygon Documentation](https://docs.polygon.technology/)
-- [USDC on Polygon](https://polygon.technology/blog/usd-coin-usdc-is-now-live-on-polygon)
-
-## ⚠️ Security Considerations
-
-**IMPORTANT**: 
-- Never commit private keys to git
-- Always test on testnet first
-- Verify contract source code after deployment
-- Consider professional audit for mainnet deployment
-- Use multi-sig wallet for ownership in production
 
 ## 📄 License
 
-MIT License - see LICENSE file in root directory
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- **OpenZeppelin** for secure smart contract libraries
+- **Hardhat** for development framework
+- **Polygon** for scalable blockchain infrastructure
+- **Community** for feedback and contributions
+
+## 📞 Support
+
+- **Documentation**: [docs.gigchain.io](https://docs.gigchain.io)
+- **Discord**: [discord.gg/gigchain](https://discord.gg/gigchain)
+- **Twitter**: [@GigChain](https://twitter.com/GigChain)
+- **Email**: support@gigchain.io
+
+---
+
+**Built with ❤️ by the GigChain community**
+
+*The future of professional networking is decentralized, tokenized, and community-owned.*

@@ -1,36 +1,77 @@
 {
   "name": "gigchain-frontend",
   "version": "1.0.0",
-  "description": "GigChain.io React Frontend",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
-    "test": "cypress run"
-  },
+  "description": "GigChain - Decentralized Social Network for Professionals",
+  "private": true,
   "dependencies": {
-    "@thirdweb-dev/chains": "^0.1.45",
-    "@thirdweb-dev/react": "^4.9.4",
-    "@thirdweb-dev/sdk": "^4.0.99",
-    "axios": "^1.7.7",
-    "buffer": "^6.0.3",
-    "crypto-browserify": "^3.12.1",
-    "lucide-react": "^0.445.0",
-    "os-browserify": "^0.3.0",
-    "path-browserify": "^1.0.1",
-    "process": "^0.11.10",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-router-dom": "^7.9.4",
-    "stream-browserify": "^3.0.0",
-    "util": "^0.12.5"
+    "@testing-library/jest-dom": "^5.16.4",
+    "@testing-library/react": "^13.3.0",
+    "@testing-library/user-event": "^13.5.0",
+    "@types/jest": "^27.5.2",
+    "@types/node": "^16.11.56",
+    "@types/react": "^18.0.17",
+    "@types/react-dom": "^18.0.6",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-scripts": "5.0.1",
+    "typescript": "^4.7.4",
+    "web-vitals": "^2.1.4",
+    "ethers": "^6.7.1",
+    "wagmi": "^1.4.7",
+    "@rainbow-me/rainbowkit": "^1.1.0",
+    "@tanstack/react-query": "^4.29.0",
+    "react-router-dom": "^6.8.1",
+    "framer-motion": "^10.0.0",
+    "lucide-react": "^0.263.1",
+    "clsx": "^1.2.1",
+    "tailwind-merge": "^1.14.0",
+    "@headlessui/react": "^1.7.15",
+    "@heroicons/react": "^2.0.16",
+    "react-hot-toast": "^2.4.1",
+    "react-hook-form": "^7.45.2",
+    "@hookform/resolvers": "^3.1.1",
+    "zod": "^3.21.4",
+    "date-fns": "^2.30.0",
+    "react-markdown": "^8.0.7",
+    "react-syntax-highlighter": "^15.5.0",
+    "@types/react-syntax-highlighter": "^15.5.6",
+    "react-intersection-observer": "^9.5.2",
+    "react-virtualized": "^9.22.5",
+    "@types/react-virtualized": "^9.21.29"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "lint": "eslint src --ext .ts,.tsx",
+    "lint:fix": "eslint src --ext .ts,.tsx --fix",
+    "type-check": "tsc --noEmit"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
   },
   "devDependencies": {
-    "@types/react": "^18.3.12",
-    "@types/react-dom": "^18.3.1",
-    "@vitejs/plugin-react": "^4.3.3",
-    "cypress": "^13.15.1",
-    "vite": "^5.4.10"
-  }
+    "@types/react-virtualized": "^9.21.29",
+    "autoprefixer": "^10.4.14",
+    "postcss": "^8.4.24",
+    "tailwindcss": "^3.3.2",
+    "@types/react-syntax-highlighter": "^15.5.6"
+  },
+  "proxy": "http://localhost:5000"
 }
