@@ -17,6 +17,9 @@ import Marketplace from './pages/Marketplace/Marketplace';
 import DAO from './pages/DAO/DAO';
 import Staking from './pages/Staking/Staking';
 import Settings from './pages/Settings/Settings';
+import Messages from './pages/Messages/Messages';
+import Analytics from './pages/Analytics/Analytics';
+import CreatePost from './pages/CreatePost/CreatePost';
 import NotFound from './pages/NotFound/NotFound';
 
 // Import styles
@@ -69,9 +72,12 @@ function App() {
                   <Route path="/profile/:address" element={<Profile />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/connections" element={<Connections />} />
+                  <Route path="/messages" element={<Messages />} />
                   <Route path="/marketplace" element={<Marketplace />} />
                   <Route path="/dao" element={<DAO />} />
                   <Route path="/staking" element={<Staking />} />
+                  <Route path="/analytics" element={<Analytics />} />
+                  <Route path="/create-post" element={<CreatePost />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
