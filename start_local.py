@@ -3,7 +3,7 @@
 
 import os
 import sys
-from app import app
+from main import app
 
 def main():
     """Start the Flask development server."""
