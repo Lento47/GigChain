@@ -81,6 +81,9 @@ from ipfs_api import router as ipfs_router
 # Import Private Jobs System
 from private_jobs_api import router as private_jobs_router
 
+# Import Engagement System
+from engagement_api import router as engagement_router
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -330,6 +333,9 @@ app.include_router(ipfs_router)
 
 # Include Private Jobs router
 app.include_router(private_jobs_router)
+
+# Include Engagement router
+app.include_router(engagement_router)
 
 # Include Contracts router
 app.include_router(contracts_router)
