@@ -19,8 +19,8 @@ load_dotenv()
 
 # Import existing modules
 from contract_ai import full_flow, generate_contract
-from agents import chain_agents, AgentInput, get_agent_status
-from security.template_security import validate_template_security, SecurityValidationResult
+from agents import AgentInput, get_agent_status
+from security.template_security import validate_template_security
 from security.validators import validator
 from chat_enhanced import chat_manager
 
@@ -43,7 +43,7 @@ from auth import (
 )
 
 # Import Wallet Manager
-from wallet_manager import get_wallet_manager, GigChainWallet
+from wallet_manager import get_wallet_manager
 
 # Import Gamification & Negotiation System
 from gamification_api import router as gamification_router
