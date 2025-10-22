@@ -90,6 +90,15 @@ def get_client_info(request: Request) -> Dict[str, str]:
 
 # ==================== Authentication Endpoints ====================
 
+# OPTIONS handler for CORS preflight requests
+@router.options("/challenge")
+@router.options("/verify")  
+@router.options("/refresh")
+@router.options("/logout")
+async def handle_cors_preflight():
+    """Handle CORS preflight requests for authentication endpoints."""
+    return {"message": "CORS preflight handled"}
+
 @router.post(
     "/challenge",
     response_model=AuthChallengeResponse,
@@ -166,7 +175,10 @@ async def request_challenge(
     except WCSAPException:
         raise
     except Exception as e:
+        import traceback
+        error_traceback = traceback.format_exc()
         logger.error(f"Challenge generation error: {str(e)}")
+        logger.error(f"Full traceback:\n{error_traceback}")
         raise InternalErrorException("Failed to generate challenge")
 
 

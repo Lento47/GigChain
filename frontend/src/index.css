@@ -98,20 +98,61 @@ body {
   margin-left: 80px;
 }
 
+.main-content.mobile-layout {
+  margin-left: 0;
+  padding-bottom: 84px; /* Space for mobile bottom nav */
+}
+
 .content-body {
   flex: 1;
   padding: 2rem;
   min-width: 0;
 }
 
-/* Responsive Layout */
+/* Sidebar Overlay for Mobile */
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  backdrop-filter: blur(2px);
+  display: none;
+  opacity: 0;
+  animation: fadeIn 0.3s forwards;
+}
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+  }
+}
+
+/* Mobile Layout Adjustments */
 @media (max-width: 768px) {
   .main-content {
     margin-left: 0;
+    padding-bottom: 84px; /* Space for mobile bottom nav */
   }
 
   .main-content.sidebar-closed {
     margin-left: 0;
+  }
+
+  .content-body {
+    padding: 1.5rem 1rem;
+  }
+
+  .sidebar-overlay {
+    display: block;
+  }
+}
+
+@media (max-width: 480px) {
+  .content-body {
+    padding: 1rem;
   }
 }
 

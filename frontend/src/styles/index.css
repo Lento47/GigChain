@@ -9,6 +9,7 @@
 @import './components/network-alert.css';
 @import './utils/animations.css';
 @import './utils/responsive.css';
+@import './responsive/enhanced.css';
 
 /* CSS Variables and Global Styles */
 :root {

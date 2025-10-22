@@ -1,0 +1,589 @@
+/* Tier Badge System */
+.tier-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.tier-image {
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.tier-badge.small .tier-image {
+  width: 20px;
+  height: 20px;
+}
+
+.tier-badge.medium .tier-image {
+  width: 32px;
+  height: 32px;
+}
+
+.tier-badge.large .tier-image {
+  width: 48px;
+  height: 48px;
+}
+
+.tier-label {
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Tier-specific colors */
+.tier-1 { 
+  color: #CD7F32; 
+  border-color: rgba(205, 127, 50, 0.3);
+}
+
+.tier-2 { 
+  color: #C0C0C0; 
+  border-color: rgba(192, 192, 192, 0.3);
+}
+
+.tier-3 { 
+  color: #FFD700; 
+  border-color: rgba(255, 215, 0, 0.3);
+}
+
+.tier-4 { 
+  color: #E5E4E2; 
+  border-color: rgba(229, 228, 226, 0.3);
+}
+
+.tier-5 { 
+  color: #B9F2FF; 
+  border-color: rgba(185, 242, 255, 0.3);
+}
+
+/* Profile name and tier layout */
+.profile-name-tier {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.profile-name-tier h2 {
+  margin: 0;
+}
+
+/* NFT Image Updates */
+.nft-image-container {
+  position: relative;
+  width: 100%;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+
+.nft-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+}
+
+.nft-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nft-description {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0.5rem 0;
+  line-height: 1.4;
+}
+
+/* Hero Header */
+.profile-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 3rem;
+  padding: 3rem 2.5rem;
+  background: rgba(21, 27, 46, 0.6);
+  backdrop-filter: blur(20px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.hero-left {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.hero-icon {
+  width: 96px;
+  height: 96px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #00ff88, #00d4ff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0a0e1a;
+  box-shadow: 0 12px 36px rgba(0, 255, 136, 0.5);
+}
+
+.title-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.profile-title {
+  font-size: 3rem;
+  margin: 0;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.title-accent {
+  width: 80px;
+  height: 4px;
+  background: linear-gradient(90deg, #00ff88 0%, #00d4ff 100%);
+  border-radius: 2px;
+  box-shadow: 0 0 12px rgba(0, 255, 136, 0.6);
+}
+
+.profile-subtitle {
+  font-size: 1.125rem;
+  color: #a0aec0;
+}
+
+.edit-profile-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.5rem;
+  background: linear-gradient(135deg, #00ff88, #00d4ff);
+  border: none;
+  border-radius: 12px;
+  color: #0a0e1a;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 16px rgba(0, 255, 136, 0.4);
+}
+
+.edit-profile-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0, 255, 136, 0.6);
+}
+
+/* Profile Content */
+.profile-content {
+  padding: 2.5rem;
+  border-radius: 20px;
+}
+
+.profile-header {
+  display: flex;
+  gap: 2rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 2rem;
+}
+
+.profile-avatar-large {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #00ff88, #00d4ff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  font-weight: 800;
+  color: #0a0e1a;
+  flex-shrink: 0;
+  box-shadow: 0 8px 24px rgba(0, 255, 136, 0.5);
+}
+
+.profile-info {
+  flex: 1;
+}
+
+.profile-info h2 {
+  margin: 0 0 0.5rem 0;
+  color: #ffffff;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.profile-address {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(0, 255, 136, 0.1);
+  border: 1px solid rgba(0, 255, 136, 0.3);
+  border-radius: 8px;
+  color: #00ff88;
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 0.875rem;
+  cursor: pointer;
+  margin-bottom: 1rem;
+  transition: all 0.2s;
+}
+
+.profile-address:hover {
+  background: rgba(0, 255, 136, 0.2);
+  transform: scale(1.02);
+}
+
+.profile-bio {
+  margin: 1rem 0;
+  color: #e2e8f0;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.profile-meta {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #a0aec0;
+  font-size: 0.875rem;
+}
+
+.meta-item a {
+  color: #00d4ff;
+  text-decoration: none;
+}
+
+.meta-item a:hover {
+  text-decoration: underline;
+}
+
+/* Stats Grid */
+.profile-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  padding: 1.5rem;
+  background: rgba(10, 14, 26, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  text-align: center;
+  transition: all 0.3s;
+}
+
+.stat-card:hover {
+  border-color: rgba(0, 255, 136, 0.4);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 255, 136, 0.2);
+}
+
+.stat-card svg {
+  color: #00ff88;
+  margin-bottom: 0.75rem;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #00ff88;
+  font-family: 'Monaco', 'Courier New', monospace;
+  margin: 0.5rem 0;
+}
+
+.stat-label {
+  font-size: 0.813rem;
+  color: #718096;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Tabs */
+.profile-tabs {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 2rem;
+}
+
+.tab-btn {
+  padding: 1rem 1.5rem;
+  background: transparent;
+  border: none;
+  color: #a0aec0;
+  font-size: 0.938rem;
+  font-weight: 600;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.tab-btn:hover {
+  color: #ffffff;
+}
+
+.tab-btn.active {
+  color: #00ff88;
+}
+
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #00ff88, #00d4ff);
+  box-shadow: 0 0 8px rgba(0, 255, 136, 0.5);
+}
+
+/* Tab Content */
+.tab-content {
+  min-height: 300px;
+}
+
+.tab-content h3 {
+  margin: 0 0 1rem 0;
+  color: #ffffff;
+  font-size: 1.25rem;
+}
+
+.text-secondary {
+  color: #a0aec0;
+  line-height: 1.6;
+}
+
+/* Skills Section */
+.skills-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.skill-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.skill-info {
+  flex: 0 0 150px;
+}
+
+.skill-info h4 {
+  margin: 0 0 0.25rem 0;
+  color: #ffffff;
+  font-size: 0.938rem;
+}
+
+.endorsements {
+  font-size: 0.75rem;
+  color: #718096;
+}
+
+.skill-bar {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.skill-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00ff88, #00d4ff);
+  border-radius: 4px;
+  transition: width 0.8s ease;
+}
+
+.skill-level {
+  font-size: 0.875rem;
+  color: #00ff88;
+  font-weight: 700;
+  font-family: 'Monaco', 'Courier New', monospace;
+  min-width: 48px;
+  text-align: right;
+}
+
+/* NFTs Section */
+.nfts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.nft-card {
+  padding: 1.5rem;
+  background: rgba(10, 14, 26, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  text-align: center;
+  transition: all 0.3s;
+}
+
+.nft-card:hover {
+  border-color: rgba(139, 92, 246, 0.5);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.3);
+}
+
+.nft-image {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.nft-card h4 {
+  margin: 0 0 0.5rem 0;
+  color: #ffffff;
+  font-size: 1rem;
+}
+
+.rarity {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.rarity.legendary {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.rarity.epic {
+  background: rgba(139, 92, 246, 0.2);
+  color: #8b5cf6;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.rarity.rare {
+  background: rgba(0, 212, 255, 0.2);
+  color: #00d4ff;
+  border: 1px solid rgba(0, 212, 255, 0.3);
+}
+
+/* Coming Soon */
+.coming-soon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  color: #718096;
+}
+
+.coming-soon svg {
+  margin-bottom: 1rem;
+}
+
+.quick-stats {
+  display: flex;
+  gap: 2rem;
+  margin-top: 1.5rem;
+}
+
+.quick-stat {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  background: rgba(0, 255, 136, 0.1);
+  border: 1px solid rgba(0, 255, 136, 0.3);
+  border-radius: 8px;
+  color: #00ff88;
+  font-weight: 600;
+}
+
+/* Glass Card */
+.glass-card {
+  background: rgba(21, 27, 46, 0.6);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  text-align: center;
+}
+
+.empty-icon {
+  color: #718096;
+  margin-bottom: 1.5rem;
+}
+
+.empty-state h2 {
+  margin: 0 0 0.5rem 0;
+  color: #ffffff;
+  font-size: 1.5rem;
+}
+
+.empty-state p {
+  color: #a0aec0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .profile-hero {
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 2rem 1.5rem;
+  }
+
+  .profile-title {
+    font-size: 2.5rem;
+  }
+
+  .profile-header {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .profile-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .profile-tabs {
+    overflow-x: auto;
+  }
+
+  .nfts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+

@@ -175,7 +175,7 @@ class ChallengeGenerator:
         issued_dt = datetime.fromtimestamp(issued_at).isoformat()
         expires_dt = datetime.fromtimestamp(expires_at).isoformat()
         
-        return f"""🔐 GigChain.io - Wallet Authentication
+        return f"""GigChain.io - Wallet Authentication
 
 Sign this message to authenticate your wallet.
 
@@ -186,7 +186,7 @@ Nonce: {nonce[:16]}...
 Issued: {issued_dt}
 Expires: {expires_dt}
 
-⚠️ Only sign this if you initiated the login.
+WARNING: Only sign this if you initiated the login.
 Never share this signature with anyone.
 
 Security: This is a one-time authentication challenge."""
@@ -709,19 +709,52 @@ class WCSAPAuthenticator:
         self,
         challenge_id: str,
         signature: str,
-        wallet_address: str
+        wallet_address: str,
+        db=None
     ) -> Optional[SessionAssertion]:
         """
         Step 2: Complete authentication by verifying the signed challenge.
+        
+        SECURITY FIX: Now supports database fallback for persistent challenge storage.
+        If challenge not found in memory, checks database before failing.
+        
+        Args:
+            challenge_id: Unique challenge identifier
+            signature: Wallet signature of challenge message
+            wallet_address: Wallet address that should have signed
+            db: Optional database instance for persistent lookup
         
         Returns:
             SessionAssertion if successful, None otherwise
         """
         try:
-            # Retrieve challenge
+            # First try to retrieve challenge from memory (fast path)
             challenge = self.active_challenges.get(challenge_id)
+            
+            # If not in memory, try database (persistent fallback)
+            if not challenge and db:
+                try:
+                    db_challenge = db.get_challenge(challenge_id)
+                    if db_challenge:
+                        # Reconstruct Challenge object from database data
+                        challenge = Challenge(
+                            challenge_id=db_challenge["challenge_id"],
+                            wallet_address=db_challenge["wallet_address"],
+                            challenge_message=db_challenge["challenge_message"],
+                            nonce=db_challenge["nonce"],
+                            issued_at=db_challenge["issued_at"],
+                            expires_at=db_challenge["expires_at"],
+                            metadata=db_challenge.get("metadata", {})
+                        )
+                        logger.info(f"🔄 Challenge recovered from database: {challenge_id[:16]}...")
+                    else:
+                        logger.warning(f"Challenge not found in database: {challenge_id[:16]}...")
+                except Exception as e:
+                    logger.error(f"Database challenge lookup error: {str(e)}")
+            
+            # Final check - challenge not found anywhere
             if not challenge:
-                logger.warning(f"Challenge not found: {challenge_id[:16]}...")
+                logger.warning(f"Challenge not found (memory or database): {challenge_id[:16]}...")
                 return None
             
             # Check expiry

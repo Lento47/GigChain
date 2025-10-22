@@ -1,33 +1,25 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { ThirdwebProvider } from '@thirdweb-dev/react';
-
-// Amoy Testnet (Mumbai replacement)
-const Amoy = {
-  chainId: 80002,
-  name: 'Polygon Amoy Testnet',
-  chain: 'Polygon',
-  rpc: ['https://rpc-amoy.polygon.technology'],
-  nativeCurrency: {
-    name: 'MATIC',
-    symbol: 'MATIC',
-    decimals: 18,
-  },
-  shortName: 'amoy',
-  slug: 'polygon-amoy-testnet',
-  testnet: true,
-};
+import { ThirdwebProvider, ConnectButton } from "thirdweb/react";
+import { createThirdwebClient } from "thirdweb";
+import { polygonAmoy } from "thirdweb/chains";
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MessageSquare, Eye, Send } from 'lucide-react';
 
 // Import components from new structure (non-lazy for layout)
 import { Sidebar, Header } from './components/layout';
+import { MobileBottomNav } from './components/layout/MobileNav';
 import { DashboardView } from './views/Dashboard';
 import { WalletConnection, ContractStatus } from './components/features';
 import { NotificationCenter, NotificationProvider, useNotifications, ThemeToggle, NetworkAlert } from './components/common';
+import ProtectedRoute, { AuthenticationRequired, useRouteProtection } from './components/auth/ProtectedRoute';
 import { ToastProvider } from './components/common/Toast';
 import { useWallet } from './hooks/useWallet';
+import { useResponsive, useSwipeGesture } from './hooks/useResponsive';
 import { ThemeProvider } from './contexts/ThemeContext';
 import ErrorBoundary from './components/ErrorBoundary';
+import { LoadingSpinner, PageLoading, SkeletonDashboard } from './components/ui/Loading';
+import mobileDebugger from './utils/mobileDebugger';
 
 // Lazy load views for code splitting (improves initial load time)
 const ContractsView = lazy(() => import('./views/Contracts'));
@@ -56,30 +48,47 @@ import { logger } from './utils/logger';
 
 import './styles/index.css';
 import './styles/chat-ai.css';
+import './components/auth/ProtectedRoute.css';
 
-// Loading Fallback Component
-const LoadingFallback = () => (
-  <div className="loading-container" style={{ 
-    display: 'flex', 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    minHeight: '400px',
-    color: '#94a3b8'
-  }}>
-    <div style={{ textAlign: 'center' }}>
-      <div className="spinner" style={{
-        width: '40px',
-        height: '40px',
-        border: '4px solid #e2e8f0',
-        borderTop: '4px solid #667eea',
-        borderRadius: '50%',
-        animation: 'spin 1s linear infinite',
-        margin: '0 auto 1rem'
-      }}></div>
-      <p>Cargando...</p>
-    </div>
-  </div>
-);
+// Enhanced Loading Fallback Component
+const LoadingFallback = ({ type = 'spinner', message = 'Cargando...' }) => {
+  if (type === 'skeleton') {
+    return <SkeletonDashboard />;
+  }
+  
+  return (
+    <LoadingSpinner 
+      size="lg" 
+      message={message} 
+      className="loading-fallback"
+    />
+  );
+};
+
+// Smart Redirect Component - Intelligently redirects based on wallet state
+const SmartRedirect = () => {
+  const { address, isConnected, isCorrectChain, isInitializing } = useWallet();
+  const navigate = useNavigate();
+  
+  // Wait for wallet to initialize before making decisions
+  React.useEffect(() => {
+    if (isInitializing) {
+      return; // Don't redirect while initializing
+    }
+    
+    // Check if wallet is connected and on correct chain
+    const canAccess = isConnected && address && /^0x[a-fA-F0-9]{40}$/.test(address) && isCorrectChain;
+    
+    if (canAccess) {
+      navigate('/dashboard', { replace: true });
+    } else {
+      navigate('/home', { replace: true });
+    }
+  }, [isConnected, address, isCorrectChain, isInitializing, navigate]);
+  
+  // Return null to avoid any flash while redirecting
+  return null;
+};
 
 // Chat AI Component (Memoized to prevent unnecessary re-renders)
 const ChatAI = ({ isConnected, walletInfo }) => {
@@ -302,14 +311,15 @@ const AnalyticsRoute = () => {
 };
 
 // Main Content Component (Memoized to prevent unnecessary re-renders)
-const MainContent = React.memo(({ walletInfo, isConnected, sidebarOpen, walletHookData }) => {
+const MainContent = React.memo(({ walletInfo, isConnected, sidebarOpen, isMobile, walletHookData, client }) => {
   const location = useLocation();
 
   return (
-    <div className={`main-content ${sidebarOpen ? '' : 'sidebar-closed'}`}>
+    <div className={`main-content ${sidebarOpen ? '' : 'sidebar-closed'} ${isMobile ? 'mobile-layout' : ''}`}>
       <Header 
         walletInfo={walletInfo}
         isConnected={isConnected}
+        client={client}
       />
       
       {/* Network Alert - Shows when user is on wrong chain */}
@@ -348,13 +358,15 @@ const MainContent = React.memo(({ walletInfo, isConnected, sidebarOpen, walletHo
 MainContent.displayName = 'MainContent';
 
 // Internal App Component (uses Thirdweb hooks)
-const InternalApp = () => {
+const InternalApp = ({ client }) => {
   const [walletInfo, setWalletInfo] = useState({ connected: false, address: null });
   const [isConnected, setIsConnected] = useState(false);
   const [showCookieConsent, setShowCookieConsent] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
+  const { isMobileDevice, isTouchDevice } = useResponsive();
+  const { authStatus } = useRouteProtection();
 
   // Safe wallet hook usage with error boundary
   let walletHook;
@@ -405,10 +417,38 @@ const InternalApp = () => {
     }
   }, []);
 
+  // Close sidebar on mobile when route changes
+  useEffect(() => {
+    if (isMobileDevice) {
+      setSidebarOpen(false);
+    }
+  }, [location.pathname, isMobileDevice]);
+
+  // Swipe gesture for mobile sidebar
+  const swipeHandlers = useSwipeGesture(
+    () => {
+      // Swipe left - close sidebar
+      if (isMobileDevice && sidebarOpen) {
+        setSidebarOpen(false);
+      }
+    },
+    () => {
+      // Swipe right - open sidebar
+      if (isMobileDevice && !sidebarOpen) {
+        setSidebarOpen(true);
+      }
+    }
+  );
+
   const handleGetStarted = () => {
-    // Scroll to top and show wallet connection
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    navigate('/dashboard');
+    // Only navigate to dashboard if properly authenticated
+    if (authStatus.canAccess) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      navigate('/dashboard');
+    } else {
+      // Show authentication requirement
+      console.log('Cannot access dashboard:', authStatus.reason);
+    }
   };
 
   const handleCookieAccept = (preferences) => {
@@ -426,7 +466,7 @@ const InternalApp = () => {
   // Show dashboard if connected
   return (
     <NotificationProvider walletState={notificationWalletState}>
-      <Suspense fallback={<LoadingFallback />}>
+      <Suspense fallback={<LoadingFallback type="skeleton" message="Loading application..." />}>
         <Routes>
           {/* Legal pages routes */}
           <Route path="/terms" element={<TermsOfService onClose={() => navigate('/home')} />} />
@@ -434,38 +474,67 @@ const InternalApp = () => {
           <Route path="/prohibited" element={<ProhibitedActivities onClose={() => navigate('/home')} />} />
           <Route path="/license" element={<License onClose={() => navigate('/home')} />} />
           
-          {/* Home page route */}
+          {/* Home page route - Always accessible but shows different content based on auth state */}
           <Route path="/home" element={
-            !isConnected ? (
-              <HomePage onGetStarted={handleGetStarted} onNavigate={(view) => navigate(`/${view}`)} />
-            ) : (
-              <Navigate to="/dashboard" replace />
-            )
+            <HomePage 
+              onGetStarted={handleGetStarted} 
+              onNavigate={(view) => navigate(`/${view}`)}
+              authStatus={authStatus}
+              locationState={location.state}
+              client={client}
+            />
           } />
           
-          {/* Main app routes */}
+          {/* Protected app routes - Require wallet authentication */}
           <Route path="/*" element={
-            <div className="app">
-              <Sidebar 
-                walletInfo={walletInfo}
-                isConnected={isConnected}
-                isOpen={sidebarOpen}
-                onToggle={() => setSidebarOpen(!sidebarOpen)}
-              />
-              
-              <MainContent 
-                walletInfo={walletInfo}
-                isConnected={isConnected}
-                sidebarOpen={sidebarOpen}
-                walletHookData={{
-                  isCorrectChain,
-                  switchToCorrectChain,
-                  isSwitching,
-                  targetChain
-                }}
-              />
-            </div>
+            <ProtectedRoute requireCorrectChain={true}>
+              <div className="app" {...(isTouchDevice ? swipeHandlers : {})}>
+                <Sidebar 
+                  walletInfo={walletInfo}
+                  isConnected={isConnected}
+                  isOpen={sidebarOpen}
+                  onToggle={() => setSidebarOpen(!sidebarOpen)}
+                />
+                
+                {/* Sidebar overlay for mobile */}
+                {isMobileDevice && sidebarOpen && (
+                  <div 
+                    className="sidebar-overlay" 
+                    onClick={() => setSidebarOpen(false)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => e.key === 'Escape' && setSidebarOpen(false)}
+                    aria-label="Close sidebar"
+                  />
+                )}
+                
+                <MainContent 
+                  walletInfo={walletInfo}
+                  isConnected={isConnected}
+                  sidebarOpen={sidebarOpen}
+                  isMobile={isMobileDevice}
+                  walletHookData={{
+                    isCorrectChain,
+                    switchToCorrectChain,
+                    isSwitching,
+                    targetChain
+                  }}
+                  client={client}
+                />
+                
+                {/* Mobile Bottom Navigation */}
+                {isMobileDevice && (
+                  <MobileBottomNav 
+                    onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
+                    isMenuOpen={sidebarOpen}
+                  />
+                )}
+              </div>
+            </ProtectedRoute>
           } />
+          
+          {/* Fallback route - Smart redirect based on authentication status */}
+          <Route path="*" element={<SmartRedirect />} />
         </Routes>
       </Suspense>
       {showCookieConsent && <CookieConsent onAccept={handleCookieAccept} />}
@@ -473,31 +542,89 @@ const InternalApp = () => {
   );
 };
 
+// Custom QueryClient that works with Thirdweb
+const createCompatibleQueryClient = () => {
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: 1,
+        staleTime: 1000 * 60 * 5, // 5 minutes
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
+      },
+    },
+    logger: {
+      log: () => {},
+      warn: () => {},
+      error: () => {}, // Suppress query errors from showing in console
+    },
+  });
+};
+
 // Main App Component (provides Thirdweb context)
 const App = () => {
-  // Get clientId from env, use undefined if not set (allows development without Thirdweb)
-  const clientId = import.meta.env.VITE_THIRDWEB_CLIENT_ID || undefined;
+  // Get clientId from env - NO fallback hardcoded
+  const clientId = import.meta.env.VITE_TEMPLATE_CLIENT_ID || import.meta.env.VITE_THIRDWEB_CLIENT_ID;
+  
+  // Create QueryClient instance
+  const [queryClient] = useState(() => createCompatibleQueryClient());
+
+  // Create Thirdweb client
+  const client = clientId ? createThirdwebClient({
+    clientId: clientId,
+  }) : null;
+
+  // Log client ID status for debugging
+  useEffect(() => {
+    // Initialize mobile debugger
+    if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+      mobileDebugger.log('📱 GigChain App loaded on iOS');
+      mobileDebugger.log(`🏠 URL: ${window.location.href}`);
+      mobileDebugger.log(`🔧 Client ID: ${clientId ? 'Configured' : 'Missing'}`);
+    }
+    
+    if (!clientId) {
+      console.warn('VITE_TEMPLATE_CLIENT_ID or VITE_THIRDWEB_CLIENT_ID not configured. Some wallet features may be limited.');
+      console.log('Current env variables:', {
+        VITE_TEMPLATE_CLIENT_ID: import.meta.env.VITE_TEMPLATE_CLIENT_ID,
+        VITE_THIRDWEB_CLIENT_ID: import.meta.env.VITE_THIRDWEB_CLIENT_ID
+      });
+    } else {
+      console.log('✅ Thirdweb Client ID configured successfully:', clientId?.slice(0, 8) + '...');
+    }
+  }, [clientId]);
+
+  if (!client) {
+    // Fallback when no client ID is configured
+    return (
+      <ErrorBoundary>
+        <ThemeProvider>
+          <ToastProvider>
+            <QueryClientProvider client={queryClient}>
+              <BrowserRouter>
+                <div style={{ padding: '20px', textAlign: 'center' }}>
+                  <h3>Configuration Required</h3>
+                  <p>Please configure VITE_THIRDWEB_CLIENT_ID environment variable.</p>
+                </div>
+              </BrowserRouter>
+            </QueryClientProvider>
+          </ToastProvider>
+        </ThemeProvider>
+      </ErrorBoundary>
+    );
+  }
 
   return (
     <ErrorBoundary>
       <ThemeProvider>
         <ToastProvider>
-        <BrowserRouter>
-          <ThirdwebProvider
-            activeChain={Amoy}
-            clientId={clientId}
-            supportedChains={[Amoy]}
-              dAppMeta={{
-                name: "GigChain",
-                description: "Decentralized Freelance Platform",
-                logoUrl: "https://gigchain.io/logo.png",
-                url: "https://gigchain.io",
-                isDarkMode: true,
-              }}
-            >
-              <InternalApp />
-            </ThirdwebProvider>
-          </BrowserRouter>
+          <QueryClientProvider client={queryClient}>
+            <BrowserRouter>
+              <ThirdwebProvider>
+                <InternalApp client={client} />
+              </ThirdwebProvider>
+            </BrowserRouter>
+          </QueryClientProvider>
         </ToastProvider>
       </ThemeProvider>
     </ErrorBoundary>

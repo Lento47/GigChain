@@ -1,10 +1,111 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Zap, Lock, Users, FileCheck, TrendingUp, CheckCircle, Globe, Award, ChevronDown } from 'lucide-react';
+import { Shield, Zap, Lock, Users, FileCheck, TrendingUp, CheckCircle, Globe, Award, ChevronDown, Wallet, ArrowRight, AlertTriangle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useWallet } from '../../hooks/useWallet';
+import { AuthenticationRequired } from '../../components/auth/ProtectedRoute';
+import SimpleWalletConnection from '../../components/features/Wallet/SimpleWalletConnection';
 import HomeNavbar from './HomeNavbar';
 import Footer from './Footer';
 import './home-page.css';
+import './auth-enhancements.css';
 
-const HomePage = ({ onGetStarted, onNavigate }) => {
+const HomePage = ({ onGetStarted, onNavigate, authStatus, locationState, client }) => {
+  const { address, isConnected, isInitializing, isCorrectChain, switchToCorrectChain, isSwitching, targetChain } = useWallet();
+  const navigate = useNavigate();
+  const [showAuthRequired, setShowAuthRequired] = useState(false);
+  const [showWalletConnection, setShowWalletConnection] = useState(false);
+  
+  // IMMEDIATE REDIRECT: If already authenticated, go to dashboard before rendering
+  useEffect(() => {
+    // Don't redirect while wallet is still initializing
+    if (isInitializing) {
+      return;
+    }
+    
+    const canAccess = isConnected && address && /^0x[a-fA-F0-9]{40}$/.test(address) && isCorrectChain;
+    if (canAccess) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isConnected, address, isCorrectChain, isInitializing, navigate]);
+
+  // Check if user was redirected here due to authentication issues
+  useEffect(() => {
+    if (locationState?.reason) {
+      setShowAuthRequired(true);
+      console.log('User redirected to home due to:', locationState.reason);
+      
+      // Auto-show wallet connection modal for better UX
+      if (locationState.reason === 'wallet_not_connected') {
+        setShowWalletConnection(true);
+      }
+    }
+  }, [locationState]);
+
+  // Handle wallet connection attempt
+  const handleConnectWallet = async () => {
+    try {
+      console.log('Opening wallet connection interface...');
+      setShowWalletConnection(true);
+    } catch (error) {
+      console.error('Error opening wallet connection:', error);
+    }
+  };
+
+  // Handle network switch
+  const handleSwitchNetwork = async () => {
+    try {
+      await switchToCorrectChain();
+      setShowAuthRequired(false);
+    } catch (error) {
+      console.error('Error switching network:', error);
+    }
+  };
+
+  // Handle successful wallet connection
+  const handleWalletConnectionSuccess = ({ address, walletInfo, chainId }) => {
+    console.log('✅ Wallet connection successful:', { address, chainId });
+    setShowWalletConnection(false);
+    setShowAuthRequired(false);
+    // Call the onGetStarted callback to navigate to dashboard
+    if (onGetStarted) {
+      onGetStarted();
+    }
+  };
+
+  // Close wallet connection modal
+  const handleCloseWalletConnection = () => {
+    setShowWalletConnection(false);
+  };
+
+  // Get appropriate action based on auth state
+  const getAuthAction = () => {
+    if (!isConnected) {
+      return {
+        text: 'Connect Wallet to Continue',
+        icon: <Wallet size={20} />,
+        action: handleConnectWallet,
+        disabled: false
+      };
+    }
+    
+    if (!isCorrectChain) {
+      return {
+        text: `Switch to ${targetChain?.name}`,
+        icon: <Globe size={20} />,
+        action: handleSwitchNetwork,
+        disabled: isSwitching
+      };
+    }
+    
+    return {
+      text: 'Enter Platform',
+      icon: <ArrowRight size={20} />,
+      action: onGetStarted,
+      disabled: false
+    };
+  };
+
+  const authAction = getAuthAction();
   const [scrollY, setScrollY] = useState(0);
   const [isVisible, setIsVisible] = useState({});
 
@@ -111,7 +212,7 @@ const HomePage = ({ onGetStarted, onNavigate }) => {
   return (
     <div className="home-page">
       {/* Navbar */}
-      <HomeNavbar onGetStarted={onGetStarted} />
+      <HomeNavbar onGetStarted={onGetStarted} authAction={authAction} />
       
       {/* Hero Section */}
       <section className="hero-section" id="hero">
@@ -144,13 +245,25 @@ const HomePage = ({ onGetStarted, onNavigate }) => {
           </p>
           
           <div className="hero-cta animate-fade-in-up delay-2">
-            <button className="cta-primary" onClick={onGetStarted}>
-              <Zap size={20} />
-              Comenzar Ahora
+            <button 
+              className={`cta-primary ${authAction.disabled ? 'disabled' : ''}`}
+              onClick={authAction.action}
+              disabled={authAction.disabled}
+            >
+              {authAction.icon}
+              {authAction.text}
             </button>
             <button className="cta-secondary">
               Ver Demo
             </button>
+            
+            {/* Show authentication status if needed */}
+            {showAuthRequired && locationState && (
+              <div className="auth-status-banner">
+                <AlertTriangle size={16} />
+                <span>{locationState.message}</span>
+              </div>
+            )}
           </div>
 
           <div className="hero-stats animate-fade-in-up delay-3">
@@ -416,10 +529,29 @@ const HomePage = ({ onGetStarted, onNavigate }) => {
           <h2>¿Listo para Trabajar sin Límites?</h2>
           <p>Únete a miles de freelancers y clientes que ya confían en GigChain</p>
           
-          <button className="cta-large" onClick={onGetStarted}>
-            <Zap size={24} />
-            Comenzar Gratis
+          <button 
+            className={`cta-large ${authAction.disabled ? 'disabled' : ''}`}
+            onClick={authAction.action}
+            disabled={authAction.disabled}
+          >
+            {authAction.icon}
+            {authAction.text}
           </button>
+          
+          {/* Authentication Status Display */}
+          {!isConnected && (
+            <div className="auth-requirement-notice">
+              <Wallet size={16} />
+              <span>Wallet connection required to access the platform</span>
+            </div>
+          )}
+          
+          {isConnected && !isCorrectChain && (
+            <div className="auth-requirement-notice warning">
+              <Globe size={16} />
+              <span>Please switch to {targetChain?.name} network</span>
+            </div>
+          )}
           
           <p className="cta-note">
             <Lock size={16} />
@@ -427,6 +559,31 @@ const HomePage = ({ onGetStarted, onNavigate }) => {
           </p>
         </div>
       </section>
+
+      {/* Wallet Connection Modal */}
+      {showWalletConnection && (
+        <div className="wallet-connection-overlay">
+          <div className="wallet-connection-modal">
+            <div className="wallet-connection-header">
+              <h2>Connect Your Wallet</h2>
+              <button 
+                className="close-button"
+                onClick={handleCloseWalletConnection}
+                aria-label="Close wallet connection"
+              >
+                ×
+              </button>
+            </div>
+            <SimpleWalletConnection
+              onSuccess={handleWalletConnectionSuccess}
+              showGuide={true}
+              compact={false}
+              redirectReason={locationState?.reason}
+              client={client}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <Footer onNavigate={onNavigate} />

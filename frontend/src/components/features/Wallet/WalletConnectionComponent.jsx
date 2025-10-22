@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import WalletConnection from './WalletConnection';
 
-const WalletConnectionComponent = () => {
+const WalletConnectionComponent = ({ client }) => {
   const [walletState, setWalletState] = useState({ connected: false, address: null });
 
   const handleWalletChange = (newState) => {
@@ -12,6 +12,7 @@ const WalletConnectionComponent = () => {
     <WalletConnection 
       onWalletChange={handleWalletChange}
       className="main-wallet-connection"
+      client={client}
     />
   );
 };

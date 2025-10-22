@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ConnectWallet, useAddress, useDisconnect } from '@thirdweb-dev/react';
+import { ConnectButton } from 'thirdweb/react';
+import { createWallet } from "thirdweb/wallets";
 import { Wallet, AlertCircle, CheckCircle, ExternalLink, Copy, ChevronDown } from 'lucide-react';
 import { useWallet } from '../../../hooks/useWallet';
 import './Wallet.css';
@@ -12,7 +13,7 @@ const truncateWalletAddress = (address, startChars = 6, endChars = 4) => {
   return `${address.slice(0, startChars)}...${address.slice(-endChars)}`;
 };
 
-export const WalletConnection = ({ onWalletChange, className = '', showOptionalMessage = false }) => {
+export const WalletConnection = ({ onWalletChange, className = '', showOptionalMessage = false, client }) => {
   const { 
     address, 
     isConnected, 
@@ -60,10 +61,28 @@ export const WalletConnection = ({ onWalletChange, className = '', showOptionalM
   };
 
   // Handle wallet disconnection
-  const handleDisconnect = () => {
-    disconnect();
-    if (onWalletChange) {
-      onWalletChange({ connected: false, address: null });
+  const handleDisconnect = async () => {
+    try {
+      // Disconnect function now properly handles the active wallet
+      if (disconnect && typeof disconnect === 'function') {
+        await disconnect();
+        console.log('✅ Wallet disconnected successfully');
+      } else {
+        console.warn('Disconnect function not available');
+      }
+      
+      // Close dropdown after disconnect
+      setShowDetails(false);
+      
+      if (onWalletChange) {
+        onWalletChange({ connected: false, address: null });
+      }
+    } catch (error) {
+      console.error('❌ Error disconnecting wallet:', error);
+      // Show user-friendly message
+      alert('Error al desconectar wallet. Por favor, intenta refrescar la página.');
+      // Close dropdown even if error
+      setShowDetails(false);
     }
   };
 
@@ -96,23 +115,34 @@ export const WalletConnection = ({ onWalletChange, className = '', showOptionalM
   if (!isConnected) {
     return (
       <div className={`wallet-connection ${className}`}>
-        <ConnectWallet 
-          theme="dark"
-          modalTitle="Conectar a GigChain"
-          modalTitleIconUrl=""
-          auth={{
-            loginOptional: true
-          }}
-          switchToActiveChain={true}
-          showThirdwebBranding={false}
-          welcomeScreen={{
-            title: "Bienvenido a GigChain.io",
-            subtitle: "Conecta tu wallet para comenzar a crear contratos inteligentes"
-          }}
-          termsOfServiceUrl=""
-          privacyPolicyUrl=""
-          onConnect={handleConnect}
-        />
+        {client && (
+          <ConnectButton
+            client={client}
+            theme="dark"
+            connectButton={{
+              label: "Conectar Wallet",
+              style: {
+                fontSize: '0.875rem',
+                minHeight: '44px',
+                borderRadius: 'var(--radius-md)',
+                width: '100%'
+              }
+            }}
+            connectModal={{
+              title: "Conectar a GigChain",
+              size: "compact",
+              welcomeScreen: {
+                title: "Bienvenido a GigChain.io",
+                subtitle: "Conecta tu wallet para comenzar a crear contratos inteligentes"
+              }
+            }}
+            wallets={[
+              createWallet("io.metamask"),
+              createWallet("com.coinbase.wallet"),
+              createWallet("me.rainbow")
+            ]}
+          />
+        )}
         {showOptionalMessage && (
           <div className="wallet-info">
             <p className="wallet-note">

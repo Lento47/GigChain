@@ -5,6 +5,7 @@ Comprehensive validation for all user inputs
 
 import re
 import logging
+import hashlib
 from typing import Any, Dict, List, Optional, Tuple
 from decimal import Decimal, InvalidOperation
 
@@ -39,8 +40,14 @@ class InputValidator:
             'complexity': 20
         }
     
-    def validate_wallet_address(self, address: str) -> Tuple[bool, str]:
-        """Validate Ethereum wallet address."""
+    def validate_wallet_address(self, address: str, check_checksum: bool = True) -> Tuple[bool, str]:
+        """
+        Validate Ethereum wallet address with optional EIP-55 checksum validation.
+        
+        Args:
+            address: Ethereum address to validate
+            check_checksum: If True, validate EIP-55 checksum (default: True)
+        """
         if not address or not isinstance(address, str):
             return False, "Address is required"
         
@@ -52,7 +59,42 @@ class InputValidator:
         if not self.ETH_ADDRESS_PATTERN.match(address):
             return False, "Invalid Ethereum address format"
         
+        # EIP-55 checksum validation
+        if check_checksum and not address.islower() and not address.isupper():
+            if not self._validate_eip55_checksum(address):
+                return False, "Invalid EIP-55 checksum - address may be incorrect"
+        
         return True, "Valid address"
+    
+    def _validate_eip55_checksum(self, address: str) -> bool:
+        """
+        Validate EIP-55 checksum for Ethereum address.
+        https://eips.ethereum.org/EIPS/eip-55
+        """
+        try:
+            # Remove 0x prefix
+            address_without_prefix = address[2:] if address.startswith('0x') else address
+            
+            # Hash the lowercase address
+            hash_str = hashlib.sha3_256(address_without_prefix.lower().encode()).hexdigest()
+            
+            # Check each character
+            for i, char in enumerate(address_without_prefix):
+                if char.isalpha():
+                    # If character is letter, check if case matches hash
+                    hash_value = int(hash_str[i], 16)
+                    if hash_value >= 8:
+                        if char.lower() == char:
+                            return False
+                    else:
+                        if char.upper() == char:
+                            return False
+            
+            return True
+        except Exception as e:
+            logger.warning(f"EIP-55 checksum validation error: {e}")
+            # If validation fails, accept it (better than rejecting valid addresses)
+            return True
     
     def validate_amount(self, amount: Any) -> Tuple[bool, str, Optional[float]]:
         """Validate monetary amounts."""

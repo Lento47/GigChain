@@ -17,11 +17,6 @@ fastapi==0.115.4
 uvicorn[standard]==0.32.0
 gunicorn==23.0.0
 
-# Legacy Flask Support (for backward compatibility during migration)
-flask==3.0.3
-flask-cors==5.0.0
-werkzeug==3.0.4
-
 # Production Dependencies
 python-dotenv==1.0.1
 pydantic==2.9.2

@@ -3,6 +3,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 import logging
@@ -42,8 +43,54 @@ from auth import (
     SessionCleanupMiddleware
 )
 
+# Import auth schemas for proper response models
+try:
+    from auth.schemas import (
+        AuthChallengeRequest,
+        AuthChallengeResponse,
+        AuthVerifyRequest,
+        AuthVerifyResponse,
+        AuthRefreshRequest,
+        AuthRefreshResponse
+    )
+except ImportError:
+    # Fallback: Define basic models if auth.schemas not available
+    class AuthChallengeRequest(BaseModel):
+        wallet_address: str
+        
+    class AuthVerifyRequest(BaseModel):
+        challenge_id: str
+        signature: str
+        wallet_address: str
+        
+    class AuthRefreshRequest(BaseModel):
+        refresh_token: str
+        session_token: str
+        
+    # Response models will use APIResponseWrapper format
+    AuthChallengeResponse = dict
+    AuthVerifyResponse = dict  
+    AuthRefreshResponse = dict
+
 # Import Wallet Manager
 from wallet_manager import get_wallet_manager
+
+# Import Contract Storage and Utilities
+from contracts_storage import save_contract_to_dashboard
+from utils.text_constructor import construct_text_from_structured_data
+
+# Import Security Utilities
+from security.input_sanitizer import sanitizer
+from security.validators import validator
+from security.audit_logger import get_audit_logger, AuditEventType, AuditSeverity
+
+# Import API Response Wrapper
+from api_response_wrapper import (
+    APIResponseWrapper, ResponseTimingMiddleware,
+    create_validation_error, create_auth_error, create_not_found_error,
+    create_rate_limit_error, create_server_error, paginated_response,
+    created_response, no_content_response
+)
 
 # Import Gamification & Negotiation System
 from gamification_api import router as gamification_router
@@ -78,190 +125,34 @@ from dispute_mediation_api import router as mediation_router
 # Import IPFS Storage System
 from ipfs_api import router as ipfs_router
 
-# Import Private Jobs System
-from private_jobs_api import router as private_jobs_router
+# Import Private Jobs System (TEMPORARILY DISABLED - missing models directory)
+# from private_jobs_api import router as private_jobs_router
 
-# Import Engagement System
-from engagement_api import router as engagement_router
+# Import Engagement System (TEMPORARILY DISABLED - missing models directory)
+# from engagement_api import router as engagement_router
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# Configure logging - ONLY W-CSAP Authentication logs
+logging.basicConfig(
+    level=logging.WARNING,  # Set base level to WARNING to reduce noise
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
+# Enable INFO level ONLY for W-CSAP auth modules
+logging.getLogger('auth.w_csap').setLevel(logging.INFO)
+logging.getLogger('auth.routes').setLevel(logging.INFO)
+logging.getLogger('auth.middleware').setLevel(logging.WARNING)
+logging.getLogger('auth.database').setLevel(logging.WARNING)
+logging.getLogger('auth.config').setLevel(logging.WARNING)
+
+# Silence noisy modules
+logging.getLogger('uvicorn.access').setLevel(logging.WARNING)
+logging.getLogger('security.audit_logger').setLevel(logging.WARNING)
+
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.WARNING)  # Reduce main logger noise
 
-# Database helper function
-def save_contract_to_dashboard(contract_id: str, contract_data: Dict[str, Any], client_address: str = None) -> bool:
-    """
-    Save contract to the contracts database for dashboard integration.
-    
-    Args:
-        contract_id: Unique contract identifier
-        contract_data: Contract data including text, formData, and result
-        client_address: Client wallet address (optional)
-        
-    Returns:
-        bool: True if successful, False otherwise
-    """
-    try:
-        import sqlite3
-        import json
-        
-        logger.info(f"Attempting to save contract {contract_id} to database")
-        logger.info(f"Contract data keys: {list(contract_data.keys()) if contract_data else 'None'}")
-        
-        # Get database connection
-        conn = sqlite3.connect('gigchain.db')
-        conn.row_factory = sqlite3.Row
-        c = conn.cursor()
-        
-        logger.info("Database connection established")
-        
-        # Initialize contracts database if needed
-        c.execute('''CREATE TABLE IF NOT EXISTS contracts (
-            id TEXT PRIMARY KEY,
-            title TEXT NOT NULL,
-            description TEXT,
-            freelancer_address TEXT,
-            client_address TEXT NOT NULL,
-            amount REAL NOT NULL,
-            currency TEXT DEFAULT 'USDC',
-            status TEXT NOT NULL,
-            category TEXT,
-            skills TEXT,
-            deadline TEXT,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL,
-            started_at TEXT,
-            completed_at TEXT,
-            milestones TEXT,
-            metadata TEXT,
-            contract_type TEXT DEFAULT 'project'
-        )''')
-        
-        # Add contract_type column if it doesn't exist (for existing databases)
-        try:
-            c.execute("ALTER TABLE contracts ADD COLUMN contract_type TEXT DEFAULT 'project'")
-        except Exception:
-            # Column already exists, ignore
-            pass
-        
-        # Extract data from contract_data
-        form_data = contract_data.get('formData', {})
-        result = contract_data.get('result', {})
-        
-        # Extract title and description
-        base_title = form_data.get('projectTitle', 'Contrato Generado')
-        contract_type = form_data.get('contractType', 'project')
-        
-        # Set appropriate title based on type
-        if contract_type == 'service':
-            title = f"[SERVICIO] {base_title}"
-        else:
-            title = f"[PROYECTO] {base_title}"
-            
-        description = contract_data.get('text', form_data.get('description', 'Contrato generado por IA'))
-        
-        # Extract amount
-        amount = form_data.get('requestedAmount') or form_data.get('offeredAmount') or 1000.0
-        if isinstance(amount, str):
-            try:
-                amount = float(amount)
-            except (ValueError, TypeError):
-                amount = 1000.0
-                
-        # Extract other fields with category mapping
-        category_spanish = form_data.get('category', 'otros')
-        
-        # Map Spanish categories to English (for API compatibility)
-        category_mapping = {
-            'desarrollo-web': 'development',
-            'diseno-grafico': 'design', 
-            'marketing-digital': 'marketing',
-            'redaccion': 'writing',
-            'traduccion': 'writing',
-            'consultoria': 'consulting',
-            'otros': 'other'
-        }
-        
-        category = category_mapping.get(category_spanish, 'other')
-        
-        skills = form_data.get('requiredSkills', '')
-        skills_list = [skill.strip() for skill in skills.split(',')] if skills else []
-        deadline = form_data.get('deadline')
-        
-        # Contract type is already handled in title generation above
-        
-        # Debug: Log what we're receiving
-        logger.info(f"DEBUG - save_contract_to_dashboard called with:")
-        logger.info(f"  - contract_id: {contract_id}")
-        logger.info(f"  - client_address param: {client_address}")
-        
-        # Set client and freelancer addresses based on role and wallet data
-        role = form_data.get('role', 'unknown')
-        client_wallet = form_data.get('clientWallet')
-        freelancer_wallet = form_data.get('freelancerWallet')
-        
-        logger.info(f"  - role from form: {role}")
-        logger.info(f"  - clientWallet from form: {client_wallet}")
-        logger.info(f"  - freelancerWallet from form: {freelancer_wallet}")
-        
-        if role == 'client':
-            # When role is client, use clientWallet for client_address
-            client_address = client_wallet or client_address or 'unknown_client'
-            freelancer_address = None  # Will be assigned when freelancer accepts
-        elif role == 'freelancer':
-            # When role is freelancer, use freelancerWallet for freelancer_address
-            client_address = client_address or 'unknown_client'
-            freelancer_address = freelancer_wallet
-        else:
-            # Fallback to original logic
-            client_address = client_wallet or client_address or 'unknown_client'
-            freelancer_address = freelancer_wallet
-            
-        logger.info(f"  - Final client_address: {client_address}")
-        logger.info(f"  - Final freelancer_address: {freelancer_address}")
-            
-        now = datetime.now().isoformat()
-        
-        logger.info(f"Contract details:")
-        logger.info(f"  - ID: {contract_id}")
-        logger.info(f"  - Title: {title}")
-        logger.info(f"  - Type: {contract_type}")
-        logger.info(f"  - Amount: {amount}")
-        logger.info(f"  - Category: {category}")
-        logger.info(f"  - Role: {role}")
-        logger.info(f"  - Client Wallet from form: {client_wallet}")
-        logger.info(f"  - Freelancer Wallet from form: {freelancer_wallet}")
-        logger.info(f"  - Client: {client_address}")
-        logger.info(f"  - Freelancer: {freelancer_address}")
-        logger.info(f"  - Skills: {skills_list}")
-        
-        # Insert contract
-        c.execute('''INSERT OR REPLACE INTO contracts 
-                     (id, title, description, freelancer_address, client_address, amount, currency, 
-                      status, category, skills, deadline, created_at, updated_at,
-                      milestones, metadata, contract_type)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                  (contract_id, title, description, freelancer_address, client_address, amount, 'USDC',
-                   'open', category, json.dumps(skills_list), deadline, now, now,
-                   json.dumps(result.get('milestones', [])), 
-                   json.dumps(contract_data), contract_type))
-        
-        conn.commit()
-        logger.info(f"Database commit successful")
-        
-        # Verify the contract was saved
-        c.execute("SELECT COUNT(*) FROM contracts WHERE id = ?", (contract_id,))
-        count = c.fetchone()[0]
-        logger.info(f"Contract verification: {count} contract(s) with ID {contract_id}")
-        
-        conn.close()
-        
-        logger.info(f"Contract {contract_id} saved to database successfully")
-        return True
-        
-    except Exception as e:
-        logger.error(f"Failed to save contract {contract_id} to database: {e}")
-        return False
+# Initialize security audit logger
+audit_logger = get_audit_logger()
 
 # Lifespan context manager for startup/shutdown events
 @asynccontextmanager
@@ -331,11 +222,11 @@ app.include_router(mediation_router)
 # Include IPFS router
 app.include_router(ipfs_router)
 
-# Include Private Jobs router
-app.include_router(private_jobs_router)
+# Include Private Jobs router (TEMPORARILY DISABLED)
+# app.include_router(private_jobs_router)
 
-# Include Engagement router
-app.include_router(engagement_router)
+# Include Engagement router (TEMPORARILY DISABLED)
+# app.include_router(engagement_router)
 
 # Include Contracts router
 app.include_router(contracts_router)
@@ -344,7 +235,7 @@ app.include_router(contracts_router)
 # Get allowed origins from environment with development defaults
 ALLOWED_ORIGINS_ENV = os.getenv(
     'ALLOWED_ORIGINS',
-    'http://localhost:3000,http://localhost:3001,http://localhost:5173,http://localhost:5174,http://127.0.0.1:3000,http://127.0.0.1:3001,http://127.0.0.1:5173,http://127.0.0.1:5174'
+    'http://localhost:3000,http://localhost:3001,http://localhost:5173,http://localhost:5174,http://127.0.0.1:3000,http://127.0.0.1:3001,http://127.0.0.1:5173,http://127.0.0.1:5174,http://10.0.175.113:5173,http://192.168.223.1:5173,http://192.168.32.1:5173,http://172.27.80.1:5173'
 )
 if not ALLOWED_ORIGINS_ENV:
     raise ValueError(
@@ -359,21 +250,51 @@ for origin in ALLOWED_ORIGINS:
     if not (origin.startswith('http://') or origin.startswith('https://')):
         raise ValueError(f"Invalid origin format: {origin}. Must include protocol (http:// or https://)")
 
-# Apply CORS middleware with strict configuration
+# Custom CORS middleware for mobile compatibility
+class CustomCORSMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        # Handle OPTIONS preflight requests directly
+        if request.method == "OPTIONS":
+            response = JSONResponse(content={"message": "CORS preflight OK"})
+            response.headers["Access-Control-Allow-Origin"] = "*"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "*"
+            response.headers["Access-Control-Max-Age"] = "3600"
+            return response
+        
+        # Process normal requests
+        response = await call_next(request)
+        
+        # Add CORS headers to all responses
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+        
+        return response
+
+# Add custom CORS middleware FIRST (before other middlewares)
+app.add_middleware(CustomCORSMiddleware)
+
+# Log allowed origins for debugging
+print(f"CORS DEBUG: Using custom CORS middleware for mobile compatibility")
+
+# Apply standard CORS middleware as backup
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "X-Requested-With", "X-CSRF-Token"],
-    max_age=3600,  # Cache preflight requests for 1 hour
+    allow_origins=["*"],  # Allow all origins for mobile development
+    allow_credentials=False,  # Must be False when using allow_origins=["*"]  
+    allow_methods=["*"],  # Allow all methods including OPTIONS
+    allow_headers=["*"],  # Allow all headers
+    max_age=3600,
 )
 
 # Add W-CSAP authentication middleware
-# Note: Middleware currently commented out - needs refactoring to be compatible with FastAPI
-# TODO: Implement as BaseHTTPMiddleware or pure ASGI middleware
-# app.add_middleware(RateLimitMiddleware)  # Uncomment to enable rate limiting
-# app.add_middleware(SessionCleanupMiddleware)  # Uncomment for auto cleanup
+# Note: RateLimitMiddleware and SessionCleanupMiddleware enabled for security
+app.add_middleware(SessionCleanupMiddleware, cleanup_interval=3600)  # Auto cleanup expired sessions
+app.add_middleware(RateLimitMiddleware, max_attempts=5, window_seconds=300)  # Enable rate limiting
+
+# Add API response timing middleware
+app.add_middleware(ResponseTimingMiddleware)
 
 # Add security middleware
 from auth.security_middleware import get_security_middleware
@@ -578,15 +499,22 @@ async def log_requests(request: Request, call_next):
     return response
 
 # Health check endpoint
-@app.get("/health", response_model=HealthResponse)
-async def health_check():
+@app.get("/health")
+async def health_check(request: Request):
     """Health check endpoint with AI agent status."""
-    return HealthResponse(
-        status="healthy",
-        timestamp=datetime.now().isoformat(),
-        service="GigChain API",
-        version="1.0.0",
-        ai_agents_active=bool(os.getenv('OPENAI_API_KEY'))
+    request_id = getattr(request.scope, 'request_id', str(uuid.uuid4()))
+    
+    health_data = {
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat(),
+        "service": "GigChain API",
+        "version": "1.0.0",
+        "ai_agents_active": bool(os.getenv('OPENAI_API_KEY'))
+    }
+    
+    return APIResponseWrapper.success(
+        data=health_data,
+        request_id=request_id
     )
 
 # ==================== W-CSAP AUTHENTICATION ENDPOINTS ====================
@@ -653,13 +581,29 @@ async def auth_challenge(request: Request, body: AuthChallengeRequest):
             user_agent=user_agent
         )
         
+        # Security audit log
+        audit_logger.log_event(
+            event_type=AuditEventType.AUTH_CHALLENGE_REQUESTED,
+            severity=AuditSeverity.INFO,
+            wallet_address=body.wallet_address,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            event_data={"challenge_id": challenge.challenge_id},
+            success=True
+        )
+        
         logger.info(f"🎯 Challenge generated for {body.wallet_address[:10]}...")
         
         return AuthChallengeResponse(
+            success=True,
             challenge_id=challenge.challenge_id,
             wallet_address=challenge.wallet_address,
             challenge_message=challenge.challenge_message,
-            expires_at=challenge.expires_at
+            nonce=challenge.nonce,
+            issued_at=challenge.issued_at,
+            expires_at=challenge.expires_at,
+            expires_in=int(challenge.expires_at - challenge.issued_at),
+            metadata=challenge.metadata
         )
         
     except Exception as e:
@@ -669,7 +613,7 @@ async def auth_challenge(request: Request, body: AuthChallengeRequest):
             detail="Failed to generate authentication challenge"
         )
 
-@app.post("/api/auth/verify", response_model=AuthVerifyResponse)
+@app.post("/api/auth/verify")
 async def auth_verify(request: Request, body: AuthVerifyRequest):
     """
     Step 2: Verify the signed challenge and create a session.
@@ -684,11 +628,12 @@ async def auth_verify(request: Request, body: AuthVerifyRequest):
         ip_address = request.client.host if request.client else None
         user_agent = request.headers.get("user-agent")
         
-        # Complete authentication
+        # Complete authentication (with database fallback)
         session_assertion = authenticator.complete_authentication(
             challenge_id=body.challenge_id,
             signature=body.signature,
-            wallet_address=body.wallet_address
+            wallet_address=body.wallet_address,
+            db=db
         )
         
         if not session_assertion:
@@ -703,11 +648,25 @@ async def auth_verify(request: Request, body: AuthVerifyRequest):
                 user_agent=user_agent
             )
             
+            # Security audit log - WARNING level for failed auth
+            audit_logger.log_event(
+                event_type=AuditEventType.AUTH_FAILURE,
+                severity=AuditSeverity.WARNING,
+                wallet_address=body.wallet_address,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                event_data={"challenge_id": body.challenge_id},
+                success=False,
+                error_message="Invalid signature or expired challenge"
+            )
+            
             logger.warning(f"❌ Authentication failed for {body.wallet_address[:10]}...")
             
-            return AuthVerifyResponse(
-                success=False,
-                error="Invalid signature or expired challenge"
+            request_id = getattr(request.scope, 'request_id', str(uuid.uuid4()))
+            
+            return create_auth_error(
+                message="Invalid signature or expired challenge",
+                request_id=request_id
             )
         
         # Save session to database
@@ -739,22 +698,42 @@ async def auth_verify(request: Request, body: AuthVerifyRequest):
         # Update challenge status
         db.update_challenge_status(body.challenge_id, "used")
         
+        # Security audit log - Successful authentication
+        audit_logger.log_event(
+            event_type=AuditEventType.AUTH_SUCCESS,
+            severity=AuditSeverity.INFO,
+            wallet_address=body.wallet_address,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            session_id=session_assertion.assertion_id,
+            event_data={"challenge_id": body.challenge_id},
+            success=True
+        )
+        
         logger.info(f"✅ Authentication successful for {body.wallet_address[:10]}...")
         
-        return AuthVerifyResponse(
-            success=True,
-            session_token=session_assertion.session_token,
-            refresh_token=session_assertion.refresh_token,
-            wallet_address=session_assertion.wallet_address,
-            expires_at=session_assertion.expires_at,
-            expires_in=session_assertion.expires_at - session_assertion.issued_at
+        request_id = getattr(request.scope, 'request_id', str(uuid.uuid4()))
+        
+        auth_data = {
+            "session_token": session_assertion.session_token,
+            "refresh_token": session_assertion.refresh_token,
+            "wallet_address": session_assertion.wallet_address,
+            "expires_at": session_assertion.expires_at,
+            "expires_in": session_assertion.expires_at - session_assertion.issued_at
+        }
+        
+        return APIResponseWrapper.success(
+            data=auth_data,
+            request_id=request_id
         )
         
     except Exception as e:
         logger.error(f"Authentication verification error: {str(e)}")
-        return AuthVerifyResponse(
-            success=False,
-            error="Failed to verify authentication"
+        request_id = getattr(request.scope, 'request_id', str(uuid.uuid4()))
+        
+        return create_server_error(
+            message="Failed to verify authentication",
+            request_id=request_id
         )
 
 @app.post("/api/auth/refresh", response_model=AuthRefreshResponse)
@@ -1242,6 +1221,18 @@ async def api_full_flow(request: ContractRequest):
             'database_saved': True
         }
         
+        # Audit log contract creation
+        audit_logger.log_event(
+            event_type=AuditEventType.CONTRACT_CREATED,
+            severity=AuditSeverity.INFO,
+            event_data={
+                "contract_id": result.get('contract_id', 'unknown'),
+                "endpoint": "full_flow",
+                "has_ai": True
+            },
+            success=True
+        )
+        
         logger.info(f"Successfully generated contract: {result.get('contract_id', 'unknown')}")
         return result
         
@@ -1305,6 +1296,18 @@ async def api_simple_contract(request: SimpleContractRequest):
             'database_saved': True
         }
         
+        # Audit log simple contract creation
+        audit_logger.log_event(
+            event_type=AuditEventType.CONTRACT_CREATED,
+            severity=AuditSeverity.INFO,
+            event_data={
+                "contract_id": result.get('contract_id', 'unknown'),
+                "endpoint": "contract",
+                "has_ai": False
+            },
+            success=True
+        )
+        
         logger.info("Successfully generated simple contract")
         return result
         
@@ -1337,7 +1340,7 @@ async def api_structured_contract(request: StructuredContractRequest):
         
         # Construct text from structured data
         try:
-            constructed_text = _construct_text_from_structured_data(request)
+            constructed_text = construct_text_from_structured_data(request)
             logger.info(f"Constructed text length: {len(constructed_text)}")
         except Exception as e:
             logger.error(f"Error constructing text: {str(e)}")
@@ -1388,18 +1391,10 @@ async def api_structured_contract(request: StructuredContractRequest):
             "clientLocation": request.clientLocation
         }
         
-        # DEBUG: Check if we reach this point
-        print("DEBUG: Reached the contract saving section")
-        logger.info("DEBUG: About to save contract to database")
-        
         # Save to contracts database for dashboard integration
         try:
             contract_id = result.get('contract_id')
-            logger.info(f"ATTEMPTING TO SAVE CONTRACT: {contract_id}")
-            
-            # Don't pass user_address as client_address - let save_contract_to_dashboard
-            # determine the correct addresses from the form data
-            logger.info(f"Saving contract with role: {request.role}")
+            logger.info(f"Saving contract {contract_id} for role: {request.role}")
             
             # Save to dashboard database with form data
             dashboard_saved = save_contract_to_dashboard(
@@ -1417,9 +1412,7 @@ async def api_structured_contract(request: StructuredContractRequest):
                 logger.warning(f"Failed to save structured contract to dashboard: {contract_id}")
             
         except Exception as db_error:
-            logger.error(f"CRITICAL ERROR saving structured contract to database: {str(db_error)}")
-            import traceback
-            logger.error(f"Traceback: {traceback.format_exc()}")
+            logger.error(f"Error saving structured contract to database: {str(db_error)}")
             # Continue without failing the request
         
         # Add API metadata
@@ -1431,6 +1424,19 @@ async def api_structured_contract(request: StructuredContractRequest):
             'database_saved': True
         }
         
+        # Audit log structured contract creation
+        audit_logger.log_event(
+            event_type=AuditEventType.CONTRACT_CREATED,
+            severity=AuditSeverity.INFO,
+            event_data={
+                "contract_id": result.get('contract_id', 'unknown'),
+                "endpoint": "structured_contract",
+                "role": request.role,
+                "has_ai": False
+            },
+            success=True
+        )
+        
         logger.info("Successfully generated structured contract")
         return result
         
@@ -1441,132 +1447,6 @@ async def api_structured_contract(request: StructuredContractRequest):
     except Exception as e:
         logger.error(f"Unexpected error: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error occurred")
-
-def _construct_text_from_structured_data(data: StructuredContractRequest) -> str:
-    """Construct text input from structured form data."""
-    # Determine contract type based on role if not explicitly set
-    contract_type = data.contractType or ("project" if data.role == "client" else "service")
-    
-    # Start with appropriate title
-    text = ""
-    if data.projectTitle:
-        if contract_type == "service":
-            text = f"Servicio: {data.projectTitle}. "
-        else:
-            text = f"Proyecto: {data.projectTitle}. "
-    
-    # Add description with context
-    if contract_type == "service":
-        text += f"Ofrezco: {data.description}"
-    else:
-        text += f"Necesito: {data.description}"
-    
-    # Add profile information
-    if data.role == 'freelancer':
-        if data.freelancerName:
-            text += f" Freelancer: {data.freelancerName}"
-        if data.freelancerTitle:
-            text += f", {data.freelancerTitle}"
-        if data.freelancerLocation:
-            text += f" ({data.freelancerLocation})"
-        if data.freelancerBio:
-            text += f". {data.freelancerBio}"
-        if data.freelancerSkills:
-            text += f" Habilidades: {data.freelancerSkills}"
-        if data.freelancerExperience:
-            text += f" Experiencia: {data.freelancerExperience} años"
-        if data.freelancerRate:
-            text += f" Tarifa: ${data.freelancerRate}/hora"
-        
-        # For freelancer services, emphasize what they offer
-        if contract_type == "service":
-            if data.offeredAmount:
-                text += f" Precio: ${data.offeredAmount} dolares."
-            elif data.hourlyRate:
-                text += f" Tarifa: ${data.hourlyRate}/hora."
-        else:
-            # For freelancer projects (rare case)
-            if data.offeredAmount:
-                text += f" Ofrezco ${data.offeredAmount} dolares."
-            if data.requestedAmount:
-                text += f" Cliente solicita ${data.requestedAmount} dolares."
-    else:
-        # Client profile information
-        if data.clientName:
-            text += f" Cliente: {data.clientName}"
-        if data.clientCompany:
-            text += f" ({data.clientCompany})"
-        if data.clientLocation:
-            text += f" - {data.clientLocation}"
-        if data.clientBio:
-            text += f". {data.clientBio}"
-        
-        # For client projects, emphasize budget
-        if contract_type == "project":
-            if data.requestedAmount:
-                text += f" Presupuesto disponible: ${data.requestedAmount} dolares."
-            elif data.fixedBudget:
-                text += f" Presupuesto: ${data.fixedBudget} dolares."
-        
-        if data.offeredAmount:
-            text += f" Freelancer ofrezco ${data.offeredAmount} dolares."
-    
-    if data.days:
-        text += f" Proyecto de {data.days} días."
-    
-    # Add wallet information
-    if data.freelancerWallet:
-        text += f" Wallet freelancer: {data.freelancerWallet}."
-    if data.clientWallet:
-        text += f" Wallet cliente: {data.clientWallet}."
-    
-    # Add social links for credibility
-    social_links = []
-    if data.freelancerLinkedIn:
-        social_links.append(f"LinkedIn: {data.freelancerLinkedIn}")
-    if data.freelancerGithub:
-        social_links.append(f"GitHub: {data.freelancerGithub}")
-    if data.freelancerPortfolio:
-        social_links.append(f"Portfolio: {data.freelancerPortfolio}")
-    if data.freelancerX:
-        social_links.append(f"X: {data.freelancerX}")
-    
-    if social_links:
-        text += f" Enlaces: {', '.join(social_links)}."
-    
-    # Add frontend form fields
-    if data.category:
-        text += f" Categoría: {data.category}."
-    
-    if data.budgetType == 'fixed' and data.fixedBudget:
-        text += f" Presupuesto fijo: ${data.fixedBudget}"
-    elif data.budgetType == 'hourly' and data.hourlyRate:
-        text += f" Tarifa por hora: ${data.hourlyRate}"
-        if data.estimatedHours:
-            text += f" Horas estimadas: {data.estimatedHours}"
-    
-    if data.projectDuration:
-        text += f" Duración: {data.projectDuration} días"
-    
-    if data.requiredSkills:
-        text += f" Habilidades requeridas: {data.requiredSkills}."
-    
-    if data.experienceLevel:
-        text += f" Nivel de experiencia: {data.experienceLevel}."
-    
-    if data.deliverables:
-        text += f" Entregables: {data.deliverables}."
-    
-    if data.milestones:
-        text += f" Hitos: {data.milestones}."
-    
-    if data.additionalRequirements:
-        text += f" Requisitos adicionales: {data.additionalRequirements}."
-    
-    if data.deadline:
-        text += f" Fecha límite: {data.deadline}."
-    
-    return text
 
 # Wallet validation endpoint
 @app.post("/api/validate_wallet", response_model=WalletValidationResponse)
@@ -1932,6 +1812,22 @@ async def send_chat_message(request: ChatMessage):
     Soporta múltiples tipos de agentes especializados con persistencia.
     """
     try:
+        # Validate and sanitize chat message
+        is_valid, error = sanitizer.validate_contract_input(request.message)
+        if not is_valid:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "response": "Tu mensaje contiene contenido no permitido. Por favor, reformúlalo.",
+                    "session_id": request.session_id or str(uuid.uuid4()),
+                    "timestamp": datetime.now().isoformat(),
+                    "agent_type": "error",
+                    "suggestions": []
+                }
+            )
+        
+        # Sanitize message before AI processing
+        sanitized_message = sanitizer.sanitize_text(request.message)
         logger.info(f"Processing chat message from user: {request.user_id or 'anonymous'}")
         
         # Generar o usar session_id existente
@@ -1944,9 +1840,9 @@ async def send_chat_message(request: ChatMessage):
                 agent_type=request.context.get("agent_type", "contract") if request.context else "contract"
             )
         
-        # Obtener respuesta del chat mejorado
+        # Obtener respuesta del chat mejorado with sanitized message
         response_data = await chat_manager.process_message(
-            message=request.message,
+            message=sanitized_message,
             session_id=session_id,
             user_id=request.user_id,
             context=request.context
@@ -2128,9 +2024,282 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
     finally:
         chat_manager.websocket_manager.disconnect(connection_id, session_id)
 
-# Error handlers with error codes
-@app.exception_handler(404)
-async def not_found_handler(request: Request, exc):
+# Import profile management
+from profile_manager import (
+    get_profile_db, UserProfile, UserSkill, UserNFT,
+    ProfileDatabase
+)
+
+# Profile management endpoints (Development version - no auth required)
+@app.get("/api/profile/{wallet_address}")
+async def get_user_profile(wallet_address: str):
+    """Get user profile by wallet address."""
+    try:
+        profile_db = get_profile_db()
+        profile = profile_db.get_profile(wallet_address)
+        
+        if not profile:
+            return JSONResponse(
+                status_code=404,
+                content={"error": "Profile not found"}
+            )
+        
+        # Get additional data
+        skills = profile_db.get_skills(wallet_address)
+        nfts = profile_db.get_nfts(wallet_address)
+        
+        return {
+            "profile": {
+                "wallet_address": profile.wallet_address,
+                "display_name": profile.display_name,
+                "bio": profile.bio,
+                "avatar_url": profile.avatar_url,  # ✅ AGREGADO!
+                "location": profile.location,
+                "website": profile.website,
+                "twitter_handle": profile.twitter_handle,
+                "github_handle": profile.github_handle,
+                "linkedin_handle": profile.linkedin_handle,
+                "is_verified": profile.is_verified,
+                "verification_level": profile.verification_level,
+                "profile_completeness": profile.profile_completeness,
+                "current_tier": profile.current_tier,
+                "tier_progress": profile.tier_progress,
+                "total_xp": profile.total_xp,
+                "created_at": profile.created_at,
+                "updated_at": profile.updated_at,
+                "last_active": profile.last_active,
+                "preferences": profile.preferences,
+                "settings": profile.settings
+            },
+            "skills": [
+                {
+                    "wallet_address": skill.wallet_address,
+                    "skill_name": skill.skill_name,
+                    "skill_level": skill.skill_level,
+                    "endorsements": skill.endorsements,
+                    "is_verified": skill.is_verified,
+                    "created_at": skill.created_at
+                } for skill in skills
+            ],
+            "nfts": [
+                {
+                    "wallet_address": nft.wallet_address,
+                    "nft_name": nft.nft_name,
+                    "nft_type": nft.nft_type,
+                    "tier_level": nft.tier_level,
+                    "rarity": nft.rarity,
+                    "image_file": nft.image_file,
+                    "description": nft.description,
+                    "earned_at": nft.earned_at
+                } for nft in nfts
+            ]
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting profile: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Internal server error"}
+        )
+
+@app.post("/api/profile/create")
+async def create_user_profile(profile_data: dict):
+    """Create a new user profile."""
+    try:
+        profile_db = get_profile_db()
+        
+        # Use wallet address from profile_data or default test address
+        wallet_address = profile_data.get("wallet_address", "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0")
+        
+        # Log avatar_url info
+        avatar_url = profile_data.get("avatar_url")
+        if avatar_url:
+            logger.info(f"📸 Creating profile with avatar_url (size: {len(avatar_url)} chars)")
+        else:
+            logger.info("Creating profile without avatar")
+        
+        # Create UserProfile object
+        profile = UserProfile(
+            wallet_address=wallet_address,
+            username=profile_data.get("username"),
+            display_name=profile_data.get("display_name"),
+            bio=profile_data.get("bio"),
+            avatar_url=avatar_url,
+            location=profile_data.get("location"),
+            website=profile_data.get("website"),
+            twitter_handle=profile_data.get("twitter_handle"),
+            github_handle=profile_data.get("github_handle"),
+            linkedin_handle=profile_data.get("linkedin_handle"),
+            preferences=profile_data.get("preferences", {}),
+            settings=profile_data.get("settings", {})
+        )
+        
+        success = profile_db.create_profile(profile)
+        
+        if success:
+            logger.info(f"✅ Profile created successfully for {wallet_address}")
+            return {"message": "Profile created successfully", "wallet": wallet_address}
+        else:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "Profile already exists"}
+            )
+            
+    except Exception as e:
+        logger.error(f"❌ Error creating profile: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Internal server error"}
+        )
+
+@app.put("/api/profile/update")
+async def update_user_profile(updates: dict):
+    """Update user profile."""
+    try:
+        print(f"\n{'='*80}")
+        print(f"🔥 PROFILE UPDATE REQUEST RECEIVED")
+        print(f"📦 Raw updates keys: {list(updates.keys())}")
+        print(f"{'='*80}\n")
+        
+        profile_db = get_profile_db()
+        
+        # Use wallet address from updates or default test address
+        wallet_address = updates.get("wallet_address", "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0")
+        
+        # Log avatar_url info
+        if "avatar_url" in updates:
+            avatar_url = updates.get("avatar_url")
+            if avatar_url:
+                print(f"📸 avatar_url FOUND: {len(avatar_url)} chars")
+                logger.info(f"📸 Updating profile with avatar_url (size: {len(avatar_url)} chars)")
+            else:
+                print(f"⚠️ avatar_url is EMPTY")
+                logger.info("Removing avatar from profile")
+        else:
+            print(f"❌ avatar_url NOT IN UPDATES")
+        
+        # Remove wallet_address from updates to avoid updating it
+        clean_updates = {k: v for k, v in updates.items() if k != "wallet_address" and v is not None}
+        print(f"🧹 clean_updates keys: {list(clean_updates.keys())}")
+        print(f"📸 avatar_url in clean_updates: {'avatar_url' in clean_updates}")
+        
+        logger.info(f"📝 Updating profile for {wallet_address} with fields: {list(clean_updates.keys())}")
+        
+        success = profile_db.update_profile(wallet_address, clean_updates)
+        
+        if success:
+            logger.info(f"✅ Profile updated successfully for {wallet_address}")
+            return {"message": "Profile updated successfully", "wallet": wallet_address}
+        else:
+            logger.warning(f"⚠️ Failed to update profile for {wallet_address}")
+            return JSONResponse(
+                status_code=400,
+                content={"error": "Failed to update profile"}
+            )
+            
+    except Exception as e:
+        logger.error(f"❌ Error updating profile: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Internal server error"}
+        )
+
+@app.post("/api/profile/skills/add")
+async def add_user_skill(
+    skill_data: dict,
+    wallet: str = Depends(get_current_wallet)
+):
+    """Add or update user skill."""
+    try:
+        profile_db = get_profile_db()
+        
+        skill = UserSkill(
+            wallet_address=wallet,
+            skill_name=skill_data["skill_name"],
+            skill_level=skill_data.get("skill_level", 0),
+            endorsements=skill_data.get("endorsements", 0),
+            is_verified=skill_data.get("is_verified", False)
+        )
+        
+        success = profile_db.add_skill(skill)
+        
+        if success:
+            return {"message": "Skill added successfully", "wallet": wallet}
+        else:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "Failed to add skill"}
+            )
+            
+    except Exception as e:
+        logger.error(f"Error adding skill: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Internal server error"}
+        )
+
+@app.post("/api/profile/nfts/add")
+async def add_user_nft(
+    nft_data: dict,
+    wallet: str = Depends(get_current_wallet)
+):
+    """Add user NFT/achievement."""
+    try:
+        profile_db = get_profile_db()
+        
+        nft = UserNFT(
+            wallet_address=wallet,
+            nft_name=nft_data["nft_name"],
+            nft_type=nft_data["nft_type"],
+            tier_level=nft_data.get("tier_level"),
+            rarity=nft_data.get("rarity"),
+            image_file=nft_data.get("image_file"),
+            description=nft_data.get("description")
+        )
+        
+        success = profile_db.add_nft(nft)
+        
+        if success:
+            return {"message": "NFT added successfully", "wallet": wallet}
+        else:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "Failed to add NFT"}
+            )
+            
+    except Exception as e:
+        logger.error(f"Error adding NFT: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Internal server error"}
+        )
+
+@app.get("/api/profile/tier/{wallet_address}")
+async def get_user_tier(wallet_address: str):
+    """Get user tier information."""
+    try:
+        profile_db = get_profile_db()
+        profile = profile_db.get_profile(wallet_address)
+        
+        if not profile:
+            return JSONResponse(
+                status_code=404,
+                content={"error": "Profile not found"}
+            )
+        
+        return {
+            "current_tier": profile.current_tier,
+            "tier_progress": profile.tier_progress,
+            "total_xp": profile.total_xp,
+            "next_tier_xp": (profile.current_tier + 1) * 1000  # Example calculation
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting tier: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Internal server error"}
+        )
     return JSONResponse(
         status_code=404,
         content={

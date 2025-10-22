@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Shield, Menu, X } from 'lucide-react';
 import './home-navbar.css';
 
-const HomeNavbar = ({ onGetStarted }) => {
+const HomeNavbar = ({ onGetStarted, authAction }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -45,8 +45,12 @@ const HomeNavbar = ({ onGetStarted }) => {
             Docs
           </a>
           
-          <button onClick={onGetStarted} className="nav-cta">
-            Comenzar
+          <button 
+            onClick={authAction ? authAction.action : onGetStarted} 
+            className={`nav-cta ${authAction?.disabled ? 'disabled' : ''}`}
+            disabled={authAction?.disabled}
+          >
+            {authAction ? authAction.text : 'Comenzar'}
           </button>
         </div>
 

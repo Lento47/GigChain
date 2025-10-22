@@ -7,14 +7,13 @@
  */
 
 import React, { useState } from 'react';
-import { useAddress, useDisconnect } from '@thirdweb-dev/react';
 import { Shield, Lock, Unlock, LogOut, CheckCircle, AlertCircle } from 'lucide-react';
+import { useWallet } from '../../../hooks/useWallet';
 import { useWalletAuth } from '../../../hooks/useWalletAuth';
 import './Wallet.css';
 
 export const WalletAuthButton = ({ onAuthChange, className = '' }) => {
-  const address = useAddress();
-  const disconnect = useDisconnect();
+  const { address, disconnect } = useWallet();
   const {
     isAuthenticated,
     isAuthenticating,
@@ -40,9 +39,15 @@ export const WalletAuthButton = ({ onAuthChange, className = '' }) => {
     }
   };
 
-  const handleDisconnectWallet = () => {
-    handleLogout();
-    disconnect();
+  const handleDisconnectWallet = async () => {
+    try {
+      handleLogout();
+      if (disconnect) {
+        await disconnect();
+      }
+    } catch (error) {
+      console.error('Error disconnecting wallet:', error);
+    }
   };
 
   // Not connected to wallet

@@ -1,5 +1,5 @@
-import { useAddress, useDisconnect, useConnect, useChainId, useSwitchChain } from '@thirdweb-dev/react';
-import { Polygon } from '@thirdweb-dev/chains';
+import { useActiveAccount, useDisconnect, useSwitchActiveWalletChain, useActiveWalletChain, useActiveWallet } from 'thirdweb/react';
+import { polygonAmoy } from "thirdweb/chains";
 import { useState, useEffect } from 'react';
 
 // Amoy Testnet (Mumbai replacement)
@@ -27,61 +27,109 @@ const Amoy = {
 
 export const useWallet = () => {
   // Safe hook calls with error handling
-  let address, disconnect, chainId, switchChain;
+  let activeAccount, disconnectHook, activeWalletChain, switchChain, activeWallet;
+  
+  // Add initialization state
+  const [isInitializing, setIsInitializing] = useState(true);
   
   try {
-    address = useAddress();
-    disconnect = useDisconnect();
-    chainId = useChainId();
-    switchChain = useSwitchChain();
+    activeAccount = useActiveAccount();
+    activeWallet = useActiveWallet(); // Get the active wallet instance
+    disconnectHook = useDisconnect();
+    activeWalletChain = useActiveWalletChain();
+    switchChain = useSwitchActiveWalletChain();
   } catch (error) {
     console.warn('Thirdweb hooks not available, using fallback values:', error);
     // Fallback values when Thirdweb context is not available
-    address = undefined;
-    disconnect = () => Promise.resolve();
-    chainId = undefined;
+    activeAccount = undefined;
+    activeWallet = undefined;
+    disconnectHook = null;
+    activeWalletChain = undefined;
     switchChain = async () => Promise.resolve();
   }
+  
+  // Create a safe disconnect function that passes the active wallet
+  // ThirdWeb v5 requires the wallet instance to disconnect properly
+  const disconnect = async () => {
+    if (!disconnectHook) {
+      console.warn('Disconnect hook not available');
+      return;
+    }
+    
+    if (!activeWallet) {
+      console.warn('No active wallet to disconnect');
+      return;
+    }
+    
+    try {
+      // ThirdWeb v5: disconnect(wallet)
+      if (typeof disconnectHook === 'function') {
+        await disconnectHook(activeWallet);
+      } else if (disconnectHook.disconnect) {
+        await disconnectHook.disconnect(activeWallet);
+      }
+    } catch (error) {
+      console.error('Error in disconnect:', error);
+      throw error;
+    }
+  };
+
+  // Extract address and chainId from activeAccount and activeWalletChain
+  const address = activeAccount?.address;
+  const chainId = activeWalletChain?.id;
   
   const [isConnecting, setIsConnecting] = useState(false);
   const [isSwitching, setIsSwitching] = useState(false);
   const [walletInfo, setWalletInfo] = useState(null);
 
   // Supported chains
-  const supportedChains = [Polygon, Amoy];
-  const targetChain = Amoy; // Default to Amoy testnet (Mumbai replacement)
+  const supportedChains = [polygonAmoy];
+  const targetChain = polygonAmoy; // Default to Amoy testnet (Mumbai replacement)
+  
+  // Get chainId from targetChain - polygonAmoy has 'id' property
+  const targetChainId = targetChain?.id || 80002; // Fallback to Amoy chainId
 
   // Check if wallet is connected to the correct chain
-  const isCorrectChain = chainId ? chainId === targetChain.chainId : false;
+  const isCorrectChain = chainId ? chainId === targetChainId : false;
 
-  // Get wallet info
+  // Get wallet info and handle initialization
   useEffect(() => {
-    console.log('Wallet state changed:', { address, chainId, isCorrectChain, targetChainId: targetChain.chainId });
+    console.log('Wallet state changed:', { address, chainId, isCorrectChain, targetChainId });
+    
+    // Mark as initialized after first wallet state change
+    if (isInitializing) {
+      // Give ThirdWeb a moment to fully initialize
+      const timer = setTimeout(() => {
+        setIsInitializing(false);
+      }, 500); // Small delay to ensure wallet hooks are ready
+      
+      return () => clearTimeout(timer);
+    }
     
     if (address) {
       setWalletInfo({
         address,
         chainId,
         isCorrectChain,
-        network: isCorrectChain ? targetChain.name : 'Unknown',
+        network: isCorrectChain ? (targetChain?.name || 'Polygon Amoy') : 'Unknown',
         shortAddress: `${address.slice(0, 6)}...${address.slice(-4)}`
       });
     } else {
       setWalletInfo(null);
     }
-  }, [address, chainId, isCorrectChain]);
+  }, [address, chainId, isCorrectChain, isInitializing]);
 
   // Switch to correct chain
   const switchToCorrectChain = async () => {
     if (!switchChain) {
-      alert('Por favor, cambia manualmente a Mumbai en MetaMask');
+      alert('Por favor, cambia manualmente a Amoy en MetaMask');
       return;
     }
     
     try {
       setIsSwitching(true);
-      console.log('Switching to chain:', targetChain.chainId, targetChain.name);
-      await switchChain(targetChain.chainId);
+      console.log('Switching to chain:', targetChainId, targetChain?.name || 'Polygon Amoy');
+      await switchChain(targetChain);
       console.log('Successfully switched to Polygon Amoy testnet');
     } catch (error) {
       console.error('Error switching chain:', error);
@@ -111,14 +159,14 @@ export const useWallet = () => {
   // Get network info
   const getNetworkInfo = () => {
     return {
-      targetChain: targetChain.name,
-      targetChainId: targetChain.chainId,
+      targetChain: targetChain?.name || 'Polygon Amoy',
+      targetChainId: targetChainId,
       currentChainId: chainId,
       isCorrectChain,
       supportedChains: supportedChains.map(chain => ({
-        name: chain.name,
-        chainId: chain.chainId,
-        isActive: chain.chainId === chainId
+        name: chain?.name || 'Unknown',
+        chainId: chain?.id || 0,
+        isActive: chain?.id === chainId
       }))
     };
   };
@@ -127,6 +175,7 @@ export const useWallet = () => {
     // State
     address,
     isConnected: !!address,
+    isInitializing,
     isSwitching,
     isCorrectChain,
     walletInfo,
@@ -135,10 +184,16 @@ export const useWallet = () => {
     disconnect,
     switchToCorrectChain,
     
+    // Chain info
+    targetChain: {
+      ...targetChain,
+      id: targetChainId,
+      name: targetChain?.name || 'Polygon Amoy'
+    },
+    
     // Utils
     validateAddress,
     getNetworkInfo,
-    supportedChains,
-    targetChain
+    supportedChains
   };
 };

@@ -1,13 +1,12 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAddress, useDisconnect } from '@thirdweb-dev/react';
 import { BarChart3, FileText, Code, Zap, MessageSquare, Settings, Wallet, ChevronLeft, ChevronRight, Home, TrendingUp, Users, CreditCard } from 'lucide-react';
+import { useWallet } from '../../../hooks/useWallet';
 import { truncateWalletAddress } from '../../../utils/walletUtils';
 import './Sidebar.css';
 
 const Sidebar = ({ walletInfo, isConnected, isOpen = true, onToggle }) => {
-  const address = useAddress();
-  const disconnect = useDisconnect();
+  const { address, disconnect } = useWallet();
   const navigate = useNavigate();
   const location = useLocation();
 

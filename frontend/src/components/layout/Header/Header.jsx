@@ -5,7 +5,7 @@ import { WalletAuthButton } from '../../features';
 import ThemeToggle from '../../common/ThemeToggle/ThemeToggle';
 import './Header.css';
 
-const Header = ({ walletInfo, isConnected }) => {
+const Header = ({ walletInfo, isConnected, client }) => {
   const location = useLocation();
   
   // Get current view from pathname
@@ -96,6 +96,7 @@ const Header = ({ walletInfo, isConnected }) => {
               onWalletChange={() => {}}
               className="header-wallet"
               showOptionalMessage={currentView === 'chat'}
+              client={client}
             />
           </div>
           

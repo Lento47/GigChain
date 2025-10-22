@@ -127,5 +127,141 @@ curl http://localhost:5000/api/agents/status
 - **ANTES DE CUALQUIER DESARROLLO**: Leer .env, verificar servidor, revisar dependencias, preguntar al usuario
 - **SI ALGO FALLA**: NO asumir, NO modificar .env, NO instalar sin confirmación, SÍ reportar estado actual
 
+## 🔒 **PROTECCIÓN CRÍTICA DE AUTENTICACIÓN**
+
+### **⚠️ REGLA ABSOLUTA - AUTENTICACIÓN iOS FUNCIONANDO:**
+- **PROHIBIDO**: Modificar CUALQUIER archivo relacionado con autenticación sin permiso explícito del usuario
+- **OBLIGATORIO**: Si necesitas cambiar algo de autenticación, PREGUNTAR primero y EXPLICAR el impacto exacto
+- **RAZÓN**: La autenticación iOS fue extremadamente difícil de arreglar y DEBE permanecer estable
+- **ARCHIVOS PROTEGIDOS**:
+  - `main.py` (endpoints `/api/auth/*`)
+  - `auth/middleware.py` 
+  - `auth/routes.py`
+  - `auth/w_csap.py`
+  - `auth/schemas.py`
+  - `frontend/src/hooks/useWalletAuth.js`
+  - `frontend/src/utils/mobileDebugger.js`
+
+### **ANTES DE TOCAR AUTENTICACIÓN:**
+1. ❓ **PREGUNTAR**: ¿Puedo modificar [archivo específico] para [razón específica]?
+2. 📊 **EXPLICAR IMPACTO**: El cambio puede afectar [componentes específicos]
+3. ⏳ **ESPERAR CONFIRMACIÓN**: No proceder sin aprobación explícita del usuario
+4. 🧪 **PROBAR DESPUÉS**: Verificar que iOS auth sigue funcionando
+
+### **SI ALGO SE ROMPE EN AUTH:**
+- 🚨 **PARAR INMEDIATAMENTE** 
+- 📝 **REPORTAR**: Qué se cambió y qué se rompió
+- 🔄 **REVERTIR**: Volver al estado anterior funcional
+- ❓ **PREGUNTAR**: Cómo proceder
+
 ---
 *Configuración para desarrollo local - Sin Docker hasta finalizar proyecto*
+
+## 🎨 GIGCHAIN DESIGN GUARDRAILS
+> Purpose: Prevent “AI-generic” visuals and enforce a unique, premium, minimal-industrial aesthetic for all GigChain UI generation.
+
+---
+
+### 🧠 Core Philosophy
+GigChain design = **trust + precision + mystique**.  
+It must feel **premium**, **technical**, and **timeless**, *not* “friendly SaaS with blobs and gradients.”
+
+Design direction keywords:
+- Minimal-industrial
+- Metallic / contrast-based
+- High legibility, low decoration
+- Blockchain-inspired geometry (hexes, lines, grids)
+- Editorial rhythm, asymmetric layouts
+- Feels like a system — not a marketing site
+
+---
+
+### 🚫 HARD NO (Blacklist)
+Cursor must **avoid all of the following:**
+- Blue-purple gradients, neon glows, or “AI waves.”
+- Glassmorphism, neumorphism, soft-blur panels.
+- Centered hero with blob background or laptop mockup.
+- Rounded-2xl cards repeated in a 3-column grid.
+- “Modern SaaS” landing patterns (cards + testimonials + pricing table stack).
+- Default Tailwind shadows (`shadow-lg` etc.) everywhere.
+- Excessive animation or floating particles.
+- Generic Inter/Outfit font combos with 16px body/1.5 line height.
+
+---
+
+### ✅ MUST HAVES (Whitelist)
+Cursor should **follow these structural and aesthetic rules:**
+- **Typography:** Editorial or monospaced hybrid vibe. Example: Satoshi, IBM Plex, Space Grotesk, or similar.
+- **Color:** Max two brand colors + neutrals (black, dark grey, white, metallic tones). No gradients; flat, solid fills.
+- **Grid:** Strict 12-column or modular grid. Asymmetric compositions allowed; off-center is welcome.
+- **Spacing:** Wide breathing room. Avoid dense “card farms.”
+- **Shape Language:** Subtle geometry (lines, hex nodes, grids). Radii limited to 0, 2, or 4.
+- **Motion:** Micro-interactions only (hover, focus, fade-in). No parallax, blob, or orbit animations.
+- **Brand Region Cues:** Subtle tropical warmth (cream, muted green, sand) — *never literal palm trees or waves.*
+
+---
+
+### 🧩 Design Tokens (Conceptual)
+| Token | Role | Rule |
+|-------|------|------|
+| `color-bg` | Base background | Solid off-black or off-white |
+| `color-surface` | Panels | Slightly lighter/darker than bg |
+| `color-primary` | Accent (GigSoul metallic) | Subtle silver/gold gradient allowed only in small UI marks |
+| `color-accent` | Feedbacks / states | Use muted green or orange |
+| `radius` | Corners | 0 / 2 / 4 only |
+| `elevation` | Shadow depth | 0 / 1 / 2 levels, soft spread only |
+| `type-scale` | H1-H6 | H1 64/64, H2 40/44, H3 28/32, Body 16/26, Mono 14/22 |
+| `spacing` | Layout rhythm | 4, 8, 12, 16, 24, 32, 48, 72 |
+| `font-family` | Base | Prefer tall, condensed, editorial sans; fallback monospace for UI |
+
+---
+
+### 🧱 Workflow Requirements
+1. **Phase 1 – Wireframe:**  
+   - Output structure and hierarchy first.  
+   - No CSS until the layout is approved.  
+   - Describe purpose of each section.
+
+2. **Phase 2 – Token Application:**  
+   - Apply GigChain tokens above.  
+   - Verify color/spacing/typography adherence.  
+   - Do not invent new UI components without mapping to an existing token.
+
+3. **Phase 3 – Self-Audit:**  
+   Cursor must check its output against this list before finalizing.  
+   If any blacklist item appears, rewrite until compliant.
+
+---
+
+### 🧾 Acceptance Checklist
+- [ ] No gradients or glassmorphism.  
+- [ ] No blob or particle hero.  
+- [ ] Typography is distinct from Tailwind defaults.  
+- [ ] Homepage has no centered 3-card feature grid.  
+- [ ] All sections serve a clear purpose (Learn / Decide / Act).  
+- [ ] Visual identity matches *premium-industrial blockchain aesthetic.*
+
+---
+
+### 🧭 Inspirations (for mood, not mimicry)
+- Swiss typographic grids (Müller-Brockmann era)  
+- Editorial magazine spreads (Monocle / Wired print layouts)  
+- Industrial control UIs (Siemens / Honeywell minimal dashboards)  
+- Japanese MUJI catalog rhythm (white space + quiet structure)
+
+---
+
+### ⚙️ Output Format
+When generating UI or pages:
+1. Begin with **“Wireframe Summary”** (markdown outline).  
+2. Then list **“Applied Tokens”** (names only).  
+3. Finally output **“Final Layout Spec”** in prose.  
+4. Conclude with **“Self-Audit Against CursorRules.md.”**
+
+---
+
+### 🔒 Enforcement
+Any design violating these rules must be **flagged by Cursor as rejected** with reason.  
+Auto-iteration is allowed *only within these boundaries.*
+
+---

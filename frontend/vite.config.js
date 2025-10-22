@@ -25,23 +25,21 @@ export default defineConfig({
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],
-          thirdweb: ['@thirdweb-dev/react', '@thirdweb-dev/sdk']
+          thirdweb: ['thirdweb']
         }
       }
     }
   },
   optimizeDeps: {
     include: [
-      '@thirdweb-dev/react',
-      '@thirdweb-dev/sdk',
-      '@thirdweb-dev/chains',
+      'thirdweb',
+      'thirdweb/react',
+      'thirdweb/chains',
+      'thirdweb/wallets',
       'buffer',
       'process',
       'stream-browserify',
       'util'
-    ],
-    exclude: [
-      'thirdweb-dev-wallets-evm-connectors-phantom'
     ]
   },
   define: {
@@ -61,11 +59,19 @@ export default defineConfig({
       '@services': path.resolve(__dirname, './src/services'),
       '@constants': path.resolve(__dirname, './src/constants'),
       '@styles': path.resolve(__dirname, './src/styles'),
-      // Node polyfills - removed to avoid browser compatibility issues
-      // These modules should not be imported in browser code
+      // Node polyfills for browser compatibility
+      buffer: 'buffer',
+      crypto: 'crypto-browserify',
+      stream: 'stream-browserify',
+      path: 'path-browserify',
+      os: 'os-browserify',
+      util: 'util',
+      process: 'process/browser',
+      // Disable node modules that shouldn't be used in browser
       fs: false,
       net: false,
-      tls: false
+      tls: false,
+      child_process: false
     }
   }
 })

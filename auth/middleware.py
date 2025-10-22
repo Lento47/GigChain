@@ -7,6 +7,7 @@ FastAPI middleware and dependencies for protecting routes with wallet authentica
 
 from fastapi import Request, HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from starlette.requests import Request as StarletteRequest
 from typing import Optional, Dict, Any
 import logging
 import time
@@ -285,16 +286,45 @@ class RateLimitMiddleware:
     
     def __init__(
         self,
+        app,
         max_attempts: int = 5,
         window_seconds: int = 300  # 5 minutes
     ):
+        self.app = app
         self.max_attempts = max_attempts
         self.window_seconds = window_seconds
     
-    async def __call__(self, request: Request, call_next):
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        
+        request = Request(scope, receive)
+        
+        async def call_next():
+            response_started = False
+            status_code = 200
+            response_headers = []
+            
+            async def send_wrapper(message):
+                nonlocal response_started, status_code, response_headers
+                if message["type"] == "http.response.start":
+                    response_started = True
+                    status_code = message["status"]
+                    response_headers = message.get("headers", [])
+                await send(message)
+            
+            await self.app(scope, receive, send_wrapper)
+            return status_code, response_headers
+        
+        # Apply rate limiting logic
+        await self._process_request(request, call_next, send)
+    
+    async def _process_request(self, request: Request, call_next, send):
         # Only apply to auth endpoints
         if not request.url.path.startswith("/api/auth/"):
-            return await call_next(request)
+            await self.app(request.scope, request.receive, send)
+            return
         
         # Get client identifier (wallet or IP)
         client_id = self._get_client_identifier(request)
@@ -310,31 +340,39 @@ class RateLimitMiddleware:
         
         if not is_allowed:
             logger.warning(f"Rate limit exceeded for {client_id}")
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail=f"Too many authentication attempts. Try again later.",
-                headers={"Retry-After": str(self.window_seconds)}
-            )
+            # Send rate limit error response
+            response_headers = [
+                [b"content-type", b"application/json"],
+                [b"retry-after", str(self.window_seconds).encode()],
+            ]
+            await send({
+                "type": "http.response.start",
+                "status": 429,
+                "headers": response_headers,
+            })
+            await send({
+                "type": "http.response.body",
+                "body": b'{"error": "Too many authentication attempts. Try again later."}',
+            })
+            return
         
-        # Add rate limit headers
-        response = await call_next(request)
-        response.headers["X-RateLimit-Limit"] = str(self.max_attempts)
-        response.headers["X-RateLimit-Remaining"] = str(attempts_remaining)
+        # Modify send to add rate limit headers
+        async def send_with_headers(message):
+            if message["type"] == "http.response.start":
+                headers = list(message.get("headers", []))
+                headers.extend([
+                    [b"x-ratelimit-limit", str(self.max_attempts).encode()],
+                    [b"x-ratelimit-remaining", str(attempts_remaining).encode()],
+                ])
+                message = {**message, "headers": headers}
+            await send(message)
         
-        return response
+        await self.app(request.scope, request.receive, send_with_headers)
     
     def _get_client_identifier(self, request: Request) -> str:
-        """Get client identifier from request."""
-        # Try to get wallet from request body
-        try:
-            if hasattr(request, 'json'):
-                body = request.json()
-                if 'wallet_address' in body:
-                    return body['wallet_address']
-        except:
-            pass
-        
-        # Fallback to IP address
+        """Get client identifier from request without consuming body."""
+        # Don't read request body in middleware to avoid conflicts
+        # Just use IP address for rate limiting
         forwarded = request.headers.get("X-Forwarded-For")
         if forwarded:
             return forwarded.split(",")[0].strip()
@@ -347,11 +385,20 @@ class SessionCleanupMiddleware:
     Middleware to periodically cleanup expired challenges and sessions.
     """
     
-    def __init__(self, cleanup_interval: int = 3600):  # 1 hour
+    def __init__(self, app, cleanup_interval: int = 3600):  # 1 hour
+        self.app = app
         self.cleanup_interval = cleanup_interval
         self.last_cleanup = 0
     
-    async def __call__(self, request: Request, call_next):
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        
+        request = Request(scope, receive)
+        await self._process_cleanup(request, scope, receive, send)
+    
+    async def _process_cleanup(self, request: Request, scope, receive, send):
         import time
         
         current_time = int(time.time())
@@ -363,16 +410,18 @@ class SessionCleanupMiddleware:
                 db.cleanup_expired_challenges(current_time)
                 db.cleanup_expired_sessions(current_time)
                 
-                # Also cleanup in-memory cache
-                if hasattr(request.app.state, 'authenticator'):
-                    request.app.state.authenticator.cleanup_expired()
+                # Also cleanup in-memory cache - we'll need to get the app from scope
+                from starlette.applications import Starlette
+                app_state = getattr(scope.get("app"), "state", None)
+                if app_state and hasattr(app_state, 'authenticator'):
+                    app_state.authenticator.cleanup_expired()
                 
                 self.last_cleanup = current_time
                 
             except Exception as e:
                 logger.error(f"Cleanup error: {str(e)}")
         
-        return await call_next(request)
+        await self.app(scope, receive, send)
 
 
 # Helper functions for route protection
