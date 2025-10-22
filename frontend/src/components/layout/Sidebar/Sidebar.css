@@ -1,4 +1,4 @@
-/* Sidebar Layout Styles */
+/* Sidebar Layout Styles - Web3 Theme */
 
 .sidebar {
   position: fixed;
@@ -6,13 +6,36 @@
   top: 0;
   width: 280px;
   height: 100vh;
-  background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
-  border-right: 2px solid var(--border-color);
+  background: rgba(10, 14, 26, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 1000;
   display: flex;
   flex-direction: column;
-  box-shadow: var(--shadow-lg);
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+}
+
+.sidebar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 1px;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(0, 255, 136, 0.3) 50%,
+    transparent
+  );
+  animation: borderGlow 3s ease-in-out infinite;
+}
+
+@keyframes borderGlow {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
 }
 
 .sidebar-overlay {
@@ -195,37 +218,34 @@
 }
 
 .nav-item:hover {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  transform: translateX(4px);
-}
-
-.nav-item:hover {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  border-color: var(--border-color);
-  transform: translateX(4px);
-  box-shadow: var(--shadow-sm);
+  background: rgba(0, 255, 136, 0.1);
+  color: #00ff88;
+  transform: translateX(6px);
+  border-left: 3px solid #00ff88;
+  box-shadow: 0 4px 16px rgba(0, 255, 136, 0.15);
 }
 
 .nav-item:hover::before {
   transform: scaleY(1);
+  background: #00ff88;
 }
 
 .nav-item.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  background: linear-gradient(135deg, rgba(0, 255, 136, 0.2) 0%, rgba(0, 212, 255, 0.2) 100%);
+  color: #00ff88;
+  border-left: 3px solid #00ff88;
+  box-shadow: 0 4px 16px rgba(0, 255, 136, 0.3);
 }
 
 .nav-item.active::before {
   transform: scaleY(1);
-  background: rgba(255, 255, 255, 0.3);
+  background: #00ff88;
+  box-shadow: 0 0 10px #00ff88;
 }
 
 .nav-item.active:hover {
-  transform: translateX(4px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+  transform: translateX(6px);
+  box-shadow: 0 6px 20px rgba(0, 255, 136, 0.4);
 }
 
 .nav-content {

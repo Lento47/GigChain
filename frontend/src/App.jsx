@@ -10,6 +10,7 @@ import { MessageSquare, Eye, Send } from 'lucide-react';
 import { Sidebar, Header } from './components/layout';
 import { MobileBottomNav } from './components/layout/MobileNav';
 import { DashboardView } from './views/Dashboard';
+import { AnalyticsView } from './views/Analytics';
 import { WalletConnection, ContractStatus } from './components/features';
 import { NotificationCenter, NotificationProvider, useNotifications, ThemeToggle, NetworkAlert } from './components/common';
 import ProtectedRoute, { AuthenticationRequired, useRouteProtection } from './components/auth/ProtectedRoute';
@@ -31,6 +32,18 @@ const PaymentsView = lazy(() => import('./views/Payments'));
 const SettingsView = lazy(() => import('./views/Settings'));
 const HelpView = lazy(() => import('./views/Help'));
 
+// Lazy load social network pages (Red Social GigChain)
+const FeedView = lazy(() => import('./pages/Feed/FeedSimple'));
+const MarketplaceView = lazy(() => import('./pages/Marketplace/MarketplaceSimple'));
+const DAOView = lazy(() => import('./pages/DAO/DAOSimple'));
+const StakingView = lazy(() => import('./pages/Staking/StakingSimple'));
+
+// Social network pages (Simple versions without wagmi dependency)
+const MessagesView = lazy(() => import('./pages/Messages/MessagesSimple'));
+const ConnectionsView = lazy(() => import('./pages/Connections/ConnectionsSimple'));
+const ProfileView = lazy(() => import('./pages/Profile/ProfileSimple'));
+const CreatePostView = lazy(() => import('./pages/CreatePost/CreatePostSimple'));
+
 // Lazy load home and legal pages (rarely accessed)
 const HomePage = lazy(() => import('./views/Home'));
 const TermsOfService = lazy(() => import('./views/Legal').then(module => ({ default: module.TermsOfService })));
@@ -47,6 +60,7 @@ import { CONTRACT_TEMPLATES } from './constants/contractTemplates';
 import { logger } from './utils/logger';
 
 import './styles/index.css';
+import './styles/web3-theme.css';
 import './styles/chat-ai.css';
 import './components/auth/ProtectedRoute.css';
 
@@ -303,11 +317,7 @@ const ContractsRoute = () => {
 };
 
 const AnalyticsRoute = () => {
-  return (
-    <div className="analytics-view">
-      <h2>Analíticas</h2>
-    </div>
-  );
+  return <AnalyticsView />;
 };
 
 // Main Content Component (Memoized to prevent unnecessary re-renders)
@@ -347,6 +357,17 @@ const MainContent = React.memo(({ walletInfo, isConnected, sidebarOpen, isMobile
             <Route path="/payments" element={<PaymentsView />} />
             <Route path="/settings" element={<SettingsView />} />
             <Route path="/help" element={<HelpView />} />
+            
+            {/* Red Social GigChain Routes */}
+            <Route path="/feed" element={<FeedView />} />
+            <Route path="/messages" element={<MessagesView />} />
+            <Route path="/connections" element={<ConnectionsView />} />
+            <Route path="/profile" element={<ProfileView />} />
+            <Route path="/create-post" element={<CreatePostView />} />
+            <Route path="/marketplace" element={<MarketplaceView />} />
+            <Route path="/dao" element={<DAOView />} />
+            <Route path="/staking" element={<StakingView />} />
+            
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </Suspense>

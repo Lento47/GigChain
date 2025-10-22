@@ -1,33 +1,34 @@
 /* GigChain.io - Main Styles Entry Point */
+/* Web3 Crypto/Blockchain Theme - Dark by Default */
 
 /* CSS Variables and Global Styles */
 :root {
-  /* Colors */
-  --primary-color: #667eea;
-  --primary-hover: #5a67d8;
-  --secondary-color: #764ba2;
-  --accent-color: #10b981;
-  --warning-color: #f59e0b;
+  /* Web3 Color Palette */
+  --primary-color: #00ff88;
+  --primary-hover: #00cc6a;
+  --secondary-color: #00d4ff;
+  --accent-color: #8b5cf6;
+  --warning-color: #fbbf24;
   --error-color: #ef4444;
-  --success-color: #10b981;
+  --success-color: #00ff88;
 
-  /* Light Theme Default Variables (Vibrant and Attractive) */
-  --bg-primary: #ffffff;
-  --bg-secondary: #f8fafc;
-  --bg-tertiary: #f1f5f9;
-  --bg-accent: #f0f9ff;
-  --bg-dark: #1e293b;
-  --bg-darker: #0f172a;
+  /* Dark Theme (Default for Crypto Aesthetic) */
+  --bg-primary: #0a0e1a;
+  --bg-secondary: #151b2e;
+  --bg-tertiary: #1a2332;
+  --bg-accent: #667eea;
+  --bg-dark: #0a0e1a;
+  --bg-darker: #05070f;
 
-  --text-primary: #0f172a;
-  --text-secondary: #1e293b;
-  --text-muted: #64748b;
-  --text-accent: #3b82f6;
-  --text-inverse: #ffffff;
+  --text-primary: #ffffff;
+  --text-secondary: #a0aec0;
+  --text-muted: #718096;
+  --text-accent: #00ff88;
+  --text-inverse: #0a0e1a;
 
-  --border-color: #e2e8f0;
-  --border-light: #f1f5f9;
-  --border-accent: #3b82f6;
+  --border-color: rgba(255, 255, 255, 0.1);
+  --border-light: rgba(255, 255, 255, 0.05);
+  --border-accent: rgba(0, 255, 136, 0.3);
 
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -60,14 +61,18 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: var(--bg-secondary);
+  background: var(--bg-primary);
+  background-image: radial-gradient(at 50% 50%, rgba(102, 126, 234, 0.15) 0%, transparent 50%),
+                    radial-gradient(at 80% 20%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
+                    radial-gradient(at 20% 80%, rgba(0, 255, 136, 0.1) 0%, transparent 50%);
   color: var(--text-primary);
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 #root {
@@ -79,7 +84,7 @@ body {
 .app {
   display: flex;
   min-height: 100vh;
-  background: var(--bg-secondary);
+  background: transparent;
 }
 
 /* Main Content Area */
@@ -89,7 +94,7 @@ body {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  background: var(--bg-secondary);
+  background: transparent;
   min-height: 100vh;
   transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -156,12 +161,13 @@ body {
   }
 }
 
-/* Thirdweb Wallet Button Overrides */
+/* Thirdweb Wallet Button Overrides - Web3 Theme */
 [data-wc-wallet-button] {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  background: linear-gradient(135deg, #00ff88 0%, #00d4ff 100%) !important;
   border-radius: 12px !important;
   border: none !important;
   padding: 0.75rem 1.5rem !important;
+  box-shadow: 0 4px 16px rgba(0, 255, 136, 0.3) !important;
   font-weight: 600 !important;
   transition: all 0.3s ease !important;
 }

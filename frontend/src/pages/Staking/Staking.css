@@ -1,0 +1,489 @@
+.staking-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  position: relative;
+}
+
+.staking-header {
+  text-align: center;
+  margin-bottom: 2rem;
+  padding: 2rem;
+  background: rgba(21, 27, 46, 0.5);
+  backdrop-filter: blur(12px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.staking-header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #00ff88 0%, #00d4ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.staking-subtitle {
+  color: #a0aec0;
+  font-size: 1.125rem;
+}
+
+.stats-overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background: rgba(21, 27, 46, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: all 0.3s;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(0, 255, 136, 0.3);
+  box-shadow: 0 12px 40px rgba(0, 255, 136, 0.2);
+}
+
+.stat-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #00ff88, #00d4ff);
+  color: #0a0e1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(0, 255, 136, 0.4);
+}
+
+.stat-icon.locked {
+  background: linear-gradient(135deg, #ff9800, #f57c00);
+  box-shadow: 0 4px 16px rgba(255, 152, 0, 0.4);
+}
+
+.stat-icon.earnings {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+  color: white;
+}
+
+.stat-info {
+  flex: 1;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: #a0aec0;
+  margin: 0 0 0.5rem 0;
+}
+
+.stat-info h3 {
+  font-size: 1.5rem;
+  margin: 0;
+  color: #ffffff;
+  font-weight: 700;
+  font-family: 'Monaco', 'Courier New', monospace;
+}
+
+.staking-section {
+  margin-bottom: 3rem;
+}
+
+.staking-section h2 {
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
+  color: var(--text-primary, #1a1a1a);
+}
+
+.pools-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.pool-card {
+  background: rgba(21, 27, 46, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+  cursor: pointer;
+  transition: all 0.3s;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+}
+
+.pool-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 40px rgba(0, 255, 136, 0.2);
+  border-color: rgba(0, 255, 136, 0.3);
+}
+
+.pool-card.selected {
+  border-color: #00ff88;
+  box-shadow: 0 0 30px rgba(0, 255, 136, 0.4),
+              0 8px 32px rgba(0, 255, 136, 0.3);
+  background: rgba(21, 27, 46, 0.9);
+}
+
+.pool-card.selected::after {
+  content: '✓ Selected';
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  padding: 0.25rem 0.75rem;
+  background: #00ff88;
+  color: #0a0e1a;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 6px;
+}
+
+.pool-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.pool-icon {
+  font-size: 2rem;
+}
+
+.pool-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--text-primary, #1a1a1a);
+}
+
+.pool-apy {
+  text-align: center;
+  padding: 1rem;
+  background: linear-gradient(135deg, #4caf50, #45a049);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.apy-value {
+  display: block;
+  font-size: 2rem;
+  font-weight: 700;
+  color: white;
+}
+
+.apy-label {
+  display: block;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.pool-description {
+  color: var(--text-secondary, #666);
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+
+.pool-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.detail-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-secondary, #666);
+  font-size: 0.875rem;
+}
+
+.pool-participants {
+  text-align: center;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color, #e0e0e0);
+  color: var(--text-secondary, #666);
+  font-size: 0.875rem;
+}
+
+.stake-form-section {
+  margin-bottom: 3rem;
+}
+
+.stake-form-card {
+  background: var(--card-bg, white);
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.stake-form-card h3 {
+  font-size: 1.5rem;
+  margin: 0 0 1.5rem 0;
+  color: var(--text-primary, #1a1a1a);
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: var(--text-primary, #1a1a1a);
+}
+
+.input-with-max {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-with-max input {
+  flex: 1;
+  padding: 0.75rem 5rem 0.75rem 1rem;
+  border: 2px solid var(--border-color, #e0e0e0);
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+  width: 100%;
+}
+
+.input-with-max input:focus {
+  outline: none;
+  border-color: var(--primary, #4caf50);
+}
+
+.max-btn {
+  position: absolute;
+  right: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: var(--primary, #4caf50);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.max-btn:hover {
+  background: var(--primary-dark, #45a049);
+}
+
+.input-hint {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary, #666);
+}
+
+.selected-pool-info {
+  background: var(--primary-light, #e8f5e9);
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.selected-pool-info p {
+  margin: 0.25rem 0;
+  font-size: 0.875rem;
+  color: var(--text-primary, #1a1a1a);
+}
+
+.stake-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 1rem;
+  background: var(--primary, #4caf50);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.stake-btn:hover:not(:disabled) {
+  background: var(--primary-dark, #45a049);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.stake-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.active-stakes-section {
+  margin-bottom: 2rem;
+}
+
+.active-stakes-section h2 {
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
+  color: var(--text-primary, #1a1a1a);
+}
+
+.stakes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.stake-item {
+  background: var(--card-bg, white);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.stake-info {
+  flex: 1;
+}
+
+.stake-info h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.125rem;
+  color: var(--text-primary, #1a1a1a);
+}
+
+.stake-details {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.stake-amount,
+.stake-days,
+.stake-apy {
+  padding: 0.25rem 0.75rem;
+  background: var(--primary-light, #e8f5e9);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--primary, #4caf50);
+}
+
+.stake-earnings {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-secondary, #666);
+  font-size: 0.875rem;
+}
+
+.unstake-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: transparent;
+  color: var(--primary, #4caf50);
+  border: 2px solid var(--primary, #4caf50);
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.unstake-btn:hover {
+  background: var(--primary, #4caf50);
+  color: white;
+  transform: translateY(-2px);
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .staking-header h1,
+  .staking-section h2,
+  .stake-form-card h3,
+  .stake-info h4,
+  .pool-header h3 {
+    color: #ffffff;
+  }
+
+  .stat-card,
+  .pool-card,
+  .stake-form-card,
+  .stake-item {
+    background: #2a2a2a;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  .stat-info h3 {
+    color: #e0e0e0;
+  }
+
+  .input-with-max input {
+    background: #1a1a1a;
+    color: #e0e0e0;
+    border-color: #444;
+  }
+
+  .selected-pool-info {
+    background: #1a1a1a;
+  }
+
+  .selected-pool-info p {
+    color: #e0e0e0;
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .staking-container {
+    padding: 1rem 0.5rem;
+  }
+
+  .stats-overview {
+    grid-template-columns: 1fr;
+  }
+
+  .pools-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stake-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .unstake-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .stake-details {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}
+

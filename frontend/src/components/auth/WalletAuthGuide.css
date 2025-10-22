@@ -1,0 +1,454 @@
+/* Wallet Authentication Guide Styles */
+
+.wallet-auth-guide {
+  max-width: 600px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.wallet-auth-guide.compact {
+  max-width: 500px;
+  margin: 1rem auto;
+  padding: 1.5rem;
+}
+
+/* Auth Guide Header */
+.auth-guide-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.auth-guide-header h2 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.auth-guide-header p {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+/* Redirect Message */
+.redirect-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-radius: var(--radius-lg);
+  margin-bottom: 1.5rem;
+  animation: slideIn 0.3s ease;
+}
+
+.redirect-message.warning {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  color: var(--warning-color);
+}
+
+.redirect-message.error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: var(--error-color);
+}
+
+.redirect-message strong {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+/* Authentication Steps */
+.auth-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.auth-step {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1rem;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  background: var(--bg-secondary);
+}
+
+.auth-step:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+}
+
+.auth-step.success {
+  border-color: var(--success-color);
+  background: rgba(16, 185, 129, 0.05);
+}
+
+.auth-step.warning {
+  border-color: var(--warning-color);
+  background: rgba(245, 158, 11, 0.05);
+}
+
+.auth-step.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.auth-step.completed {
+  background: rgba(16, 185, 129, 0.05);
+  border-color: var(--success-color);
+}
+
+/* Step Header */
+.step-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.step-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
+}
+
+.step-number {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: all 0.3s ease;
+}
+
+.auth-step.success .step-number,
+.auth-step.completed .step-number {
+  background: var(--success-color);
+  color: white;
+}
+
+.auth-step.warning .step-number {
+  background: var(--warning-color);
+  color: white;
+}
+
+.step-icon {
+  color: var(--text-secondary);
+  transition: all 0.3s ease;
+}
+
+.auth-step.success .step-icon,
+.auth-step.completed .step-icon {
+  color: var(--success-color);
+}
+
+.auth-step.warning .step-icon {
+  color: var(--warning-color);
+}
+
+.step-check {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background: white;
+  border-radius: 50%;
+  color: var(--success-color);
+}
+
+/* Step Info */
+.step-info {
+  flex: 1;
+}
+
+.step-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.step-description {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* Step Action */
+.step-action {
+  flex-shrink: 0;
+}
+
+.step-action .btn {
+  min-width: 120px;
+  gap: 0.375rem;
+}
+
+/* Expanded Content */
+.step-expanded {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+  animation: expandDown 0.3s ease;
+}
+
+.step-help {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.step-help p {
+  margin-bottom: 0.75rem;
+}
+
+.step-help ul {
+  list-style: none;
+  padding-left: 0;
+  margin: 0.75rem 0;
+}
+
+.step-help li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.step-help li::before {
+  content: "•";
+  color: var(--primary-color);
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+/* Compact Steps */
+.auth-steps-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.auth-step-compact {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  transition: all 0.2s ease;
+}
+
+.auth-step-compact.success {
+  border-color: var(--success-color);
+  background: rgba(16, 185, 129, 0.05);
+}
+
+.auth-step-compact.warning {
+  border-color: var(--warning-color);
+  background: rgba(245, 158, 11, 0.05);
+}
+
+.auth-step-compact .step-content {
+  flex: 1;
+}
+
+.auth-step-compact .step-content h4 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.125rem;
+}
+
+.auth-step-compact .step-content p {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+/* Wallet Status */
+.wallet-status {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-indicator.connected {
+  background: var(--success-color);
+}
+
+.status-indicator.disconnected {
+  background: var(--error-color);
+}
+
+.status-indicator.warning {
+  background: var(--warning-color);
+}
+
+.wallet-address {
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  background: var(--bg-tertiary);
+  padding: 0.125rem 0.375rem;
+  border-radius: var(--radius-sm);
+  margin-left: auto;
+}
+
+/* Footer */
+.auth-guide-footer {
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+.security-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+  line-height: 1.5;
+}
+
+/* Animations */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes expandDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 500px;
+  }
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .wallet-auth-guide {
+    margin: 1rem;
+    padding: 1.5rem;
+  }
+  
+  .auth-guide-header h2 {
+    font-size: 1.5rem;
+  }
+  
+  .step-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  
+  .step-action {
+    width: 100%;
+  }
+  
+  .step-action .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .auth-steps-compact .step-action {
+    width: auto;
+  }
+  
+  .wallet-status {
+    font-size: 0.8125rem;
+  }
+}
+
+/* Dark Theme */
+[data-theme="dark"] {
+  .wallet-auth-guide {
+    background: var(--bg-dark);
+    border-color: var(--border-dark);
+  }
+  
+  .auth-step {
+    background: var(--bg-dark-secondary);
+    border-color: var(--border-dark);
+  }
+  
+  .auth-step:hover {
+    border-color: var(--primary-color);
+  }
+  
+  .step-number {
+    background: var(--bg-dark-tertiary);
+    color: var(--text-dark-secondary);
+  }
+  
+  .step-expanded {
+    border-top-color: var(--border-dark);
+  }
+  
+  .wallet-status {
+    background: var(--bg-dark-secondary);
+    border-color: var(--border-dark);
+  }
+  
+  .wallet-address {
+    background: var(--bg-dark-tertiary);
+  }
+}
+
+/* High Contrast */
+@media (prefers-contrast: high) {
+  .auth-step {
+    border-width: 2px;
+  }
+  
+  .step-number {
+    border: 2px solid currentColor;
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .auth-step,
+  .step-expanded {
+    transition: none;
+    animation: none;
+  }
+}

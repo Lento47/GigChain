@@ -1,0 +1,393 @@
+/* Enhanced Button Component Styles */
+
+.btn {
+  /* Base styles */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+  
+  /* Touch optimization */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  
+  /* Focus styles */
+  &:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+  
+  &:focus:not(:focus-visible) {
+    outline: none;
+  }
+  
+  /* Active state */
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+/* Size variants */
+.btn-sm {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+  min-height: 32px;
+}
+
+.btn-md {
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  min-height: 40px;
+}
+
+.btn-lg {
+  padding: 1rem 1.5rem;
+  font-size: 1rem;
+  min-height: 48px;
+}
+
+.btn-xl {
+  padding: 1.25rem 2rem;
+  font-size: 1.125rem;
+  min-height: 56px;
+}
+
+/* Touch-friendly minimum sizes */
+@media (max-width: 768px) {
+  .btn-sm {
+    min-height: 44px;
+    padding: 0.625rem 1rem;
+  }
+  
+  .btn-md {
+    min-height: 44px;
+    padding: 0.75rem 1.25rem;
+  }
+  
+  .btn-lg {
+    min-height: 48px;
+    padding: 1rem 1.5rem;
+  }
+  
+  .btn-xl {
+    min-height: 52px;
+    padding: 1.125rem 2rem;
+  }
+}
+
+/* Variant styles */
+.btn-primary {
+  background: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+  
+  &:hover:not(:disabled) {
+    background: var(--primary-hover);
+    border-color: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  }
+}
+
+.btn-secondary {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+  
+  &:hover:not(:disabled) {
+    background: var(--bg-tertiary);
+    border-color: var(--border-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+  
+  &:hover:not(:disabled) {
+    background: var(--primary-color);
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+  }
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-primary);
+  border-color: transparent;
+  
+  &:hover:not(:disabled) {
+    background: var(--bg-tertiary);
+    color: var(--primary-color);
+  }
+}
+
+.btn-danger {
+  background: var(--error-color);
+  color: white;
+  border-color: var(--error-color);
+  
+  &:hover:not(:disabled) {
+    background: var(--error-hover);
+    border-color: var(--error-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+  }
+}
+
+.btn-success {
+  background: var(--success-color);
+  color: white;
+  border-color: var(--success-color);
+  
+  &:hover:not(:disabled) {
+    background: var(--success-hover);
+    border-color: var(--success-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  }
+}
+
+/* Full width */
+.btn-full-width {
+  width: 100%;
+}
+
+/* Loading state */
+.btn-loading {
+  cursor: not-allowed;
+  pointer-events: none;
+  
+  .btn-text {
+    opacity: 0.7;
+  }
+}
+
+.btn-loading-icon {
+  flex-shrink: 0;
+}
+
+/* Disabled state */
+.btn-disabled,
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Icon styles */
+.btn-icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.btn-icon-left {
+  margin-right: -0.125rem;
+}
+
+.btn-icon-right {
+  margin-left: -0.125rem;
+}
+
+.btn-icon-only {
+  padding: 0.75rem;
+  aspect-ratio: 1;
+  
+  .btn-text {
+    display: none;
+  }
+}
+
+.btn-icon-only.btn-sm {
+  padding: 0.5rem;
+}
+
+.btn-icon-only.btn-lg {
+  padding: 1rem;
+}
+
+.btn-icon-only.btn-xl {
+  padding: 1.25rem;
+}
+
+/* Dark theme support */
+[data-theme="dark"] {
+  .btn-secondary {
+    background: var(--bg-dark-secondary);
+    color: var(--text-dark-primary);
+    border-color: var(--border-dark);
+    
+    &:hover:not(:disabled) {
+      background: var(--bg-dark-tertiary);
+      border-color: var(--border-dark-hover);
+    }
+  }
+  
+  .btn-ghost {
+    color: var(--text-dark-primary);
+    
+    &:hover:not(:disabled) {
+      background: var(--bg-dark-tertiary);
+      color: var(--primary-color);
+    }
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  .btn {
+    border-width: 2px;
+  }
+  
+  .btn-outline {
+    border-width: 2px;
+  }
+  
+  .btn:focus {
+    outline-width: 3px;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .btn {
+    transition: none;
+  }
+  
+  .btn:hover:not(:disabled) {
+    transform: none;
+  }
+  
+  .btn:active {
+    transform: none;
+  }
+  
+  .btn-loading-icon {
+    animation: none;
+  }
+}
+
+/* Animation for loading spinner */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Button group styles */
+.btn-group {
+  display: inline-flex;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  
+  .btn {
+    border-radius: 0;
+    border-right-width: 0;
+    
+    &:first-child {
+      border-top-left-radius: var(--radius-md);
+      border-bottom-left-radius: var(--radius-md);
+    }
+    
+    &:last-child {
+      border-top-right-radius: var(--radius-md);
+      border-bottom-right-radius: var(--radius-md);
+      border-right-width: 1px;
+    }
+    
+    &:focus {
+      z-index: 1;
+    }
+  }
+}
+
+/* Floating action button */
+.btn-fab {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  
+  &:hover:not(:disabled) {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+  }
+}
+
+@media (max-width: 768px) {
+  .btn-fab {
+    bottom: calc(2rem + 80px); /* Account for mobile bottom nav */
+  }
+}
+
+/* Pulse animation for important actions */
+.btn-pulse {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(102, 126, 234, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(102, 126, 234, 0);
+  }
+}
+
+/* Ripple effect */
+.btn-ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-ripple::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.btn-ripple:active::before {
+  width: 300px;
+  height: 300px;
+}

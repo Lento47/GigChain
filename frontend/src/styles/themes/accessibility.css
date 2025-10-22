@@ -1,0 +1,572 @@
+/* Enhanced Accessibility & Color Contrast Styles */
+
+/* WCAG AA Compliant Color System */
+:root {
+  /* High Contrast Colors - WCAG AA Compliant (4.5:1 ratio minimum) */
+  --text-primary-contrast: #1a1a1a;
+  --text-secondary-contrast: #4a4a4a;
+  --text-tertiary-contrast: #6a6a6a;
+  --bg-primary-contrast: #ffffff;
+  --bg-secondary-contrast: #f8f9fa;
+  --bg-tertiary-contrast: #e9ecef;
+  
+  /* Enhanced Primary Colors with Better Contrast */
+  --primary-color-accessible: #4c63d2; /* Darker blue for better contrast */
+  --primary-hover-accessible: #3b4bc7;
+  --primary-text-on-dark: #ffffff;
+  --primary-text-on-light: #1a1a1a;
+  
+  /* Status Colors - WCAG AA Compliant */
+  --success-color-accessible: #0f7b0f; /* Darker green */
+  --success-bg-accessible: #d4edda;
+  --success-text-accessible: #0f5132;
+  
+  --warning-color-accessible: #b45309; /* Darker orange */
+  --warning-bg-accessible: #fff3cd;
+  --warning-text-accessible: #664d03;
+  
+  --error-color-accessible: #dc2626; /* Darker red */
+  --error-bg-accessible: #f8d7da;
+  --error-text-accessible: #721c24;
+  
+  --info-color-accessible: #0369a1; /* Darker blue */
+  --info-bg-accessible: #d1ecf1;
+  --info-text-accessible: #0c5460;
+  
+  /* Focus and Interactive States */
+  --focus-ring-color: #4c63d2;
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --focus-ring-style: solid;
+  
+  /* Link Colors */
+  --link-color: #0066cc;
+  --link-hover-color: #004499;
+  --link-visited-color: #551a8b;
+  --link-active-color: #ff0000;
+  
+  /* Border Colors */
+  --border-accessible: #6c757d;
+  --border-light-accessible: #adb5bd;
+  --border-dark-accessible: #495057;
+}
+
+/* Dark Theme Accessible Colors */
+[data-theme="dark"] {
+  --text-primary-contrast: #ffffff;
+  --text-secondary-contrast: #d1d5db;
+  --text-tertiary-contrast: #9ca3af;
+  --bg-primary-contrast: #111827;
+  --bg-secondary-contrast: #1f2937;
+  --bg-tertiary-contrast: #374151;
+  
+  --primary-color-accessible: #6366f1; /* Lighter blue for dark backgrounds */
+  --primary-hover-accessible: #7c3aed;
+  
+  --success-color-accessible: #10b981;
+  --success-bg-accessible: #064e3b;
+  --success-text-accessible: #a7f3d0;
+  
+  --warning-color-accessible: #f59e0b;
+  --warning-bg-accessible: #78350f;
+  --warning-text-accessible: #fde68a;
+  
+  --error-color-accessible: #ef4444;
+  --error-bg-accessible: #7f1d1d;
+  --error-text-accessible: #fecaca;
+  
+  --info-color-accessible: #3b82f6;
+  --info-bg-accessible: #1e3a8a;
+  --info-text-accessible: #bfdbfe;
+  
+  --link-color: #60a5fa;
+  --link-hover-color: #93c5fd;
+  --link-visited-color: #c084fc;
+  
+  --border-accessible: #6b7280;
+  --border-light-accessible: #4b5563;
+  --border-dark-accessible: #9ca3af;
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+  :root {
+    --text-primary-contrast: #000000;
+    --text-secondary-contrast: #000000;
+    --bg-primary-contrast: #ffffff;
+    --bg-secondary-contrast: #ffffff;
+    --border-accessible: #000000;
+    --focus-ring-width: 3px;
+    --focus-ring-color: #000000;
+  }
+  
+  [data-theme="dark"] {
+    --text-primary-contrast: #ffffff;
+    --text-secondary-contrast: #ffffff;
+    --bg-primary-contrast: #000000;
+    --bg-secondary-contrast: #000000;
+    --border-accessible: #ffffff;
+    --focus-ring-color: #ffffff;
+  }
+}
+
+/* Accessible Text Classes */
+.text-accessible-primary {
+  color: var(--text-primary-contrast);
+}
+
+.text-accessible-secondary {
+  color: var(--text-secondary-contrast);
+}
+
+.text-accessible-tertiary {
+  color: var(--text-tertiary-contrast);
+}
+
+/* Accessible Background Classes */
+.bg-accessible-primary {
+  background-color: var(--bg-primary-contrast);
+}
+
+.bg-accessible-secondary {
+  background-color: var(--bg-secondary-contrast);
+}
+
+.bg-accessible-tertiary {
+  background-color: var(--bg-tertiary-contrast);
+}
+
+/* Enhanced Focus Styles */
+.focus-accessible {
+  outline: var(--focus-ring-width) var(--focus-ring-style) var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.focus-accessible:focus {
+  outline: var(--focus-ring-width) var(--focus-ring-style) var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.focus-accessible:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Skip Links */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 6px;
+  background: var(--bg-primary-contrast);
+  color: var(--text-primary-contrast);
+  padding: 8px;
+  text-decoration: none;
+  border-radius: 4px;
+  border: 2px solid var(--border-accessible);
+  font-weight: 600;
+  z-index: 9999;
+  transition: top 0.3s ease;
+}
+
+.skip-link:focus {
+  top: 6px;
+  outline: var(--focus-ring-width) var(--focus-ring-style) var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* Accessible Links */
+.link-accessible {
+  color: var(--link-color);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+  transition: all 0.2s ease;
+}
+
+.link-accessible:hover {
+  color: var(--link-hover-color);
+  text-decoration-thickness: 2px;
+}
+
+.link-accessible:visited {
+  color: var(--link-visited-color);
+}
+
+.link-accessible:active {
+  color: var(--link-active-color);
+}
+
+.link-accessible:focus {
+  outline: var(--focus-ring-width) var(--focus-ring-style) var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+  border-radius: 2px;
+}
+
+/* Accessible Buttons */
+.btn-accessible {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 12px 16px;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.btn-accessible:focus {
+  outline: var(--focus-ring-width) var(--focus-ring-style) var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.btn-accessible:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-accessible-primary {
+  background-color: var(--primary-color-accessible);
+  color: var(--primary-text-on-dark);
+  border-color: var(--primary-color-accessible);
+}
+
+.btn-accessible-primary:hover:not(:disabled) {
+  background-color: var(--primary-hover-accessible);
+  border-color: var(--primary-hover-accessible);
+}
+
+.btn-accessible-secondary {
+  background-color: var(--bg-secondary-contrast);
+  color: var(--text-primary-contrast);
+  border-color: var(--border-accessible);
+}
+
+.btn-accessible-secondary:hover:not(:disabled) {
+  background-color: var(--bg-tertiary-contrast);
+  border-color: var(--border-dark-accessible);
+}
+
+/* Accessible Form Elements */
+.form-accessible {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-group-accessible {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.label-accessible {
+  font-weight: 600;
+  color: var(--text-primary-contrast);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.input-accessible {
+  min-height: 44px;
+  padding: 12px;
+  border: 2px solid var(--border-accessible);
+  border-radius: 4px;
+  font-size: 16px;
+  background-color: var(--bg-primary-contrast);
+  color: var(--text-primary-contrast);
+  transition: border-color 0.2s ease;
+}
+
+.input-accessible:focus {
+  outline: var(--focus-ring-width) var(--focus-ring-style) var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+  border-color: var(--primary-color-accessible);
+}
+
+.input-accessible:invalid {
+  border-color: var(--error-color-accessible);
+}
+
+.input-accessible::placeholder {
+  color: var(--text-tertiary-contrast);
+  opacity: 1;
+}
+
+/* Error Messages */
+.error-message-accessible {
+  color: var(--error-text-accessible);
+  background-color: var(--error-bg-accessible);
+  padding: 8px 12px;
+  border-radius: 4px;
+  border-left: 4px solid var(--error-color-accessible);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Success Messages */
+.success-message-accessible {
+  color: var(--success-text-accessible);
+  background-color: var(--success-bg-accessible);
+  padding: 8px 12px;
+  border-radius: 4px;
+  border-left: 4px solid var(--success-color-accessible);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Warning Messages */
+.warning-message-accessible {
+  color: var(--warning-text-accessible);
+  background-color: var(--warning-bg-accessible);
+  padding: 8px 12px;
+  border-radius: 4px;
+  border-left: 4px solid var(--warning-color-accessible);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Info Messages */
+.info-message-accessible {
+  color: var(--info-text-accessible);
+  background-color: var(--info-bg-accessible);
+  padding: 8px 12px;
+  border-radius: 4px;
+  border-left: 4px solid var(--info-color-accessible);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Accessible Cards */
+.card-accessible {
+  background-color: var(--bg-primary-contrast);
+  border: 1px solid var(--border-light-accessible);
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.card-accessible:focus-within {
+  outline: var(--focus-ring-width) var(--focus-ring-style) var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* Accessible Tables */
+.table-accessible {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: var(--bg-primary-contrast);
+}
+
+.table-accessible th,
+.table-accessible td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-light-accessible);
+}
+
+.table-accessible th {
+  background-color: var(--bg-secondary-contrast);
+  font-weight: 600;
+  color: var(--text-primary-contrast);
+}
+
+.table-accessible tbody tr:hover {
+  background-color: var(--bg-secondary-contrast);
+}
+
+.table-accessible tbody tr:focus-within {
+  outline: var(--focus-ring-width) var(--focus-ring-style) var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* Screen Reader Only Content */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.sr-only-focusable:focus {
+  position: static;
+  width: auto;
+  height: auto;
+  padding: inherit;
+  margin: inherit;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
+
+/* High Contrast Mode Utilities */
+@media (prefers-contrast: high) {
+  .high-contrast-border {
+    border: 2px solid currentColor;
+  }
+  
+  .high-contrast-outline {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+  }
+  
+  .high-contrast-bg {
+    background-color: var(--bg-primary-contrast);
+    color: var(--text-primary-contrast);
+  }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  .motion-safe-only {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* Font Size Adjustments for Better Readability */
+.text-readable {
+  font-size: 16px;
+  line-height: 1.6;
+  letter-spacing: 0.01em;
+}
+
+.text-readable-large {
+  font-size: 18px;
+  line-height: 1.7;
+  letter-spacing: 0.01em;
+}
+
+/* Color Blind Friendly Patterns */
+.pattern-accessible {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.1) 2px,
+    rgba(0, 0, 0, 0.1) 4px
+  );
+}
+
+/* Touch Target Improvements */
+.touch-accessible {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 8px;
+  margin: 4px;
+}
+
+@media (max-width: 768px) {
+  .touch-accessible {
+    min-height: 48px;
+    min-width: 48px;
+    padding: 12px;
+    margin: 6px;
+  }
+}
+
+/* Keyboard Navigation Improvements */
+.keyboard-focusable {
+  position: relative;
+}
+
+.keyboard-focusable:focus::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  border: var(--focus-ring-width) var(--focus-ring-style) var(--focus-ring-color);
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+/* Loading States with Better Accessibility */
+.loading-accessible {
+  position: relative;
+  color: transparent;
+}
+
+.loading-accessible::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid var(--border-light-accessible);
+  border-top-color: var(--primary-color-accessible);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Accessible Modal/Dialog */
+.modal-accessible {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content-accessible {
+  background-color: var(--bg-primary-contrast);
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 2px solid var(--border-accessible);
+}
+
+.modal-content-accessible:focus {
+  outline: var(--focus-ring-width) var(--focus-ring-style) var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* Accessible Tooltips */
+.tooltip-accessible {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip-accessible[aria-describedby]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--text-primary-contrast);
+  color: var(--bg-primary-contrast);
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 1000;
+}
+
+.tooltip-accessible:hover::after,
+.tooltip-accessible:focus::after {
+  opacity: 1;
+}

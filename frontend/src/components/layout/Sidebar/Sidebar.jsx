@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { BarChart3, FileText, Code, Zap, MessageSquare, Settings, Wallet, ChevronLeft, ChevronRight, Home, TrendingUp, Users, CreditCard } from 'lucide-react';
+import { BarChart3, FileText, Code, Zap, MessageSquare, Settings, Wallet, ChevronLeft, ChevronRight, Home, TrendingUp, Users, CreditCard, Rss, Mail, UserPlus, Edit3, ShoppingCart, Vote, Coins } from 'lucide-react';
 import { useWallet } from '../../../hooks/useWallet';
 import { truncateWalletAddress } from '../../../utils/walletUtils';
 import './Sidebar.css';
@@ -28,11 +28,27 @@ const Sidebar = ({ walletInfo, isConnected, isOpen = true, onToggle }) => {
       ]
     },
     {
+      title: '🌐 Red Social',
+      items: [
+        { id: 'feed', label: 'Feed', icon: Rss, description: 'Publicaciones y crear post' },
+        { id: 'messages', label: 'Mensajes', icon: Mail, description: 'Chats y notificaciones' },
+        { id: 'profile', label: 'Mi Perfil', icon: Users, description: 'Perfil y conexiones' }
+      ]
+    },
+    {
       title: 'Gestión',
       items: [
         { id: 'contracts', label: 'Contratos', icon: FileText, description: 'Gestionar contratos' },
         { id: 'templates', label: 'Plantillas', icon: Code, description: 'Plantillas de contratos' },
         { id: 'transactions', label: 'Transacciones', icon: CreditCard, description: 'Historial de pagos' }
+      ]
+    },
+    {
+      title: 'DeFi & DAO',
+      items: [
+        { id: 'marketplace', label: 'Marketplace', icon: ShoppingCart, description: 'Compra y vende' },
+        { id: 'staking', label: 'Staking', icon: Coins, description: 'Staking de tokens' },
+        { id: 'dao', label: 'DAO', icon: Vote, description: 'Gobernanza' }
       ]
     },
     {

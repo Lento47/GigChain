@@ -1,0 +1,531 @@
+/* Dark Theme - Complete Implementation */
+
+[data-theme="dark"] {
+  /* Primary Colors - Dark Mode Optimized */
+  --primary-color: #60a5fa;      /* Lighter blue for dark backgrounds */
+  --primary-hover: #3b82f6;
+  --secondary-color: #a855f7;    /* Lighter purple for dark backgrounds */
+  --accent-color: #10b981;       /* Keep green as is */
+  --warning-color: #fbbf24;      /* Lighter yellow for dark backgrounds */
+  --error-color: #f87171;        /* Lighter red for dark backgrounds */
+  --success-color: #34d399;      /* Lighter green for dark backgrounds */
+
+  /* Backgrounds - Dark Mode Hierarchy */
+  --bg-primary: #0f172a;         /* Darkest - main background */
+  --bg-secondary: #1e293b;       /* Card backgrounds */
+  --bg-tertiary: #334155;        /* Elevated elements */
+  --bg-accent: #1e3a8a;          /* Accent background */
+  --bg-dark: #0f172a;            /* Same as primary */
+  --bg-darker: #020617;          /* Even darker for overlays */
+
+  /* Text Colors - High Contrast for Dark Mode */
+  --text-primary: #f8fafc;       /* Almost white - highest contrast */
+  --text-secondary: #e2e8f0;     /* Light gray - secondary text */
+  --text-muted: #cbd5e1;         /* Medium gray - muted text */
+  --text-accent: #60a5fa;        /* Blue accent text */
+  --text-inverse: #0f172a;       /* Dark text for light backgrounds */
+
+  /* Borders - Subtle but Visible */
+  --border-color: #475569;       /* Medium gray for visibility */
+  --border-light: #64748b;       /* Lighter gray for subtle borders */
+  --border-accent: #60a5fa;      /* Blue for focused elements */
+
+  /* Shadows - Adjusted for Dark Mode */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6);
+
+  /* Interactive States - Dark Mode Optimized */
+  --interactive-primary: #60a5fa;
+  --interactive-hover: #3b82f6;
+  --interactive-active: #2563eb;
+  --interactive-disabled: #64748b;
+
+  /* Status Colors - High Contrast for Dark */
+  --success-hc: #34d399;
+  --warning-hc: #fbbf24;
+  --error-hc: #f87171;
+  --info-hc: #38bdf8;
+}
+
+/* Dark Mode Specific Component Styles */
+[data-theme="dark"] body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .app {
+  background: var(--bg-primary);
+}
+
+/* Enhanced Dark Mode Cards */
+[data-theme="dark"] .card,
+[data-theme="dark"] .card-accessible {
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .card:hover,
+[data-theme="dark"] .card-accessible:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--border-accent);
+}
+
+/* Dark Mode Forms */
+[data-theme="dark"] .form-input-accessible,
+[data-theme="dark"] input,
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .form-input-accessible:focus,
+[data-theme="dark"] input:focus,
+[data-theme="dark"] textarea:focus,
+[data-theme="dark"] select:focus {
+  background: var(--bg-tertiary);
+  border-color: var(--border-accent);
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
+}
+
+/* Dark Mode Buttons */
+[data-theme="dark"] .btn-secondary {
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .btn-secondary:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+[data-theme="dark"] .btn-ghost {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .btn-ghost:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--border-color);
+}
+
+/* Dark Mode Navigation */
+[data-theme="dark"] .nav-link-accessible {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .nav-link-accessible:hover {
+  background: var(--bg-tertiary);
+  color: var(--primary-color);
+}
+
+[data-theme="dark"] .nav-link-accessible[aria-current="page"] {
+  background: var(--primary-color);
+  color: var(--text-inverse);
+}
+
+/* Dark Mode Mobile Navigation */
+[data-theme="dark"] .mobile-bottom-nav {
+  background: var(--bg-secondary);
+  border-top-color: var(--border-color);
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="dark"] .mobile-nav-item {
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .mobile-nav-item.active {
+  color: var(--primary-color);
+  background: rgba(96, 165, 250, 0.15);
+}
+
+[data-theme="dark"] .mobile-nav-item:active {
+  background: var(--bg-tertiary);
+}
+
+/* Dark Mode Sidebar */
+[data-theme="dark"] .sidebar {
+  background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+  border-right-color: var(--border-color);
+}
+
+[data-theme="dark"] .sidebar-header {
+  border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] .nav-item {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .nav-item:hover {
+  background: var(--bg-tertiary);
+}
+
+[data-theme="dark"] .nav-item.active {
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+  color: var(--text-inverse);
+}
+
+/* Dark Mode Tables */
+[data-theme="dark"] .table-accessible {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .table-accessible th {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .table-accessible tr:hover {
+  background: var(--bg-tertiary);
+}
+
+/* Dark Mode Modals */
+[data-theme="dark"] .modal-accessible {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+[data-theme="dark"] .modal-content-accessible {
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+/* Dark Mode Scrollbars */
+[data-theme="dark"] ::-webkit-scrollbar-track {
+  background: var(--bg-darker);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: var(--bg-tertiary);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: var(--border-color);
+}
+
+/* Dark Mode Code Blocks */
+[data-theme="dark"] code {
+  background: var(--bg-darker);
+  color: var(--text-primary);
+  padding: 0.125rem 0.375rem;
+  border-radius: var(--radius-sm);
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+[data-theme="dark"] pre {
+  background: var(--bg-darker);
+  color: var(--text-primary);
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+  border: 1px solid var(--border-color);
+}
+
+/* Dark Mode Selection */
+[data-theme="dark"] ::selection {
+  background: rgba(96, 165, 250, 0.3);
+  color: var(--text-primary);
+}
+
+/* Dark Mode Focus Outlines */
+[data-theme="dark"] .focus-visible,
+[data-theme="dark"] *:focus-visible {
+  outline-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.3);
+}
+
+/* Dark Mode Tooltips */
+[data-theme="dark"] .tooltip-accessible::after {
+  background: var(--bg-darker);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+/* Dark Mode Dropdowns/Selects */
+[data-theme="dark"] select option {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+/* Dark Mode Placeholders */
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: var(--text-muted);
+}
+
+/* Dark Mode Disabled States */
+[data-theme="dark"] .form-input-accessible:disabled {
+  background: var(--bg-darker);
+  color: var(--text-muted);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .btn-accessible-primary:disabled {
+  background: var(--interactive-disabled);
+  border-color: var(--interactive-disabled);
+}
+
+[data-theme="dark"] .btn-accessible-secondary:disabled {
+  background: var(--bg-darker);
+  border-color: var(--border-color);
+  color: var(--text-muted);
+}
+
+/* Dark Mode Loading States */
+[data-theme="dark"] .loading-progress-bar {
+  background: var(--bg-darker);
+}
+
+[data-theme="dark"] .loading-progress-fill {
+  background: var(--primary-color);
+}
+
+/* Dark Mode Alerts/Notifications */
+[data-theme="dark"] .alert-info {
+  background: rgba(56, 189, 248, 0.1);
+  border-color: var(--info-hc);
+  color: var(--info-hc);
+}
+
+[data-theme="dark"] .alert-success {
+  background: rgba(52, 211, 153, 0.1);
+  border-color: var(--success-hc);
+  color: var(--success-hc);
+}
+
+[data-theme="dark"] .alert-warning {
+  background: rgba(251, 191, 36, 0.1);
+  border-color: var(--warning-hc);
+  color: var(--warning-hc);
+}
+
+[data-theme="dark"] .alert-error {
+  background: rgba(248, 113, 113, 0.1);
+  border-color: var(--error-hc);
+  color: var(--error-hc);
+}
+
+/* Dark Mode Theme Toggle Animation */
+[data-theme="dark"] {
+  transition: 
+    background-color 0.3s ease,
+    color 0.3s ease,
+    border-color 0.3s ease;
+}
+
+/* Dark Mode Print Styles */
+@media print {
+  [data-theme="dark"] * {
+    background: white !important;
+    color: black !important;
+    border-color: black !important;
+  }
+}
+
+/* Dark Mode High Contrast Variant */
+[data-theme="dark"][data-contrast="high"] {
+  --bg-primary: #000000;
+  --bg-secondary: #111111;
+  --bg-tertiary: #222222;
+  --text-primary: #ffffff;
+  --text-secondary: #ffffff;
+  --text-muted: #cccccc;
+  --border-color: #ffffff;
+  --border-light: #cccccc;
+  --primary-color: #66ccff;
+  --success-color: #00ff88;
+  --error-color: #ff6666;
+  --warning-color: #ffcc66;
+}
+
+/* Auto Theme Detection */
+@media (prefers-color-scheme: dark) {
+  [data-theme="auto"] {
+    --primary-color: #60a5fa;
+    --primary-hover: #3b82f6;
+    --secondary-color: #a855f7;
+    --accent-color: #10b981;
+    --warning-color: #fbbf24;
+    --error-color: #f87171;
+    --success-color: #34d399;
+
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --bg-tertiary: #334155;
+    --bg-accent: #1e3a8a;
+    --bg-dark: #0f172a;
+    --bg-darker: #020617;
+
+    --text-primary: #f8fafc;
+    --text-secondary: #e2e8f0;
+    --text-muted: #cbd5e1;
+    --text-accent: #60a5fa;
+    --text-inverse: #0f172a;
+
+    --border-color: #475569;
+    --border-light: #64748b;
+    --border-accent: #60a5fa;
+
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6);
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  [data-theme="auto"] {
+    --primary-color: #667eea;
+    --primary-hover: #5a67d8;
+    --secondary-color: #764ba2;
+    --accent-color: #10b981;
+    --warning-color: #f59e0b;
+    --error-color: #ef4444;
+    --success-color: #10b981;
+
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8fafc;
+    --bg-tertiary: #f1f5f9;
+    --bg-accent: #f0f9ff;
+    --bg-dark: #1e293b;
+    --bg-darker: #0f172a;
+
+    --text-primary: #0f172a;
+    --text-secondary: #1e293b;
+    --text-muted: #64748b;
+    --text-accent: #3b82f6;
+    --text-inverse: #ffffff;
+
+    --border-color: #e2e8f0;
+    --border-light: #f1f5f9;
+    --border-accent: #3b82f6;
+
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  }
+}
+
+/* Theme Transition Animations */
+.theme-transition * {
+  transition: 
+    background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Reduce transitions for users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .theme-transition * {
+    transition: none !important;
+  }
+}
+
+/* Dark Mode Syntax Highlighting */
+[data-theme="dark"] .syntax-highlight {
+  background: var(--bg-darker);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+[data-theme="dark"] .syntax-keyword {
+  color: #c792ea;
+}
+
+[data-theme="dark"] .syntax-string {
+  color: #c3e88d;
+}
+
+[data-theme="dark"] .syntax-number {
+  color: #f78c6c;
+}
+
+[data-theme="dark"] .syntax-comment {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Dark Mode Charts and Data Visualization */
+[data-theme="dark"] .chart-container {
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .chart-grid {
+  stroke: var(--border-color);
+}
+
+[data-theme="dark"] .chart-text {
+  fill: var(--text-secondary);
+}
+
+[data-theme="dark"] .chart-line {
+  stroke: var(--primary-color);
+}
+
+[data-theme="dark"] .chart-area {
+  fill: rgba(96, 165, 250, 0.1);
+}
+
+/* Dark Mode Specific Mobile Adjustments */
+@media (max-width: 768px) {
+  [data-theme="dark"] .mobile-bottom-nav {
+    backdrop-filter: blur(10px);
+    background: rgba(30, 41, 59, 0.95);
+  }
+  
+  [data-theme="dark"] .sidebar-overlay {
+    background: rgba(0, 0, 0, 0.8);
+  }
+}
+
+/* Dark Mode Image Filters (for logos/icons that need adjustment) */
+[data-theme="dark"] .dark-mode-invert {
+  filter: invert(1);
+}
+
+[data-theme="dark"] .dark-mode-dim {
+  opacity: 0.8;
+}
+
+/* Dark Mode System UI Elements */
+[data-theme="dark"] ::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+
+[data-theme="dark"] input[type="date"],
+[data-theme="dark"] input[type="time"],
+[data-theme="dark"] input[type="datetime-local"] {
+  color-scheme: dark;
+}
+
+/* Dark Mode Loading Spinners */
+[data-theme="dark"] .loading-spinner {
+  color: var(--primary-color);
+}
+
+[data-theme="dark"] .loading-message {
+  color: var(--text-secondary);
+}
+
+/* Dark Mode Empty States */
+[data-theme="dark"] .empty-state-icon {
+  color: var(--text-muted);
+}
+
+[data-theme="dark"] .empty-state-title {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .empty-state-description {
+  color: var(--text-secondary);
+}

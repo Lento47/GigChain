@@ -1,0 +1,134 @@
+/* Protected Route Styles */
+
+.protected-route-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: var(--bg-primary);
+}
+
+.wallet-switching-spinner {
+  text-align: center;
+}
+
+/* Authentication Required Component */
+.authentication-required {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: var(--bg-primary);
+  padding: 2rem;
+}
+
+.auth-required-content {
+  text-align: center;
+  max-width: 500px;
+  padding: 3rem 2rem;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border-color);
+}
+
+.auth-required-icon {
+  font-size: 4rem;
+  margin-bottom: 1.5rem;
+  display: block;
+}
+
+.auth-required-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+  line-height: 1.3;
+}
+
+.auth-required-message {
+  font-size: 1.125rem;
+  color: var(--text-secondary);
+  margin-bottom: 2rem;
+  line-height: 1.6;
+}
+
+.auth-required-button {
+  min-width: 200px;
+  padding: 1rem 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.auth-required-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+}
+
+/* Dark theme support */
+[data-theme="dark"] .auth-required-content {
+  background: var(--bg-dark-secondary);
+  border-color: var(--border-dark);
+}
+
+[data-theme="dark"] .auth-required-title {
+  color: var(--text-dark-primary);
+}
+
+[data-theme="dark"] .auth-required-message {
+  color: var(--text-dark-secondary);
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .authentication-required {
+    padding: 1rem;
+  }
+  
+  .auth-required-content {
+    padding: 2rem 1.5rem;
+  }
+  
+  .auth-required-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+  
+  .auth-required-title {
+    font-size: 1.5rem;
+  }
+  
+  .auth-required-message {
+    font-size: 1rem;
+  }
+  
+  .auth-required-button {
+    min-width: auto;
+    width: 100%;
+    padding: 0.875rem 1.5rem;
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  .auth-required-content {
+    border-width: 2px;
+    border-color: var(--text-primary);
+  }
+  
+  .auth-required-title {
+    color: var(--text-primary);
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .auth-required-button {
+    transition: none;
+  }
+  
+  .auth-required-button:hover {
+    transform: none;
+  }
+}

@@ -1,0 +1,385 @@
+/* GigChain Web3 Theme - Crypto/Blockchain Aesthetic */
+
+:root {
+  /* Crypto Color Palette */
+  --crypto-bg-primary: #0a0e1a;
+  --crypto-bg-secondary: #151b2e;
+  --crypto-bg-tertiary: #1a2332;
+  
+  /* Neon Accents */
+  --neon-green: #00ff88;
+  --neon-cyan: #00d4ff;
+  --neon-purple: #a855f7;
+  --neon-blue: #3b82f6;
+  --neon-pink: #ec4899;
+  
+  /* Gradients */
+  --gradient-crypto: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --gradient-neon: linear-gradient(135deg, #00ff88 0%, #00d4ff 100%);
+  --gradient-purple: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  --gradient-mesh: radial-gradient(at 50% 50%, #667eea33 0%, transparent 50%),
+                   radial-gradient(at 80% 20%, #764ba233 0%, transparent 50%),
+                   radial-gradient(at 20% 80%, #00ff8833 0%, transparent 50%);
+  
+  /* Glassmorphism */
+  --glass-bg: rgba(21, 27, 46, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+  
+  /* Text */
+  --text-primary: #ffffff;
+  --text-secondary: #a0aec0;
+  --text-muted: #718096;
+  
+  /* Borders */
+  --border-neon: rgba(0, 255, 136, 0.3);
+  --border-purple: rgba(139, 92, 246, 0.3);
+  --border-blue: rgba(59, 130, 246, 0.3);
+}
+
+/* Dark Theme Base */
+body {
+  background: var(--crypto-bg-primary);
+  background-image: var(--gradient-mesh);
+  color: var(--text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* Animated Mesh Background */
+.mesh-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  background: var(--crypto-bg-primary);
+  background-image: var(--gradient-mesh);
+  animation: meshMove 20s ease infinite;
+}
+
+@keyframes meshMove {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.8; }
+}
+
+/* Glassmorphism Card */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  box-shadow: var(--glass-shadow);
+  transition: all 0.3s ease;
+}
+
+.glass-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.5);
+  border-color: var(--border-neon);
+}
+
+/* Neon Glow Effects */
+.neon-glow-green {
+  box-shadow: 0 0 10px var(--neon-green),
+              0 0 20px var(--neon-green),
+              0 0 30px var(--neon-green);
+}
+
+.neon-glow-cyan {
+  box-shadow: 0 0 10px var(--neon-cyan),
+              0 0 20px var(--neon-cyan),
+              0 0 30px var(--neon-cyan);
+}
+
+.neon-glow-purple {
+  box-shadow: 0 0 10px var(--neon-purple),
+              0 0 20px var(--neon-purple),
+              0 0 30px var(--neon-purple);
+}
+
+/* Neon Border Animation */
+.neon-border {
+  position: relative;
+  border: 2px solid transparent;
+  background: var(--glass-bg);
+  border-radius: 12px;
+}
+
+.neon-border::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: var(--gradient-neon);
+  border-radius: 12px;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.neon-border:hover::before {
+  opacity: 1;
+  animation: neonPulse 2s ease-in-out infinite;
+}
+
+@keyframes neonPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Crypto Button Styles */
+.crypto-btn {
+  position: relative;
+  padding: 12px 32px;
+  background: var(--gradient-crypto);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.crypto-btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.crypto-btn:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+.crypto-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.5);
+}
+
+/* Wallet Address Badge */
+.wallet-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--glass-bg);
+  border: 1px solid var(--border-neon);
+  border-radius: 24px;
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 14px;
+  color: var(--neon-green);
+  backdrop-filter: blur(10px);
+}
+
+.wallet-badge::before {
+  content: '⬢';
+  font-size: 18px;
+}
+
+/* Network Badge */
+.network-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+}
+
+/* Animated Gradient Text */
+.gradient-text {
+  background: var(--gradient-neon);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradientShift 3s ease infinite;
+}
+
+@keyframes gradientShift {
+  0%, 100% { filter: hue-rotate(0deg); }
+  50% { filter: hue-rotate(45deg); }
+}
+
+/* Crypto Grid Pattern */
+.crypto-grid {
+  background-image: 
+    linear-gradient(var(--border-purple) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border-purple) 1px, transparent 1px);
+  background-size: 50px 50px;
+  opacity: 0.1;
+}
+
+/* Loading Spinner Crypto Style */
+.crypto-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--glass-border);
+  border-top-color: var(--neon-green);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Hexagon Badge */
+.hex-badge {
+  width: 60px;
+  height: 60px;
+  background: var(--gradient-crypto);
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+}
+
+/* Blockchain Node Effect */
+.blockchain-node {
+  position: relative;
+  width: 12px;
+  height: 12px;
+  background: var(--neon-green);
+  border-radius: 50%;
+  box-shadow: 0 0 20px var(--neon-green);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.blockchain-node::before,
+.blockchain-node::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: inherit;
+  border-radius: 50%;
+  opacity: 0.5;
+  animation: nodeRipple 2s ease-out infinite;
+}
+
+.blockchain-node::after {
+  animation-delay: 1s;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes nodeRipple {
+  0% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(3);
+    opacity: 0;
+  }
+}
+
+/* Status Indicators */
+.status-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--neon-green);
+}
+
+.status-live::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: var(--neon-green);
+  border-radius: 50%;
+  animation: blink 2s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* Scanline Effect (optional overlay) */
+.scanlines {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    transparent 50%,
+    rgba(0, 0, 0, 0.05) 51%
+  );
+  background-size: 100% 4px;
+  z-index: 9999;
+  opacity: 0.1;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .glass-card {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  
+  .crypto-btn {
+    padding: 10px 24px;
+    font-size: 14px;
+  }
+  
+  .wallet-badge {
+    font-size: 12px;
+    padding: 6px 12px;
+  }
+}
+
+/* Dark Mode Overrides (force dark) */
+body {
+  --card-bg: var(--crypto-bg-secondary);
+  --text-primary: #ffffff;
+  --text-secondary: #a0aec0;
+  --border-color: var(--glass-border);
+  --primary: var(--neon-green);
+  --primary-dark: #00cc6a;
+  --primary-light: rgba(0, 255, 136, 0.1);
+  --hover-bg: var(--crypto-bg-tertiary);
+}
+
+/* Override existing components */
+.sidebar {
+  background: var(--crypto-bg-secondary);
+  border-right: 1px solid var(--glass-border);
+}
+
+.header {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+/* Smooth Transitions */
+* {
+  transition: background-color 0.2s ease, 
+              border-color 0.2s ease,
+              color 0.2s ease;
+}
+

@@ -81,10 +81,13 @@ const Header = ({ walletInfo, isConnected, client }) => {
   return (
     <header className="app-header">
       <div className="header-content">
-        <div className="header-info">
-          <h1 className="page-title">{title}</h1>
-          <p className="page-subtitle">{subtitle}</p>
-        </div>
+        {/* Only show title/subtitle for pages with custom hero headers */}
+        {currentView !== 'dashboard' && currentView !== 'analytics' && (
+          <div className="header-info">
+            <h1 className="page-title">{title}</h1>
+            <p className="page-subtitle">{subtitle}</p>
+          </div>
+        )}
         
         <div className="header-actions">
           <div className="theme-toggle-container">
