@@ -32,7 +32,10 @@ from eth_account.messages import encode_defunct
 from web3 import Web3
 import logging
 
+from security.secure_logger import get_secure_logger, LogLevel, LogScrubMode
+
 logger = logging.getLogger(__name__)
+secure_logger = get_secure_logger('auth.w_csap', LogLevel.INFO, LogScrubMode.STRICT)
 
 
 @dataclass
@@ -334,8 +337,8 @@ class SignatureValidator:
             # ===== AUDIT LOGGING =====
             
             if is_valid:
-                logger.info(
-                    f"✅ Signature verified for {expected_address[:10]}...",
+                secure_logger.info(
+                    "✅ Signature verified",
                     extra={
                         "wallet_address": expected_address,
                         "success": True
@@ -343,9 +346,8 @@ class SignatureValidator:
                 )
                 return True, recovered_address
             else:
-                logger.warning(
-                    f"❌ Signature mismatch: expected {expected_address[:10]}..., "
-                    f"got {recovered_address[:10]}...",
+                secure_logger.warning(
+                    "❌ Signature mismatch",
                     extra={
                         "expected_address": expected_address,
                         "recovered_address": recovered_address,
@@ -358,16 +360,15 @@ class SignatureValidator:
             # ===== CATCH-ALL: FAIL CLOSED =====
             # CRITICAL: Log ALL exceptions in signature verification
             # ANY exception = DENY authentication
-            logger.critical(
-                f"SECURITY CRITICAL: Unhandled exception in signature verification",
+            secure_logger.critical(
+                "SECURITY CRITICAL: Unhandled exception in signature verification",
                 extra={
                     "exception_type": type(e).__name__,
                     "exception": str(e),
-                    "expected_address": expected_address[:20] if expected_address else None,
+                    "expected_address": expected_address,
                     "signature_length": len(signature) if signature else 0,
                     "message_length": len(message) if message else 0
-                },
-                exc_info=True
+                }
             )
             # FAIL CLOSED: Return False
             return False, None
@@ -541,14 +542,14 @@ class SessionManager:
             
             if not result:
                 if not valid_format:
-                    logger.warning("Session token validation failed: Invalid format")
+                    secure_logger.warning("Session token validation failed: Invalid format")
                 elif not hmac_valid:
-                    logger.warning("Session token validation failed: HMAC verification failed")
+                    secure_logger.warning("Session token validation failed: HMAC verification failed")
                 elif not not_expired:
-                    logger.warning("Session token validation failed: Token expired")
+                    secure_logger.warning("Session token validation failed: Token expired")
             
         except Exception as e:
-            logger.error(f"Session token validation error: {str(e)}")
+            secure_logger.error("Session token validation error", extra={"error": str(e)})
             result = False
             decoded_data = None
         
@@ -588,7 +589,7 @@ class SessionManager:
             )
             
             if not hmac.compare_digest(refresh_token, expected_refresh_hmac):
-                logger.warning("Invalid refresh token")
+                secure_logger.warning("Invalid refresh token")
                 return None
             
             # Create new session assertion
@@ -599,7 +600,7 @@ class SessionManager:
             )
             
         except Exception as e:
-            logger.error(f"Session refresh error: {str(e)}")
+            secure_logger.error("Session refresh error", extra={"error": str(e)})
             return None
     
     def _generate_assertion_id(self, wallet_address: str) -> str:
@@ -673,7 +674,7 @@ class WCSAPAuthenticator:
         self.active_challenges: Dict[str, Challenge] = {}
         self.active_sessions: Dict[str, SessionAssertion] = {}
         
-        logger.info("🔐 W-CSAP Authenticator initialized")
+        secure_logger.info("🔐 W-CSAP Authenticator initialized")
     
     def initiate_authentication(
         self,
@@ -698,11 +699,11 @@ class WCSAPAuthenticator:
             # Store challenge
             self.active_challenges[challenge.challenge_id] = challenge
             
-            logger.info(f"🎯 Challenge generated for {wallet_address[:10]}...")
+            secure_logger.info("🎯 Challenge generated", extra={"wallet_address": wallet_address})
             return challenge
             
         except Exception as e:
-            logger.error(f"Challenge generation error: {str(e)}")
+            secure_logger.error("Challenge generation error", extra={"error": str(e)})
             raise
     
     def complete_authentication(
@@ -746,26 +747,26 @@ class WCSAPAuthenticator:
                             expires_at=db_challenge["expires_at"],
                             metadata=db_challenge.get("metadata", {})
                         )
-                        logger.info(f"🔄 Challenge recovered from database: {challenge_id[:16]}...")
+                        secure_logger.info("🔄 Challenge recovered from database", extra={"challenge_id": challenge_id})
                     else:
-                        logger.warning(f"Challenge not found in database: {challenge_id[:16]}...")
+                        secure_logger.warning("Challenge not found in database", extra={"challenge_id": challenge_id})
                 except Exception as e:
-                    logger.error(f"Database challenge lookup error: {str(e)}")
+                    secure_logger.error("Database challenge lookup error", extra={"error": str(e)})
             
             # Final check - challenge not found anywhere
             if not challenge:
-                logger.warning(f"Challenge not found (memory or database): {challenge_id[:16]}...")
+                secure_logger.warning("Challenge not found (memory or database)", extra={"challenge_id": challenge_id})
                 return None
             
             # Check expiry
             if challenge.is_expired():
-                logger.warning("Challenge expired")
+                secure_logger.warning("Challenge expired")
                 del self.active_challenges[challenge_id]
                 return None
             
             # Verify wallet address matches
             if challenge.wallet_address.lower() != wallet_address.lower():
-                logger.warning("Wallet address mismatch")
+                secure_logger.warning("Wallet address mismatch")
                 return None
             
             # Verify signature
@@ -776,7 +777,7 @@ class WCSAPAuthenticator:
             )
             
             if not is_valid:
-                logger.warning("Invalid signature")
+                secure_logger.warning("Invalid signature")
                 return None
             
             # Create session assertion
@@ -792,11 +793,11 @@ class WCSAPAuthenticator:
             # Clean up challenge
             del self.active_challenges[challenge_id]
             
-            logger.info(f"✅ Authentication successful for {wallet_address[:10]}...")
+            secure_logger.info("✅ Authentication successful", extra={"wallet_address": wallet_address})
             return session_assertion
             
         except Exception as e:
-            logger.error(f"Authentication completion error: {str(e)}")
+            secure_logger.error("Authentication completion error", extra={"error": str(e)})
             return None
     
     def validate_session(self, session_token: str) -> Tuple[bool, Optional[Dict[str, Any]]]:
@@ -839,11 +840,11 @@ class WCSAPAuthenticator:
             if assertion_id in self.active_sessions:
                 del self.active_sessions[assertion_id]
             
-            logger.info("👋 Session logged out successfully")
+            secure_logger.info("👋 Session logged out successfully")
             return True
             
         except Exception as e:
-            logger.error(f"Logout error: {str(e)}")
+            secure_logger.error("Logout error", extra={"error": str(e)})
             return False
     
     def cleanup_expired(self):
@@ -867,9 +868,12 @@ class WCSAPAuthenticator:
             del self.active_sessions[aid]
         
         if expired_challenges or expired_sessions:
-            logger.info(
-                f"🧹 Cleaned up {len(expired_challenges)} challenges "
-                f"and {len(expired_sessions)} sessions"
+            secure_logger.info(
+                "🧹 Cleaned up expired items",
+                extra={
+                    "expired_challenges": len(expired_challenges),
+                    "expired_sessions": len(expired_sessions)
+                }
             )
 
 

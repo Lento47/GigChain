@@ -10,18 +10,56 @@ Features:
 - Pin important contracts for persistence
 - List all uploaded contracts
 - Integration with local IPFS daemon or remote gateways (Pinata, Infura)
+- Robust error handling with retries and exponential backoff
+- Timeout protection for all IPFS operations
 """
 
 import json
 import logging
 import os
+import time
 from datetime import datetime
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Union
 from dataclasses import dataclass
+from functools import wraps
 import ipfshttpclient
 from ipfshttpclient.exceptions import ConnectionError as IPFSConnectionError
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from ipfs_adapter import IPFSAdapter, IPFSAdapterConfig
 
 logger = logging.getLogger(__name__)
+
+
+# Configuration for retry behavior
+IPFS_RETRY_CONFIG = {
+    'stop': stop_after_attempt(3),
+    'wait': wait_exponential(multiplier=1, min=1, max=10),
+    'retry': retry_if_exception_type((IPFSConnectionError, ConnectionError, TimeoutError))
+}
+
+
+def ipfs_retry_operation(operation_name: str):
+    """
+    Decorator to add retry logic with exponential backoff to IPFS operations.
+    
+    Args:
+        operation_name: Name of the operation for logging purposes
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            @retry(**IPFS_RETRY_CONFIG)
+            def _retry_operation():
+                logger.debug(f"Attempting IPFS {operation_name}...")
+                return func(*args, **kwargs)
+            
+            try:
+                return _retry_operation()
+            except Exception as e:
+                logger.error(f"IPFS {operation_name} failed after retries: {str(e)}")
+                raise
+        return wrapper
+    return decorator
 
 
 @dataclass
@@ -58,6 +96,7 @@ class IPFSStorage:
         IPFS_MODE: 'local' | 'pinata' | 'infura' | 'nft.storage'
         IPFS_API_URL: API endpoint (default: /ip4/127.0.0.1/tcp/5001)
         IPFS_GATEWAY_URL: Gateway URL (default: http://127.0.0.1:8080)
+        IPFS_TIMEOUT: Timeout in seconds for IPFS operations (default: 30)
         PINATA_API_KEY: Pinata API key (if using Pinata)
         PINATA_SECRET_KEY: Pinata secret key (if using Pinata)
         INFURA_PROJECT_ID: Infura project ID (if using Infura)
@@ -69,6 +108,7 @@ class IPFSStorage:
         self.mode = os.getenv('IPFS_MODE', 'local')
         self.api_url = os.getenv('IPFS_API_URL', '/ip4/127.0.0.1/tcp/5001')
         self.gateway_url = os.getenv('IPFS_GATEWAY_URL', 'http://127.0.0.1:8080')
+        self.timeout = int(os.getenv('IPFS_TIMEOUT', '30'))
         
         # Public gateways as fallback
         self.public_gateways = [
@@ -78,23 +118,26 @@ class IPFSStorage:
             'https://dweb.link'
         ]
         
-        self.client = None
-        self.connected = False
-        
-        # Try to connect to IPFS
-        self._connect()
+        # Initialize IPFS adapter
+        adapter_config = IPFSAdapterConfig(
+            timeout=self.timeout,
+            api_url=self.api_url,
+            gateway_url=self.gateway_url
+        )
+        self.adapter = IPFSAdapter(adapter_config)
+        self.client = self.adapter
+        self.connected = self.adapter.is_connected()
     
     def _connect(self):
-        """Connect to IPFS node."""
+        """Connect to IPFS node using adapter."""
         try:
             if self.mode == 'local':
-                # Connect to local IPFS daemon
-                self.client = ipfshttpclient.connect(self.api_url)
-                
-                # Test connection
-                version = self.client.version()
-                logger.info(f"✅ Connected to IPFS node v{version['Version']}")
-                self.connected = True
+                # Use adapter for local connection
+                self.connected = self.adapter.is_connected()
+                if self.connected:
+                    logger.info("✅ Connected to local IPFS via adapter")
+                else:
+                    logger.warning("⚠️ Failed to connect to local IPFS via adapter")
                 
             elif self.mode == 'pinata':
                 # Pinata uses their API, not IPFS HTTP client
@@ -115,22 +158,28 @@ class IPFSStorage:
                 if not project_id:
                     raise ValueError("INFURA_PROJECT_ID required for Infura mode")
                 
-                # Infura endpoint
+                # Update adapter config for Infura
                 infura_url = f'/dns/ipfs.infura.io/tcp/5001/https'
-                self.client = ipfshttpclient.connect(
-                    infura_url,
-                    auth=(project_id, project_secret) if project_secret else None
+                adapter_config = IPFSAdapterConfig(
+                    timeout=self.timeout,
+                    api_url=infura_url,
+                    gateway_url=self.gateway_url
                 )
+                self.adapter = IPFSAdapter(adapter_config)
+                self.client = self.adapter
+                self.connected = self.adapter.is_connected()
                 
-                logger.info("✅ Connected to Infura IPFS")
-                self.connected = True
+                if self.connected:
+                    logger.info("✅ Connected to Infura IPFS via adapter")
+                else:
+                    logger.warning("⚠️ Failed to connect to Infura IPFS via adapter")
                 
             else:
                 logger.warning(f"⚠️ Unknown IPFS mode: {self.mode}, defaulting to local")
                 self.mode = 'local'
                 self._connect()
                 
-        except (IPFSConnectionError, Exception) as e:
+        except Exception as e:
             logger.warning(f"⚠️ IPFS connection failed: {str(e)}")
             logger.info("💡 Contracts will work without IPFS, but won't be stored on decentralized storage")
             logger.info("💡 To enable IPFS:")
@@ -143,6 +192,7 @@ class IPFSStorage:
         """Check if connected to IPFS."""
         return self.connected
     
+    @ipfs_retry_operation("upload")
     def upload_contract(
         self, 
         contract_data: Dict[str, Any],
@@ -183,16 +233,15 @@ class IPFSStorage:
             # Convert to JSON string
             json_data = json.dumps(upload_package, ensure_ascii=False, indent=2)
             
-            # Upload to IPFS
+            # Upload to IPFS using adapter
             logger.info(f"📤 Uploading contract to IPFS ({len(json_data)} bytes)...")
             
-            result = self.client.add_json(upload_package)
-            cid = result
+            cid = self.adapter.add_json(upload_package)
             
             # Pin if requested
             if pin:
                 try:
-                    self.client.pin.add(cid)
+                    self.adapter.pin_add(cid)
                     logger.info(f"📌 Contract pinned: {cid}")
                 except Exception as e:
                     logger.warning(f"⚠️ Failed to pin contract: {str(e)}")
@@ -215,6 +264,7 @@ class IPFSStorage:
             logger.error(f"❌ IPFS upload failed: {str(e)}")
             raise
     
+    @ipfs_retry_operation("retrieve")
     def retrieve_contract(self, cid: str) -> IPFSContract:
         """
         Retrieve contract data from IPFS by CID.
@@ -238,13 +288,13 @@ class IPFSStorage:
         try:
             logger.info(f"📥 Retrieving contract from IPFS: {cid}")
             
-            # Get JSON data from IPFS
-            data = self.client.get_json(cid)
+            # Get JSON data from IPFS using adapter
+            data = self.adapter.get_json(cid)
             
             # Check if it's pinned
             pinned = False
             try:
-                pins = self.client.pin.ls(cid)
+                pins = self.adapter.pin_ls(cid)
                 pinned = len(pins.get('Keys', {})) > 0
             except:
                 pass
@@ -271,6 +321,7 @@ class IPFSStorage:
             logger.error(f"❌ Failed to retrieve contract from IPFS: {str(e)}")
             raise ValueError(f"Contract not found or invalid CID: {cid}")
     
+    @ipfs_retry_operation("pin")
     def pin_contract(self, cid: str) -> bool:
         """
         Pin a contract to keep it permanently on IPFS.
@@ -285,13 +336,18 @@ class IPFSStorage:
             raise ConnectionError("IPFS not connected")
         
         try:
-            self.client.pin.add(cid)
-            logger.info(f"📌 Contract pinned: {cid}")
-            return True
+            success = self.adapter.pin_add(cid)
+            if success:
+                logger.info(f"📌 Contract pinned: {cid}")
+                return True
+            else:
+                logger.error(f"❌ Failed to pin contract: {cid}")
+                return False
         except Exception as e:
             logger.error(f"❌ Failed to pin contract: {str(e)}")
             return False
     
+    @ipfs_retry_operation("unpin")
     def unpin_contract(self, cid: str) -> bool:
         """
         Unpin a contract (allow garbage collection).
@@ -306,9 +362,13 @@ class IPFSStorage:
             raise ConnectionError("IPFS not connected")
         
         try:
-            self.client.pin.rm(cid)
-            logger.info(f"📍 Contract unpinned: {cid}")
-            return True
+            success = self.adapter.pin_rm(cid)
+            if success:
+                logger.info(f"📍 Contract unpinned: {cid}")
+                return True
+            else:
+                logger.error(f"❌ Failed to unpin contract: {cid}")
+                return False
         except Exception as e:
             logger.error(f"❌ Failed to unpin contract: {str(e)}")
             return False
@@ -324,14 +384,9 @@ class IPFSStorage:
         Returns:
             Full HTTP URL to access the content
         """
-        if gateway_index == -1:
-            # Use configured gateway
-            return f"{self.gateway_url}/ipfs/{cid}"
-        else:
-            # Use public gateway
-            gateway = self.public_gateways[gateway_index % len(self.public_gateways)]
-            return f"{gateway}/ipfs/{cid}"
+        return self.adapter.get_gateway_url(cid, gateway_index)
     
+    @ipfs_retry_operation("list_pins")
     def list_pinned_contracts(self) -> List[str]:
         """
         List all pinned contract CIDs.
@@ -343,7 +398,7 @@ class IPFSStorage:
             raise ConnectionError("IPFS not connected")
         
         try:
-            pins = self.client.pin.ls()
+            pins = self.adapter.pin_ls()
             cids = list(pins.get('Keys', {}).keys())
             logger.info(f"📋 Found {len(cids)} pinned contracts")
             return cids
@@ -351,6 +406,7 @@ class IPFSStorage:
             logger.error(f"❌ Failed to list pins: {str(e)}")
             return []
     
+    @ipfs_retry_operation("get_stats")
     def get_stats(self) -> Dict[str, Any]:
         """
         Get IPFS node statistics.
@@ -366,8 +422,8 @@ class IPFSStorage:
             }
         
         try:
-            stats = self.client.stats.repo()
-            version = self.client.version()
+            stats = self.adapter.stats_repo()
+            version = self.adapter.version()
             
             return {
                 "connected": True,
@@ -385,6 +441,45 @@ class IPFSStorage:
                 "mode": self.mode,
                 "error": str(e)
             }
+    
+    def _with_timeout(self, operation_name: str, operation_func, *args, **kwargs):
+        """
+        Execute an IPFS operation with timeout protection.
+        
+        Args:
+            operation_name: Name of the operation for logging
+            operation_func: Function to execute
+            *args, **kwargs: Arguments to pass to the operation
+            
+        Returns:
+            Result of the operation
+            
+        Raises:
+            TimeoutError: If operation exceeds timeout
+        """
+        import signal
+        
+        def timeout_handler(signum, frame):
+            raise TimeoutError(f"IPFS {operation_name} operation timed out after {self.timeout} seconds")
+        
+        # Set up timeout signal (Unix only)
+        if hasattr(signal, 'SIGALRM'):
+            old_handler = signal.signal(signal.SIGALRM, timeout_handler)
+            signal.alarm(self.timeout)
+        
+        try:
+            logger.debug(f"Executing IPFS {operation_name} with {self.timeout}s timeout")
+            result = operation_func(*args, **kwargs)
+            logger.debug(f"IPFS {operation_name} completed successfully")
+            return result
+        except Exception as e:
+            logger.error(f"IPFS {operation_name} failed: {str(e)}")
+            raise
+        finally:
+            # Clean up timeout signal
+            if hasattr(signal, 'SIGALRM'):
+                signal.alarm(0)
+                signal.signal(signal.SIGALRM, old_handler)
 
 
 # Global IPFS storage instance

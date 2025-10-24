@@ -14,7 +14,10 @@ from typing import Optional, Dict, Any, List, Tuple
 from contextlib import contextmanager
 from pathlib import Path
 
+from security.secure_logger import get_secure_logger, LogLevel, LogScrubMode
+
 logger = logging.getLogger(__name__)
+secure_logger = get_secure_logger('auth.database', LogLevel.WARNING, LogScrubMode.STRICT)
 
 
 class WCSAPDatabase:
@@ -28,7 +31,7 @@ class WCSAPDatabase:
         self._shared_conn = None  # For in-memory databases
         self._ensure_directory()
         self._initialize_tables()
-        logger.info(f"📦 W-CSAP Database initialized at {db_path}")
+        secure_logger.info("📦 W-CSAP Database initialized", extra={"db_path": db_path})
     
     def _ensure_directory(self):
         """Ensure database directory exists with secure permissions (FIX MEDIUM-001)."""
@@ -51,15 +54,15 @@ class WCSAPDatabase:
                 
                 # Check for group or world read permissions
                 if file_mode & (stat.S_IRGRP | stat.S_IROTH | stat.S_IWGRP | stat.S_IWOTH):
-                    logger.critical(
-                        f"🚨 SECURITY: Database file has insecure permissions: "
-                        f"{oct(file_mode)} at {self.db_path}"
+                    secure_logger.critical(
+                        "🚨 SECURITY: Database file has insecure permissions",
+                        extra={"file_mode": oct(file_mode), "db_path": self.db_path}
                     )
                     # Try to fix it
                     os.chmod(self.db_path, stat.S_IRUSR | stat.S_IWUSR)
-                    logger.warning("Corrected database file permissions to 0o600")
+                    secure_logger.warning("Corrected database file permissions to 0o600")
                 else:
-                    logger.info(f"✅ Database file has secure permissions: {oct(file_mode)}")
+                    secure_logger.info("✅ Database file has secure permissions", extra={"file_mode": oct(file_mode)})
     
     @contextmanager
     def get_connection(self):
@@ -184,7 +187,7 @@ class WCSAPDatabase:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_ratelimit_wallet_action ON rate_limits(wallet_address, action_type)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_ratelimit_ip_action ON rate_limits(ip_address, action_type)")
             
-            logger.info("✅ Database tables initialized")
+            secure_logger.info("✅ Database tables initialized")
     
     # ==================== Challenge Operations ====================
     
@@ -215,11 +218,11 @@ class WCSAPDatabase:
                     json.dumps(metadata) if metadata else None
                 ))
             
-            logger.debug(f"Challenge saved: {challenge_id[:16]}...")
+            secure_logger.debug("Challenge saved", extra={"challenge_id": challenge_id})
             return True
             
         except Exception as e:
-            logger.error(f"Failed to save challenge: {str(e)}")
+            secure_logger.error("Failed to save challenge", extra={"error": str(e)})
             return False
     
     def get_challenge(self, challenge_id: str) -> Optional[Dict[str, Any]]:
@@ -237,7 +240,7 @@ class WCSAPDatabase:
                 return None
                 
         except Exception as e:
-            logger.error(f"Failed to get challenge: {str(e)}")
+            secure_logger.error("Failed to get challenge", extra={"error": str(e)})
             return None
     
     def update_challenge_status(self, challenge_id: str, status: str) -> bool:
@@ -252,7 +255,7 @@ class WCSAPDatabase:
             return True
             
         except Exception as e:
-            logger.error(f"Failed to update challenge status: {str(e)}")
+            secure_logger.error("Failed to update challenge status", extra={"error": str(e)})
             return False
     
     def cleanup_expired_challenges(self, current_time: int) -> int:
@@ -266,11 +269,11 @@ class WCSAPDatabase:
                 
                 deleted_count = cursor.rowcount
                 
-            logger.info(f"🧹 Cleaned up {deleted_count} expired challenges")
+            secure_logger.info("🧹 Cleaned up expired challenges", extra={"deleted_count": deleted_count})
             return deleted_count
             
         except Exception as e:
-            logger.error(f"Failed to cleanup challenges: {str(e)}")
+            secure_logger.error("Failed to cleanup challenges", extra={"error": str(e)})
             return 0
     
     # ==================== Session Operations ====================
@@ -306,11 +309,11 @@ class WCSAPDatabase:
                     json.dumps(metadata) if metadata else None
                 ))
             
-            logger.debug(f"Session saved: {assertion_id[:16]}...")
+            secure_logger.debug("Session saved", extra={"assertion_id": assertion_id})
             return True
             
         except Exception as e:
-            logger.error(f"Failed to save session: {str(e)}")
+            secure_logger.error("Failed to save session", extra={"error": str(e)})
             return False
     
     def get_session_by_token(self, session_token: str) -> Optional[Dict[str, Any]]:
@@ -328,7 +331,7 @@ class WCSAPDatabase:
                 return None
                 
         except Exception as e:
-            logger.error(f"Failed to get session: {str(e)}")
+            secure_logger.error("Failed to get session", extra={"error": str(e)})
             return None
     
     def get_session_by_refresh_token(self, refresh_token: str) -> Optional[Dict[str, Any]]:
@@ -346,7 +349,7 @@ class WCSAPDatabase:
                 return None
                 
         except Exception as e:
-            logger.error(f"Failed to get session by refresh token: {str(e)}")
+            secure_logger.error("Failed to get session by refresh token", extra={"error": str(e)})
             return None
     
     def update_session_activity(self, assertion_id: str, last_activity: int) -> bool:
@@ -361,7 +364,7 @@ class WCSAPDatabase:
             return True
             
         except Exception as e:
-            logger.error(f"Failed to update session activity: {str(e)}")
+            secure_logger.error("Failed to update session activity", extra={"error": str(e)})
             return False
     
     def invalidate_session(self, assertion_id: str) -> bool:
@@ -376,7 +379,7 @@ class WCSAPDatabase:
             return True
             
         except Exception as e:
-            logger.error(f"Failed to invalidate session: {str(e)}")
+            secure_logger.error("Failed to invalidate session", extra={"error": str(e)})
             return False
     
     def get_active_sessions_by_wallet(self, wallet_address: str) -> List[Dict[str, Any]]:
@@ -393,7 +396,7 @@ class WCSAPDatabase:
                 return [dict(row) for row in cursor.fetchall()]
                 
         except Exception as e:
-            logger.error(f"Failed to get active sessions: {str(e)}")
+            secure_logger.error("Failed to get active sessions", extra={"error": str(e)})
             return []
     
     def cleanup_expired_sessions(self, current_time: int) -> int:
@@ -407,11 +410,11 @@ class WCSAPDatabase:
                 
                 deleted_count = cursor.rowcount
                 
-            logger.info(f"🧹 Cleaned up {deleted_count} expired sessions")
+            secure_logger.info("🧹 Cleaned up expired sessions", extra={"deleted_count": deleted_count})
             return deleted_count
             
         except Exception as e:
-            logger.error(f"Failed to cleanup sessions: {str(e)}")
+            secure_logger.error("Failed to cleanup sessions", extra={"error": str(e)})
             return 0
     
     # ==================== Audit Operations ====================
@@ -447,7 +450,7 @@ class WCSAPDatabase:
             return True
             
         except Exception as e:
-            logger.error(f"Failed to log auth event: {str(e)}")
+            secure_logger.error("Failed to log auth event", extra={"error": str(e)})
             return False
     
     def get_auth_history(
@@ -477,7 +480,7 @@ class WCSAPDatabase:
                 return [dict(row) for row in cursor.fetchall()]
                 
         except Exception as e:
-            logger.error(f"Failed to get auth history: {str(e)}")
+            secure_logger.error("Failed to get auth history", extra={"error": str(e)})
             return []
     
     # ==================== Rate Limiting ====================
@@ -519,7 +522,7 @@ class WCSAPDatabase:
                 return is_allowed, attempts_remaining
                 
         except Exception as e:
-            logger.error(f"Failed to check rate limit: {str(e)}")
+            secure_logger.error("Failed to check rate limit", extra={"error": str(e)})
             return True, max_attempts  # Fail open
     
     # ==================== Statistics ====================
@@ -563,7 +566,7 @@ class WCSAPDatabase:
                 }
                 
         except Exception as e:
-            logger.error(f"Failed to get statistics: {str(e)}")
+            secure_logger.error("Failed to get statistics", extra={"error": str(e)})
             return {}
 
 

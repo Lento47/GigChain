@@ -12,9 +12,9 @@ export const useTheme = () => {
 
 export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState(() => {
-    // Check localStorage first, then system preference, then default to light
+    // Check localStorage first, then system preference, then default to white
     const savedTheme = localStorage.getItem('gigchain-theme');
-    if (savedTheme) {
+    if (savedTheme && ['dark', 'white', 'indigo'].includes(savedTheme)) {
       return savedTheme;
     }
     
@@ -23,15 +23,21 @@ export const ThemeProvider = ({ children }) => {
       return 'dark';
     }
     
-    return 'light';
+    return 'white';
   });
 
-  const toggleTheme = () => {
-    setTheme(prevTheme => {
-      const newTheme = prevTheme === 'light' ? 'dark' : 'light';
+  const setThemeValue = (newTheme) => {
+    if (['dark', 'white', 'indigo'].includes(newTheme)) {
+      setTheme(newTheme);
       localStorage.setItem('gigchain-theme', newTheme);
-      return newTheme;
-    });
+    }
+  };
+
+  const cycleTheme = () => {
+    const themes = ['white', 'dark', 'indigo'];
+    const currentIndex = themes.indexOf(theme);
+    const nextIndex = (currentIndex + 1) % themes.length;
+    setThemeValue(themes[nextIndex]);
   };
 
   useEffect(() => {
@@ -42,56 +48,58 @@ export const ThemeProvider = ({ children }) => {
     const root = document.documentElement;
     
     if (theme === 'dark') {
-      // Dark theme variables
-      root.style.setProperty('--bg-primary', '#1e293b');
-      root.style.setProperty('--bg-secondary', '#0f172a');
-      root.style.setProperty('--bg-tertiary', '#334155');
-      root.style.setProperty('--bg-dark', '#0f172a');
-      root.style.setProperty('--bg-darker', '#020617');
-      
-      root.style.setProperty('--text-primary', '#f8fafc');
-      root.style.setProperty('--text-secondary', '#cbd5e1');
-      root.style.setProperty('--text-muted', '#94a3b8');
-      root.style.setProperty('--text-inverse', '#0f172a');
-      
-      root.style.setProperty('--border-color', '#475569');
-      root.style.setProperty('--border-light', '#334155');
-      
-      root.style.setProperty('--shadow-sm', '0 1px 2px 0 rgba(0, 0, 0, 0.3)');
-      root.style.setProperty('--shadow-md', '0 4px 6px -1px rgba(0, 0, 0, 0.4)');
-      root.style.setProperty('--shadow-lg', '0 10px 15px -3px rgba(0, 0, 0, 0.5)');
-      root.style.setProperty('--shadow-xl', '0 20px 25px -5px rgba(0, 0, 0, 0.6)');
+      // Dark theme - Minimal industrial with neon accents
+      root.style.setProperty('--theme-bg-primary', '#0C1221');
+      root.style.setProperty('--theme-bg-secondary', '#0A0F1C');
+      root.style.setProperty('--theme-bg-tertiary', '#1a2332');
+      root.style.setProperty('--theme-text-primary', '#ffffff');
+      root.style.setProperty('--theme-text-secondary', '#9ca3af');
+      root.style.setProperty('--theme-text-muted', '#6b7280');
+      root.style.setProperty('--theme-border', '#1a2332');
+      root.style.setProperty('--theme-accent', '#00D4FF');
+      root.style.setProperty('--theme-accent-secondary', '#8B5CF6');
+      root.style.setProperty('--theme-card-bg', '#0A0F1C');
+      root.style.setProperty('--theme-card-border', '#1a2332');
+      root.style.setProperty('--theme-hover', '#1a2332');
+    } else if (theme === 'indigo') {
+      // Indigo theme - Deep indigo with violet accents
+      root.style.setProperty('--theme-bg-primary', '#1e1b4b');
+      root.style.setProperty('--theme-bg-secondary', '#312e81');
+      root.style.setProperty('--theme-bg-tertiary', '#4338ca');
+      root.style.setProperty('--theme-text-primary', '#ffffff');
+      root.style.setProperty('--theme-text-secondary', '#c7d2fe');
+      root.style.setProperty('--theme-text-muted', '#a5b4fc');
+      root.style.setProperty('--theme-border', '#4338ca');
+      root.style.setProperty('--theme-accent', '#00D4FF');
+      root.style.setProperty('--theme-accent-secondary', '#8B5CF6');
+      root.style.setProperty('--theme-card-bg', '#312e81');
+      root.style.setProperty('--theme-card-border', '#4338ca');
+      root.style.setProperty('--theme-hover', '#4338ca');
     } else {
-      // Light theme variables (vibrant and attractive)
-      root.style.setProperty('--bg-primary', '#ffffff');
-      root.style.setProperty('--bg-secondary', '#f8fafc');
-      root.style.setProperty('--bg-tertiary', '#f1f5f9');
-      root.style.setProperty('--bg-accent', '#f0f9ff');
-      root.style.setProperty('--bg-dark', '#1e293b');
-      root.style.setProperty('--bg-darker', '#0f172a');
-      
-      root.style.setProperty('--text-primary', '#0f172a');
-      root.style.setProperty('--text-secondary', '#1e293b');
-      root.style.setProperty('--text-muted', '#64748b');
-      root.style.setProperty('--text-accent', '#3b82f6');
-      root.style.setProperty('--text-inverse', '#ffffff');
-      
-      root.style.setProperty('--border-color', '#e2e8f0');
-      root.style.setProperty('--border-light', '#f1f5f9');
-      root.style.setProperty('--border-accent', '#3b82f6');
-      
-      root.style.setProperty('--shadow-sm', '0 1px 2px 0 rgba(59, 130, 246, 0.05)');
-      root.style.setProperty('--shadow-md', '0 4px 6px -1px rgba(59, 130, 246, 0.1)');
-      root.style.setProperty('--shadow-lg', '0 10px 15px -3px rgba(59, 130, 246, 0.1)');
-      root.style.setProperty('--shadow-xl', '0 20px 25px -5px rgba(59, 130, 246, 0.1)');
+      // White theme - Clean minimal with neon accents
+      root.style.setProperty('--theme-bg-primary', '#ffffff');
+      root.style.setProperty('--theme-bg-secondary', '#f8fafc');
+      root.style.setProperty('--theme-bg-tertiary', '#e2e8f0');
+      root.style.setProperty('--theme-text-primary', '#1a1a1a');
+      root.style.setProperty('--theme-text-secondary', '#6c757d');
+      root.style.setProperty('--theme-text-muted', '#adb5bd');
+      root.style.setProperty('--theme-border', 'rgba(0, 0, 0, 0.1)');
+      root.style.setProperty('--theme-accent', '#00D4FF');
+      root.style.setProperty('--theme-accent-secondary', '#8B5CF6');
+      root.style.setProperty('--theme-card-bg', '#ffffff');
+      root.style.setProperty('--theme-card-border', '#dee2e6');
+      root.style.setProperty('--theme-hover', '#f1f3f5');
     }
   }, [theme]);
 
   const value = {
     theme,
-    toggleTheme,
+    setTheme: setThemeValue,
+    cycleTheme,
     isDark: theme === 'dark',
-    isLight: theme === 'light'
+    isWhite: theme === 'white',
+    isIndigo: theme === 'indigo',
+    isLight: theme === 'white' // For backward compatibility
   };
 
   return (

@@ -1,12 +1,37 @@
 """Agents for GigChain: AI chaining for contract negotiation, generation, and resolution."""
 
 from __future__ import annotations
-import os
-from typing import Dict, Any, Optional
-from dataclasses import dataclass
-from openai import OpenAI
 import json
+import time
+from typing import Dict, Any, Optional, List, Union, Protocol
+from dataclasses import dataclass
+from pydantic import BaseModel, Field, ValidationError, validator
 from security.input_sanitizer import sanitize_for_ai, sanitizer
+import logging
+
+# Import centralized configuration and OpenAI service
+from config import get_config
+from services import get_openai_client, OpenAIClientProtocol, MockOpenAIClient
+
+logger = logging.getLogger(__name__)
+
+
+def create_openai_client(api_key: Optional[str] = None, use_mock: bool = False) -> Union[OpenAIClientProtocol, MockOpenAIClient]:
+    """
+    Factory function to create OpenAI client or mock.
+    
+    DEPRECATED: Use get_openai_client() from services instead.
+    This function is kept for backward compatibility.
+    
+    Args:
+        api_key: OpenAI API key (if None, uses config)
+        use_mock: If True, returns mock client regardless of API key
+        
+    Returns:
+        OpenAI client or MockOpenAIClient
+    """
+    logger.warning("create_openai_client() is deprecated. Use get_openai_client() from services instead.")
+    return get_openai_client(force_mock=use_mock)
 
 
 @dataclass
@@ -16,13 +41,184 @@ class AgentInput:
     complexity: str  # 'low'/'medium'/'high'
 
 
+# Pydantic models for output validation and sanitization
+class MilestoneModel(BaseModel):
+    desc: str = Field(..., max_length=500, description="Milestone description")
+    amount: float = Field(..., ge=0, description="Milestone amount")
+    deadline: str = Field(..., pattern=r'^\d{4}-\d{2}-\d{2}$', description="Deadline in YYYY-MM-DD format")
+    percentage: float = Field(..., ge=0, le=100, description="Percentage of total amount")
+
+    @validator('desc')
+    def sanitize_desc(cls, v):
+        return sanitizer.sanitize_text(v, max_length=500)
+
+    @validator('deadline')
+    def validate_deadline(cls, v):
+        try:
+            from datetime import datetime
+            datetime.strptime(v, '%Y-%m-%d')
+            return v
+        except ValueError:
+            raise ValueError('Invalid date format. Use YYYY-MM-DD')
+
+
+class NegotiationOutputModel(BaseModel):
+    counter_offer: float = Field(..., ge=0, description="Counter offer amount")
+    milestones: List[MilestoneModel] = Field(..., min_items=1, max_items=10, description="Project milestones")
+    risks: List[str] = Field(..., max_items=20, description="Identified risks")
+    mitigation_strategies: List[str] = Field(..., max_items=20, description="Risk mitigation strategies")
+    rationale: str = Field(..., max_length=1000, description="Negotiation rationale")
+    confidence_score: float = Field(..., ge=0, le=1, description="Confidence score")
+    negotiation_tips: List[str] = Field(..., max_items=10, description="Negotiation tips")
+
+    @validator('risks', 'mitigation_strategies', 'negotiation_tips')
+    def sanitize_string_lists(cls, v):
+        return [sanitizer.sanitize_text(item, max_length=200) for item in v]
+
+    @validator('rationale')
+    def sanitize_rationale(cls, v):
+        return sanitizer.sanitize_text(v, max_length=1000)
+
+
+class ContractOutputModel(BaseModel):
+    contract_title: str = Field(..., max_length=200, description="Contract title")
+    parties: Dict[str, str] = Field(..., description="Contracting parties")
+    project_scope: str = Field(..., max_length=2000, description="Project scope")
+    deliverables: List[str] = Field(..., min_items=1, max_items=50, description="Project deliverables")
+    timeline: Dict[str, str] = Field(..., description="Project timeline")
+    payment_terms: Dict[str, Any] = Field(..., description="Payment terms")
+    intellectual_property: str = Field(..., max_length=1000, description="IP rights")
+    termination_clauses: List[str] = Field(..., max_items=20, description="Termination clauses")
+    dispute_resolution: str = Field(..., max_length=500, description="Dispute resolution")
+    legal_compliance: List[str] = Field(..., max_items=20, description="Legal compliance notes")
+
+    @validator('contract_title', 'project_scope', 'intellectual_property', 'dispute_resolution')
+    def sanitize_text_fields(cls, v):
+        return sanitizer.sanitize_text(v, max_length=2000)
+
+    @validator('deliverables', 'termination_clauses', 'legal_compliance')
+    def sanitize_string_lists(cls, v):
+        return [sanitizer.sanitize_text(item, max_length=500) for item in v]
+
+
+class ResolutionOutputModel(BaseModel):
+    resolution_type: str = Field(..., description="Type of resolution")
+    recommended_action: str = Field(..., max_length=1000, description="Recommended action")
+    timeline: str = Field(..., max_length=200, description="Resolution timeline")
+    parties_involved: List[str] = Field(..., max_items=10, description="Parties involved")
+    legal_considerations: List[str] = Field(..., max_items=20, description="Legal considerations")
+    next_steps: List[str] = Field(..., max_items=20, description="Next steps")
+    success_probability: float = Field(..., ge=0, le=1, description="Success probability")
+
+    @validator('recommended_action')
+    def sanitize_recommended_action(cls, v):
+        return sanitizer.sanitize_text(v, max_length=1000)
+
+    @validator('timeline')
+    def sanitize_timeline(cls, v):
+        return sanitizer.sanitize_text(v, max_length=200)
+
+    @validator('parties_involved', 'legal_considerations', 'next_steps')
+    def sanitize_string_lists(cls, v):
+        return [sanitizer.sanitize_text(item, max_length=300) for item in v]
+
+
 class BaseAgent:
-    def __init__(self, model: str = "gpt-4o-mini", temp: float = 0.1):
-        self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+    def __init__(self, model: str = "gpt-4o-mini", temp: float = 0.1, client: Optional[Union[OpenAIClientProtocol, MockOpenAIClient]] = None):
+        """
+        Initialize base agent with proper dependency injection.
+        
+        Args:
+            model: AI model to use
+            temp: Temperature for AI responses
+            client: OpenAI client (injected dependency)
+        """
+        self.client = client or get_openai_client()
         self.model = model
         self.temp = temp
 
-    def run(self, prompt: str, input_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _validate_and_sanitize_output(self, raw_output: Dict[str, Any], output_model: BaseModel) -> Dict[str, Any]:
+        """
+        Validate and sanitize agent output against Pydantic model.
+        
+        Args:
+            raw_output: Raw JSON output from AI model
+            output_model: Pydantic model for validation
+            
+        Returns:
+            Validated and sanitized output
+            
+        Raises:
+            ValueError: If output validation fails
+        """
+        try:
+            # Validate against Pydantic model
+            validated_output = output_model(**raw_output)
+            
+            # Convert back to dict with sanitized values
+            sanitized_output = validated_output.dict()
+            
+            # Add disclaimer
+            sanitized_output["disclaimer"] = "Este es un borrador AI generado por GigChain.io. No constituye consejo legal. Cumple con MiCA/GDPR – consulta a un experto."
+            
+            return sanitized_output
+            
+        except ValidationError as e:
+            logger.error(f"Output validation failed: {e}")
+            raise ValueError(f"Agent output validation failed: {e}")
+        except Exception as e:
+            logger.error(f"Output sanitization error: {e}")
+            raise ValueError(f"Agent output sanitization failed: {e}")
+
+    def _safe_json_parse(self, json_string: str, max_size: int = 1024 * 1024) -> Dict[str, Any]:
+        """
+        Safely parse JSON with size and timeout constraints.
+        
+        Args:
+            json_string: JSON string to parse
+            max_size: Maximum allowed JSON size in bytes
+            
+        Returns:
+            Parsed JSON as dictionary
+            
+        Raises:
+            ValueError: If JSON parsing fails or exceeds size limits
+        """
+        # Check size constraint
+        if len(json_string.encode('utf-8')) > max_size:
+            raise ValueError(f"JSON output too large: {len(json_string.encode('utf-8'))} bytes (max: {max_size})")
+        
+        # Parse with timeout protection
+        start_time = time.time()
+        try:
+            result = json.loads(json_string)
+            parse_time = time.time() - start_time
+            
+            # Log slow parsing
+            if parse_time > 1.0:
+                logger.warning(f"Slow JSON parsing: {parse_time:.2f}s")
+            
+            return result
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON parsing failed: {e}")
+            raise ValueError(f"Invalid JSON output: {e}")
+        except Exception as e:
+            logger.error(f"JSON parsing error: {e}")
+            raise ValueError(f"JSON parsing failed: {e}")
+
+    def run(self, prompt: str, input_data: Dict[str, Any], output_model: Optional[BaseModel] = None) -> Dict[str, Any]:
+        """
+        Run agent with input sanitization and output validation.
+        
+        Args:
+            prompt: System prompt for the agent
+            input_data: Input data to process
+            output_model: Pydantic model for output validation (optional)
+            
+        Returns:
+            Validated and sanitized output
+        """
         try:
             # Sanitize input data to prevent prompt injection
             sanitized_data = sanitize_for_ai(input_data)
@@ -30,19 +226,64 @@ class BaseAgent:
             # Sanitize the prompt itself
             sanitized_prompt = sanitizer.sanitize_text(prompt, max_length=5000)
             
+            # Add output format constraints to prompt
+            format_instructions = """
+            
+IMPORTANT OUTPUT CONSTRAINTS:
+- Output must be valid JSON only
+- No markdown formatting or code blocks
+- No additional text outside JSON
+- All strings must be properly escaped
+- Numbers must be valid JSON numbers
+- Arrays and objects must be properly formatted
+- Maximum response size: 1MB
+"""
+            
+            full_prompt = sanitized_prompt + format_instructions
+            
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": sanitized_prompt}, 
+                    {"role": "system", "content": full_prompt}, 
                     {"role": "user", "content": sanitizer.sanitize_json(sanitized_data)}
                 ],
                 temperature=self.temp,
-                response_format={"type": "json_object"}
+                response_format={"type": "json_object"},
+                max_tokens=4000  # Limit response size
             )
-            output = json.loads(response.choices[0].message.content)
-            output["disclaimer"] = "Este es un borrador AI generado por GigChain.io. No constituye consejo legal. Cumple con MiCA/GDPR – consulta a un experto."
-            return output
+            
+            # Safely parse JSON response
+            raw_output = self._safe_json_parse(response.choices[0].message.content)
+            
+            # Validate and sanitize output if model provided
+            if output_model:
+                return self._validate_and_sanitize_output(raw_output, output_model)
+            else:
+                # Basic sanitization for unknown output format
+                sanitized_output = {}
+                for key, value in raw_output.items():
+                    if isinstance(value, str):
+                        sanitized_output[key] = sanitizer.sanitize_text(str(value), max_length=1000)
+                    elif isinstance(value, (int, float, bool)):
+                        sanitized_output[key] = value
+                    elif isinstance(value, list):
+                        sanitized_output[key] = [
+                            sanitizer.sanitize_text(str(item), max_length=500) if isinstance(item, str) else item
+                            for item in value[:20]  # Limit list size
+                        ]
+                    elif isinstance(value, dict):
+                        sanitized_output[key] = {
+                            k: sanitizer.sanitize_text(str(v), max_length=500) if isinstance(v, str) else v
+                            for k, v in list(value.items())[:10]  # Limit dict size
+                        }
+                    else:
+                        sanitized_output[key] = str(value)[:500]  # Truncate unknown types
+                
+                sanitized_output["disclaimer"] = "Este es un borrador AI generado por GigChain.io. No constituye consejo legal. Cumple con MiCA/GDPR – consulta a un experto."
+                return sanitized_output
+                
         except Exception as e:
+            logger.error(f"Agent execution error: {e}")
             raise ValueError(f"Agent error: {e}")
 
 
@@ -54,9 +295,9 @@ class NegotiationAgent(BaseAgent):
         prompt = f"""Eres NegotiationAgent para GigChain.io. Analiza la propuesta y genera una contraoferta equilibrada.
 
 CONTEXTO:
-- Role: {sanitized_input.get('role', 'cliente')}
-- Complexity: {sanitized_input.get('complexity', 'low')}
-- Parsed Data: {sanitizer.sanitize_json(sanitized_input.get('parsed', {}))}
+- Role: {getattr(sanitized_input, 'role', 'cliente')}
+- Complexity: {getattr(sanitized_input, 'complexity', 'low')}
+- Parsed Data: {sanitizer.sanitize_json(getattr(sanitized_input, 'parsed', {}))}
 
 REGLAS DE NEGOCIACIÓN:
 1. Si complexity="low": Aumenta precio 10-15% (menor riesgo)
@@ -85,7 +326,7 @@ OUTPUT JSON:
   "confidence_score": float,
   "negotiation_tips": ["string"]
 }}"""
-        return super().run(prompt, sanitized_input)
+        return super().run(prompt, sanitized_input, NegotiationOutputModel)
 
 
 class ContractGeneratorAgent(BaseAgent):
@@ -141,7 +382,7 @@ OUTPUT JSON:
   "deployment_ready": boolean,
   "estimated_gas": integer
 }}"""
-        return super().run(prompt, sanitized_input)
+        return super().run(prompt, sanitized_input, ContractOutputModel)
 
 
 class DisputeResolverAgent(BaseAgent):
@@ -183,7 +424,7 @@ OUTPUT JSON:
   "confidence_score": float,
   "next_steps": ["string"]
 }}"""
-        return super().run(prompt, sanitized_input)
+        return super().run(prompt, sanitized_input, ResolutionOutputModel)
 
 
 class QualityAgent(BaseAgent):
@@ -264,7 +505,7 @@ OUTPUT JSON:
 
 
 # Factory para chaining mejorado
-def chain_agents(input_data: AgentInput) -> Dict[str, Any]:
+def chain_agents(input_data: AgentInput, client: Optional[Union[OpenAIClientProtocol, MockOpenAIClient]] = None) -> Dict[str, Any]:
     """
     Chain de agents para procesamiento completo de contratos.
     
@@ -287,10 +528,10 @@ def chain_agents(input_data: AgentInput) -> Dict[str, Any]:
         )
         
         # Paso 1: Negociación
-        negotiation_result = NegotiationAgent().run(sanitized_agent_input)
+        negotiation_result = NegotiationAgent(client=client).run(sanitized_agent_input)
         
         # Paso 2: Generación de contrato
-        contract_result = ContractGeneratorAgent().run(sanitize_for_ai(negotiation_result))
+        contract_result = ContractGeneratorAgent(client=client).run(sanitize_for_ai(negotiation_result))
         
         # Combinar resultados
         full_result = {
@@ -305,7 +546,7 @@ def chain_agents(input_data: AgentInput) -> Dict[str, Any]:
         
         # Paso 3: Quality Agent (si hay entregables)
         if "deliverables" in sanitized_input.get("parsed", {}) or "work_samples" in sanitized_input.get("parsed", {}):
-            quality_result = QualityAgent().run(sanitize_for_ai({
+            quality_result = QualityAgent(client=client).run(sanitize_for_ai({
                 "contract": contract_result,
                 "deliverables": sanitized_input.get("parsed", {}).get("deliverables", []),
                 "work_samples": sanitized_input.get("parsed", {}).get("work_samples", [])
@@ -315,7 +556,7 @@ def chain_agents(input_data: AgentInput) -> Dict[str, Any]:
         
         # Paso 4: Payment Agent (si hay transacciones)
         if "payment_info" in sanitized_input.get("parsed", {}) or "wallet_addresses" in sanitized_input.get("parsed", {}):
-            payment_result = PaymentAgent().run(sanitize_for_ai({
+            payment_result = PaymentAgent(client=client).run(sanitize_for_ai({
                 "contract": contract_result,
                 "payment_info": sanitized_input.get("parsed", {}).get("payment_info", {}),
                 "wallet_addresses": sanitized_input.get("parsed", {}).get("wallet_addresses", {})
@@ -325,7 +566,7 @@ def chain_agents(input_data: AgentInput) -> Dict[str, Any]:
         
         # Paso 5: Dispute Resolver (solo para casos complejos)
         if sanitized_input.get("complexity") == "high":
-            dispute_result = DisputeResolverAgent().run(sanitize_for_ai({
+            dispute_result = DisputeResolverAgent(client=client).run(sanitize_for_ai({
                 "contract": contract_result,
                 "negotiation": negotiation_result,
                 "evidence": sanitized_input.get("parsed", {}).get("evidence", [])
@@ -418,7 +659,7 @@ def get_agent_status() -> Dict[str, Any]:
                 "status": "active"
             }
         ],
-        "openai_configured": bool(os.getenv('OPENAI_API_KEY')),
+        "openai_configured": bool(get_config().ai.openai_api_key),
         "model": "gpt-4o-mini",
         "temperature": 0.1
     }

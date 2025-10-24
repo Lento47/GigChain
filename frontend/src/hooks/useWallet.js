@@ -26,21 +26,34 @@ const Amoy = {
 };
 
 export const useWallet = () => {
+  // Check if Thirdweb client is configured
+  const hasThirdwebClient = !!(import.meta.env.VITE_TEMPLATE_CLIENT_ID || import.meta.env.VITE_THIRDWEB_CLIENT_ID);
+  
   // Safe hook calls with error handling
   let activeAccount, disconnectHook, activeWalletChain, switchChain, activeWallet;
   
   // Add initialization state
   const [isInitializing, setIsInitializing] = useState(true);
   
-  try {
-    activeAccount = useActiveAccount();
-    activeWallet = useActiveWallet(); // Get the active wallet instance
-    disconnectHook = useDisconnect();
-    activeWalletChain = useActiveWalletChain();
-    switchChain = useSwitchActiveWalletChain();
-  } catch (error) {
-    console.warn('Thirdweb hooks not available, using fallback values:', error);
-    // Fallback values when Thirdweb context is not available
+  // Only attempt to use Thirdweb hooks if client is configured
+  if (hasThirdwebClient) {
+    try {
+      activeAccount = useActiveAccount();
+      activeWallet = useActiveWallet(); // Get the active wallet instance
+      disconnectHook = useDisconnect();
+      activeWalletChain = useActiveWalletChain();
+      switchChain = useSwitchActiveWalletChain();
+    } catch (error) {
+      console.warn('Thirdweb hooks not available, using fallback values:', error);
+      // Fallback values when Thirdweb context is not available
+      activeAccount = undefined;
+      activeWallet = undefined;
+      disconnectHook = null;
+      activeWalletChain = undefined;
+      switchChain = async () => Promise.resolve();
+    }
+  } else {
+    // No client configured - use fallback values immediately
     activeAccount = undefined;
     activeWallet = undefined;
     disconnectHook = null;
@@ -179,6 +192,7 @@ export const useWallet = () => {
     isSwitching,
     isCorrectChain,
     walletInfo,
+    hasThirdwebClient, // Feature flag for components to check
     
     // Actions
     disconnect,

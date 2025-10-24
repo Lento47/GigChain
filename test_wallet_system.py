@@ -12,6 +12,7 @@ if sys.platform == "win32":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
 from wallet_manager import get_wallet_manager, GigChainWallet
+from decimal import Decimal
 
 def print_separator():
     print("\n" + "="*60 + "\n")
@@ -104,11 +105,11 @@ def test_wallet_transaction(wallet_address):
     
     wallet_manager = get_wallet_manager()
     
-    # Add some test transactions
+    # Add some test transactions (using Decimal for precise currency testing)
     transactions = [
-        (100.0, "deposit", "Initial deposit"),
-        (50.0, "deposit", "Contract payment received"),
-        (-25.0, "withdraw", "Service fee"),
+        (Decimal('100.00'), "deposit", "Initial deposit"),
+        (Decimal('50.00'), "deposit", "Contract payment received"),
+        (Decimal('-25.00'), "withdraw", "Service fee"),
     ]
     
     success_count = 0
@@ -164,6 +165,48 @@ def test_wallet_count(user_address):
     
     return count == 1  # Should have exactly 1 wallet
 
+def test_decimal_precision(wallet_address):
+    """Test decimal precision for currency calculations"""
+    print_separator()
+    print("🧪 TEST 7: Testing decimal precision for currency")
+    print("-" * 60)
+    
+    wallet_manager = get_wallet_manager()
+    
+    # Test precise decimal calculations that would fail with float
+    precision_tests = [
+        (Decimal('0.01'), "deposit", "Penny deposit"),
+        (Decimal('0.01'), "deposit", "Another penny"),
+        (Decimal('0.01'), "deposit", "Third penny"),
+    ]
+    
+    success_count = 0
+    for amount, tx_type, description in precision_tests:
+        success = wallet_manager.update_balance(
+            wallet_address=wallet_address,
+            amount=amount,
+            transaction_type=tx_type,
+            description=description
+        )
+        if success:
+            print(f"✅ Precision test successful: {amount} GIG - {description}")
+            success_count += 1
+        else:
+            print(f"❌ Precision test failed: {amount} GIG - {description}")
+    
+    # Get final balance and verify precision
+    wallet = wallet_manager.get_wallet_by_address(wallet_address)
+    if wallet:
+        expected_balance = Decimal('125.03')  # 100 + 50 - 25 + 0.01 + 0.01 + 0.01
+        if wallet.balance == expected_balance:
+            print(f"✅ Decimal precision verified: {wallet.balance} == {expected_balance}")
+            return True
+        else:
+            print(f"❌ Decimal precision failed: {wallet.balance} != {expected_balance}")
+            return False
+    
+    return success_count == len(precision_tests)
+
 def run_all_tests():
     """Run all wallet system tests"""
     print("\n")
@@ -206,6 +249,12 @@ def run_all_tests():
     count_correct = test_wallet_count(test_user_address)
     if not count_correct:
         print("\n❌ Tests failed: Wallet count incorrect")
+        return False
+    
+    # Test 7: Decimal precision
+    precision_correct = test_decimal_precision(wallet.wallet_address)
+    if not precision_correct:
+        print("\n❌ Tests failed: Decimal precision not working")
         return False
     
     # All tests passed

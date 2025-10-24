@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { useAccount } from 'wagmi';
+import { useActiveAccount } from 'thirdweb/react';
 import {
   ChartBarIcon,
-  TrendingUpIcon,
-  TrendingDownIcon,
+  ArrowTrendingUpIcon,
+  ArrowTrendingDownIcon,
   EyeIcon,
   HeartIcon,
   ChatBubbleLeftIcon,
@@ -20,6 +20,7 @@ import {
   SparklesIcon,
   BookmarkIcon,
 } from '@heroicons/react/24/outline';
+import SkillsMetrics from '../../components/SkillsMetrics/SkillsMetrics';
 
 interface AnalyticsData {
   overview: {
@@ -75,7 +76,8 @@ interface AnalyticsData {
 }
 
 const Analytics: React.FC = () => {
-  const { isConnected } = useAccount();
+  const activeAccount = useActiveAccount();
+  const isConnected = !!activeAccount;
   const [selectedPeriod, setSelectedPeriod] = useState('30d');
   const [activeTab, setActiveTab] = useState('overview');
 
@@ -296,7 +298,7 @@ const Analytics: React.FC = () => {
             <nav className="-mb-px flex space-x-8">
               {[
                 { id: 'overview', name: 'Overview', icon: ChartBarIcon },
-                { id: 'engagement', name: 'Engagement', icon: TrendingUpIcon },
+                { id: 'engagement', name: 'Engagement', icon: ArrowTrendingUpIcon },
                 { id: 'audience', name: 'Audience', icon: UserGroupIcon },
                 { id: 'content', name: 'Content', icon: GlobeAltIcon },
                 { id: 'skills', name: 'Skills', icon: SparklesIcon },
@@ -427,37 +429,7 @@ const Analytics: React.FC = () => {
 
         {activeTab === 'skills' && (
           <div className="space-y-6">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                Skill Endorsements
-              </h3>
-              <div className="space-y-4">
-                {analyticsData.skills.map((skill, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <span className="text-lg font-semibold text-gray-900 dark:text-white">
-                        {skill.name}
-                      </span>
-                      <div className="flex items-center space-x-1">
-                        {getTrendIcon(skill.trend)}
-                        <span className={`text-sm font-medium ${
-                          skill.change > 0 ? 'text-green-600 dark:text-green-400' :
-                          skill.change < 0 ? 'text-red-600 dark:text-red-400' :
-                          'text-gray-600 dark:text-gray-400'
-                        }`}>
-                          {skill.change > 0 ? '+' : ''}{skill.change}%
-                        </span>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                        {skill.endorsements} endorsements
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <SkillsMetrics />
           </div>
         )}
 

@@ -4,11 +4,11 @@ import {
   EyeIcon,
   FireIcon,
   StarIcon,
-  CrownIcon,
+  StarIcon as CrownIcon,
   CurrencyDollarIcon,
   ClockIcon,
   ChartBarIcon,
-  TrendingUpIcon
+  ArrowTrendingUpIcon
 } from '@heroicons/react/24/outline';
 
 interface BoostType {
@@ -92,7 +92,7 @@ const EngagementBoost: React.FC<{ postId: string; onBoostCreated?: () => void }>
       basePrice: 25,
       maxMultiplier: 3.0,
       durationHours: 48,
-      icon: TrendingUpIcon,
+      icon: ArrowTrendingUpIcon,
       color: 'text-green-600 bg-green-100 dark:bg-green-900/20'
     },
     {

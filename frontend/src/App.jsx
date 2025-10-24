@@ -33,7 +33,7 @@ const SettingsView = lazy(() => import('./views/Settings'));
 const HelpView = lazy(() => import('./views/Help'));
 
 // Lazy load social network pages (Red Social GigChain)
-const FeedView = lazy(() => import('./pages/Feed/FeedSimple'));
+const FeedView = lazy(() => import('./pages/Feed/EnhancedFeed'));
 const MarketplaceView = lazy(() => import('./pages/Marketplace/MarketplaceSimple'));
 const DAOView = lazy(() => import('./pages/DAO/DAOSimple'));
 const StakingView = lazy(() => import('./pages/Staking/StakingSimple'));
@@ -105,7 +105,7 @@ const SmartRedirect = () => {
 };
 
 // Chat AI Component (Memoized to prevent unnecessary re-renders)
-const ChatAI = ({ isConnected, walletInfo }) => {
+const ChatAI = ({ isConnected, walletInfo, hasThirdwebClient }) => {
   const [messages, setMessages] = useState([
     {
       id: 1,
@@ -159,30 +159,42 @@ const ChatAI = ({ isConnected, walletInfo }) => {
     setIsLoading(true);
 
     try {
-      // Intentar conectar con el backend real
-      const response = await fetch(`${API_BASE_URL}/api/chat/message`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: messageText,
-          wallet_address: walletInfo?.address
-        })
-      });
+      // Only attempt backend connection if Thirdweb client is configured
+      if (hasThirdwebClient) {
+        const response = await fetch(`${API_BASE_URL}/api/chat/message`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            message: messageText,
+            wallet_address: walletInfo?.address
+          })
+        });
 
-      if (response.ok) {
-        const data = await response.json();
-        const aiResponse = {
-          id: Date.now() + 1,
-          type: 'assistant',
-          content: data.response || data.message,
-          timestamp: new Date()
-        };
-        setMessages(prev => [...prev, aiResponse]);
-      } else {
-        throw new Error('API response not ok');
+        if (response.ok) {
+          const data = await response.json();
+          const aiResponse = {
+            id: Date.now() + 1,
+            type: 'assistant',
+            content: data.response || data.message,
+            timestamp: new Date()
+          };
+          setMessages(prev => [...prev, aiResponse]);
+          return;
+        }
       }
+      
+      // Fallback response when Thirdweb client is not configured or API fails
+      const aiResponse = {
+        id: Date.now() + 1,
+        type: 'assistant',
+        content: hasThirdwebClient 
+          ? `Entiendo que necesitas ayuda con: "${messageText}". Como asistente de GigChain, puedo ayudarte con contratos inteligentes, negociaciones, gestión de proyectos y más. ¿Podrías ser más específico sobre lo que necesitas?`
+          : `Hola! Soy tu asistente de GigChain. Para habilitar todas las funcionalidades, por favor configura tu ThirdWeb Client ID. Mientras tanto, puedo ayudarte con información general sobre contratos inteligentes y Web3. ¿En qué puedo ayudarte?`,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, aiResponse]);
     } catch (error) {
       logger.error('Error sending chat message:', error);
       // Fallback a respuesta simulada si falla el backend
@@ -218,6 +230,18 @@ const ChatAI = ({ isConnected, walletInfo }) => {
             <span className="status-connected">Conectado</span>
           ) : (
             <span className="status-disconnected">Desconectado</span>
+          )}
+          {!hasThirdwebClient && (
+            <span className="status-warning" style={{ 
+              marginLeft: '8px', 
+              fontSize: '0.8rem', 
+              color: '#f59e0b',
+              background: 'rgba(245, 158, 11, 0.1)',
+              padding: '2px 6px',
+              borderRadius: '4px'
+            }}>
+              ⚠️ ThirdWeb no configurado
+            </span>
           )}
         </div>
       </div>
@@ -262,6 +286,34 @@ const ChatAI = ({ isConnected, walletInfo }) => {
                 {suggestion}
               </button>
             ))}
+            {!hasThirdwebClient && (
+              <div style={{ 
+                marginTop: '1rem', 
+                padding: '1rem', 
+                background: 'rgba(245, 158, 11, 0.1)', 
+                borderRadius: '8px',
+                border: '1px solid rgba(245, 158, 11, 0.2)'
+              }}>
+                <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#f59e0b' }}>
+                  <strong>⚠️ ThirdWeb no configurado</strong>
+                </p>
+                <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.8rem', opacity: 0.8 }}>
+                  Para habilitar todas las funcionalidades de wallet y Web3, configura tu ThirdWeb Client ID.
+                </p>
+                <a 
+                  href="/THIRDWEB_SETUP.md" 
+                  target="_blank"
+                  style={{
+                    color: '#06b6d4',
+                    textDecoration: 'none',
+                    fontSize: '0.8rem',
+                    fontWeight: '500'
+                  }}
+                >
+                  📖 Ver guía de configuración →
+                </a>
+              </div>
+            )}
           </div>
         )}
 
@@ -308,8 +360,8 @@ const DashboardRoute = () => {
   );
 };
 
-const ChatRoute = ({ isConnected, walletInfo }) => {
-  return <ChatAI isConnected={isConnected} walletInfo={walletInfo} />;
+const ChatRoute = ({ isConnected, walletInfo, hasThirdwebClient }) => {
+  return <ChatAI isConnected={isConnected} walletInfo={walletInfo} hasThirdwebClient={hasThirdwebClient} />;
 };
 
 const ContractsRoute = () => {
@@ -321,7 +373,7 @@ const AnalyticsRoute = () => {
 };
 
 // Main Content Component (Memoized to prevent unnecessary re-renders)
-const MainContent = React.memo(({ walletInfo, isConnected, sidebarOpen, isMobile, walletHookData, client }) => {
+const MainContent = React.memo(({ walletInfo, isConnected, sidebarOpen, isMobile, walletHookData, client, hasThirdwebClient }) => {
   const location = useLocation();
 
   return (
@@ -347,7 +399,7 @@ const MainContent = React.memo(({ walletInfo, isConnected, sidebarOpen, isMobile
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardRoute />} />
-            <Route path="/chat" element={<ChatRoute isConnected={isConnected} walletInfo={walletInfo} />} />
+            <Route path="/chat" element={<ChatRoute isConnected={isConnected} walletInfo={walletInfo} hasThirdwebClient={hasThirdwebClient} />} />
             <Route path="/contracts" element={<ContractsRoute />} />
             <Route path="/analytics" element={<AnalyticsRoute />} />
             <Route path="/templates" element={<TemplatesView />} />
@@ -402,7 +454,8 @@ const InternalApp = ({ client }) => {
       switchToCorrectChain: () => Promise.resolve(),
       isSwitching: false,
       disconnect: () => Promise.resolve(),
-      targetChain: { name: 'Polygon Amoy Testnet', chainId: 80002 }
+      targetChain: { name: 'Polygon Amoy Testnet', chainId: 80002 },
+      hasThirdwebClient: false
     };
   }
 
@@ -413,7 +466,8 @@ const InternalApp = ({ client }) => {
     switchToCorrectChain, 
     isSwitching, 
     disconnect,
-    targetChain
+    targetChain,
+    hasThirdwebClient
   } = walletHook;
 
   useEffect(() => {
@@ -541,6 +595,7 @@ const InternalApp = ({ client }) => {
                     targetChain
                   }}
                   client={client}
+                  hasThirdwebClient={hasThirdwebClient}
                 />
                 
                 {/* Mobile Bottom Navigation */}
@@ -610,22 +665,123 @@ const App = () => {
         VITE_TEMPLATE_CLIENT_ID: import.meta.env.VITE_TEMPLATE_CLIENT_ID,
         VITE_THIRDWEB_CLIENT_ID: import.meta.env.VITE_THIRDWEB_CLIENT_ID
       });
+      console.log('🚫 Thirdweb event endpoints will be suppressed to prevent 401 errors');
     } else {
       console.log('✅ Thirdweb Client ID configured successfully:', clientId?.slice(0, 8) + '...');
+      console.log('✅ Thirdweb event endpoints enabled');
     }
   }, [clientId]);
 
   if (!client) {
-    // Fallback when no client ID is configured
+    // Enhanced fallback when no client ID is configured
     return (
       <ErrorBoundary>
         <ThemeProvider>
           <ToastProvider>
             <QueryClientProvider client={queryClient}>
               <BrowserRouter>
-                <div style={{ padding: '20px', textAlign: 'center' }}>
-                  <h3>Configuration Required</h3>
-                  <p>Please configure VITE_THIRDWEB_CLIENT_ID environment variable.</p>
+                <div className="no-client-fallback" style={{ 
+                  padding: '40px 20px', 
+                  textAlign: 'center',
+                  minHeight: '100vh',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
+                  color: '#ffffff'
+                }}>
+                  <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+                    <div style={{ 
+                      fontSize: '4rem', 
+                      marginBottom: '1rem',
+                      opacity: 0.8
+                    }}>🔧</div>
+                    <h1 style={{ 
+                      fontSize: '2.5rem', 
+                      marginBottom: '1rem',
+                      fontWeight: '600',
+                      background: 'linear-gradient(45deg, #4f46e5, #06b6d4)',
+                      backgroundClip: 'text',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent'
+                    }}>
+                      ThirdWeb Configuration Required
+                    </h1>
+                    <p style={{ 
+                      fontSize: '1.2rem', 
+                      marginBottom: '2rem',
+                      opacity: 0.8,
+                      lineHeight: '1.6'
+                    }}>
+                      To enable wallet connectivity and Web3 features, please configure your ThirdWeb Client ID.
+                    </p>
+                    
+                    <div style={{ 
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      borderRadius: '12px',
+                      padding: '2rem',
+                      marginBottom: '2rem',
+                      border: '1px solid rgba(255, 255, 255, 0.1)'
+                    }}>
+                      <h3 style={{ marginBottom: '1rem', color: '#4f46e5' }}>Quick Setup:</h3>
+                      <ol style={{ 
+                        textAlign: 'left', 
+                        marginBottom: '1.5rem',
+                        lineHeight: '1.8'
+                      }}>
+                        <li>Get your Client ID from <a href="https://thirdweb.com/dashboard" target="_blank" rel="noopener noreferrer" style={{ color: '#06b6d4', textDecoration: 'none' }}>thirdweb.com/dashboard</a></li>
+                        <li>Create <code style={{ background: 'rgba(255, 255, 255, 0.1)', padding: '2px 6px', borderRadius: '4px' }}>frontend/.env</code> file</li>
+                        <li>Add: <code style={{ background: 'rgba(255, 255, 255, 0.1)', padding: '2px 6px', borderRadius: '4px' }}>VITE_THIRDWEB_CLIENT_ID=your_client_id</code></li>
+                        <li>Restart the development server</li>
+                      </ol>
+                    </div>
+                    
+                    <div style={{ marginBottom: '2rem' }}>
+                      <a 
+                        href="/THIRDWEB_SETUP.md" 
+                        target="_blank"
+                        style={{
+                          display: 'inline-block',
+                          background: 'linear-gradient(45deg, #4f46e5, #06b6d4)',
+                          color: 'white',
+                          padding: '12px 24px',
+                          borderRadius: '8px',
+                          textDecoration: 'none',
+                          fontWeight: '500',
+                          marginRight: '1rem'
+                        }}
+                      >
+                        📖 View Setup Guide
+                      </a>
+                      <button 
+                        onClick={() => window.location.reload()}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.1)',
+                          color: 'white',
+                          border: '1px solid rgba(255, 255, 255, 0.2)',
+                          padding: '12px 24px',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          fontWeight: '500'
+                        }}
+                      >
+                        🔄 Refresh Page
+                      </button>
+                    </div>
+                    
+                    <div style={{ 
+                      fontSize: '0.9rem', 
+                      opacity: 0.6,
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      padding: '1rem',
+                      borderRadius: '8px',
+                      border: '1px solid rgba(255, 255, 255, 0.1)'
+                    }}>
+                      <strong>Note:</strong> The application will work in limited mode without ThirdWeb configuration, 
+                      but wallet features and Web3 interactions will be disabled.
+                    </div>
+                  </div>
                 </div>
               </BrowserRouter>
             </QueryClientProvider>

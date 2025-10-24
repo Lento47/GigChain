@@ -1,0 +1,234 @@
+/* GigChain Feed - Vibrant Web3 Theme Override */
+/* Force vibrant colors and override any gray styles */
+
+.feed-container-vibrant {
+  background: var(--theme-bg-primary) !important;
+  background-image: 
+    radial-gradient(at 50% 50%, rgba(0, 255, 136, 0.15) 0%, transparent 50%),
+    radial-gradient(at 80% 20%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
+    radial-gradient(at 20% 80%, rgba(0, 212, 255, 0.1) 0%, transparent 50%) !important;
+  min-height: 100vh !important;
+}
+
+/* Dark theme specific vibrant styles */
+[data-theme="dark"] .feed-container-vibrant {
+  background: linear-gradient(135deg, #0a0e1a 0%, #151b2e 50%, #1a2332 100%) !important;
+}
+
+.feed-header-vibrant {
+  background: var(--theme-card-bg) !important;
+  border-bottom: 1px solid var(--theme-border) !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1) !important;
+  backdrop-filter: blur(12px) !important;
+}
+
+/* Dark theme specific header styles */
+[data-theme="dark"] .feed-header-vibrant {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 100%) !important;
+  border-bottom: 1px solid rgba(0, 212, 255, 0.3) !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3) !important;
+}
+
+.feed-title-vibrant {
+  background: linear-gradient(135deg, #00ff88 0%, #00d4ff 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+  color: transparent !important;
+}
+
+.feed-subtitle-vibrant {
+  color: #00d4ff !important;
+}
+
+.post-card-vibrant {
+  background: var(--theme-card-bg) !important;
+  border: 1px solid var(--theme-border) !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1) !important;
+  transition: all 0.3s ease !important;
+}
+
+/* Dark theme specific post card styles */
+[data-theme="dark"] .post-card-vibrant {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(51, 65, 85, 0.6) 50%, rgba(30, 41, 59, 0.8) 100%) !important;
+  border: 1px solid rgba(0, 212, 255, 0.2) !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3) !important;
+}
+
+.post-card-vibrant:hover {
+  border-color: rgba(0, 212, 255, 0.4) !important;
+  box-shadow: 0 20px 40px rgba(0, 212, 255, 0.2) !important;
+  transform: translateY(-8px) !important;
+}
+
+.post-text-vibrant {
+  color: var(--theme-text-primary) !important;
+}
+
+.post-meta-vibrant {
+  color: #00d4ff !important;
+}
+
+.post-username-vibrant {
+  background: linear-gradient(135deg, #00ff88 0%, #00d4ff 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+  color: transparent !important;
+}
+
+.search-bar-vibrant {
+  background: var(--theme-bg-secondary) !important;
+  border: 1px solid var(--theme-border) !important;
+  color: var(--theme-text-primary) !important;
+}
+
+/* Dark theme specific search bar styles */
+[data-theme="dark"] .search-bar-vibrant {
+  background: rgba(30, 41, 59, 0.5) !important;
+  border: 1px solid rgba(0, 212, 255, 0.2) !important;
+  color: #ffffff !important;
+}
+
+.search-bar-vibrant::placeholder {
+  color: var(--theme-text-muted) !important;
+}
+
+/* Dark theme specific placeholder styles */
+[data-theme="dark"] .search-bar-vibrant::placeholder {
+  color: rgba(0, 212, 255, 0.7) !important;
+}
+
+.search-bar-vibrant:focus {
+  border-color: var(--theme-accent) !important;
+  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1) !important;
+}
+
+.filter-button-vibrant {
+  color: #00d4ff !important;
+  background: transparent !important;
+  border: 2px solid transparent !important;
+  transition: all 0.2s ease !important;
+}
+
+.filter-button-vibrant:hover {
+  background: rgba(30, 41, 59, 0.5) !important;
+  border-color: rgba(0, 212, 255, 0.3) !important;
+}
+
+.filter-button-active-vibrant {
+  background: linear-gradient(135deg, #00d4ff 0%, #8b5cf6 100%) !important;
+  color: #ffffff !important;
+  border-color: rgba(0, 212, 255, 0.4) !important;
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.25) !important;
+}
+
+.action-button-vibrant {
+  color: #00d4ff !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  transition: all 0.2s ease !important;
+}
+
+.action-button-vibrant:hover {
+  background: rgba(0, 212, 255, 0.2) !important;
+  border-color: rgba(0, 212, 255, 0.5) !important;
+  transform: scale(1.05) !important;
+}
+
+.like-button-vibrant:hover {
+  color: #ff006e !important;
+  background: rgba(255, 0, 110, 0.2) !important;
+  border-color: rgba(255, 0, 110, 0.5) !important;
+}
+
+.comment-button-vibrant:hover {
+  color: #00d4ff !important;
+  background: rgba(0, 212, 255, 0.2) !important;
+  border-color: rgba(0, 212, 255, 0.5) !important;
+}
+
+.share-button-vibrant:hover {
+  color: #00ff88 !important;
+  background: rgba(0, 255, 136, 0.2) !important;
+  border-color: rgba(0, 255, 136, 0.5) !important;
+}
+
+.bookmark-button-vibrant:hover {
+  color: #fbbf24 !important;
+  background: rgba(251, 191, 36, 0.2) !important;
+  border-color: rgba(251, 191, 36, 0.5) !important;
+}
+
+.views-button-vibrant:hover {
+  color: #8b5cf6 !important;
+  background: rgba(139, 92, 246, 0.2) !important;
+  border-color: rgba(139, 92, 246, 0.5) !important;
+}
+
+.tag-vibrant {
+  background: rgba(0, 212, 255, 0.2) !important;
+  color: #00d4ff !important;
+  border: 1px solid rgba(0, 212, 255, 0.3) !important;
+}
+
+.modal-vibrant {
+  background: rgba(30, 41, 59, 0.95) !important;
+  border: 1px solid rgba(0, 212, 255, 0.2) !important;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5) !important;
+}
+
+.modal-title-vibrant {
+  background: linear-gradient(135deg, #00ff88 0%, #00d4ff 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+  color: transparent !important;
+}
+
+/* Override any gray colors */
+* {
+  --tw-bg-opacity: 1 !important;
+}
+
+/* Only apply gray overrides in dark theme */
+[data-theme="dark"] .bg-gray-50,
+[data-theme="dark"] .bg-gray-100,
+[data-theme="dark"] .bg-gray-200,
+[data-theme="dark"] .bg-gray-300,
+[data-theme="dark"] .bg-gray-400,
+[data-theme="dark"] .bg-gray-500,
+[data-theme="dark"] .bg-gray-600,
+[data-theme="dark"] .bg-gray-700,
+[data-theme="dark"] .bg-gray-800,
+[data-theme="dark"] .bg-gray-900 {
+  background-color: rgba(30, 41, 59, 0.8) !important;
+}
+
+/* Only apply gray text overrides in dark theme */
+[data-theme="dark"] .text-gray-50,
+[data-theme="dark"] .text-gray-100,
+[data-theme="dark"] .text-gray-200,
+[data-theme="dark"] .text-gray-300,
+[data-theme="dark"] .text-gray-400,
+[data-theme="dark"] .text-gray-500,
+[data-theme="dark"] .text-gray-600,
+[data-theme="dark"] .text-gray-700,
+[data-theme="dark"] .text-gray-800,
+[data-theme="dark"] .text-gray-900 {
+  color: #00d4ff !important;
+}
+
+/* Only apply gray border overrides in dark theme */
+[data-theme="dark"] .border-gray-200,
+[data-theme="dark"] .border-gray-300,
+[data-theme="dark"] .border-gray-400,
+[data-theme="dark"] .border-gray-500,
+[data-theme="dark"] .border-gray-600,
+[data-theme="dark"] .border-gray-700,
+[data-theme="dark"] .border-gray-800,
+[data-theme="dark"] .border-gray-900 {
+  border-color: rgba(0, 212, 255, 0.2) !important;
+}
+
+

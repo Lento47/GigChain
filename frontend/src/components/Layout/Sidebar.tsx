@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { useAccount } from 'wagmi';
+import { useActiveAccount } from 'thirdweb/react';
+import PostCreationForm from '../PostCreation/PostCreationForm';
+import SmartNotifications from '../Notifications/SmartNotifications';
 import {
   HomeIcon,
   UserGroupIcon,
@@ -24,6 +26,10 @@ import {
   MagnifyingGlassIcon,
   Bars3Icon,
   XMarkIcon,
+  DocumentTextIcon,
+  ClipboardDocumentListIcon,
+  FolderIcon,
+  UserIcon,
 } from '@heroicons/react/24/outline';
 import {
   HomeIcon as HomeIconSolid,
@@ -44,74 +50,208 @@ import {
   HeartIcon as HeartIconSolid,
   ShareIcon as ShareIconSolid,
   BookmarkIcon as BookmarkIconSolid,
+  DocumentTextIcon as DocumentTextIconSolid,
+  ClipboardDocumentListIcon as ClipboardDocumentListIconSolid,
+  FolderIcon as FolderIconSolid,
+  UserIcon as UserIconSolid,
 } from '@heroicons/react/24/solid';
 
-const navigation = [
-  { 
-    name: 'Home', 
-    href: '/', 
-    icon: HomeIcon, 
-    iconSolid: HomeIconSolid,
-    badge: null,
-    description: 'Discover and explore'
-  },
-  { 
-    name: 'Feed', 
-    href: '/feed', 
-    icon: NewspaperIcon, 
-    iconSolid: NewspaperIconSolid,
-    badge: '12',
-    description: 'Latest posts and updates'
-  },
-  { 
-    name: 'Connections', 
-    href: '/connections', 
-    icon: UserGroupIcon, 
-    iconSolid: UserGroupIconSolid,
-    badge: '5',
-    description: 'Your professional network'
-  },
-  { 
-    name: 'Messages', 
-    href: '/messages', 
-    icon: ChatBubbleLeftRightIcon, 
-    iconSolid: ChatBubbleLeftRightIconSolid,
-    badge: '3',
-    description: 'Direct messages'
-  },
-  { 
-    name: 'Marketplace', 
-    href: '/marketplace', 
-    icon: ShoppingBagIcon, 
-    iconSolid: ShoppingBagIconSolid,
-    badge: null,
-    description: 'Services and skills'
-  },
-  { 
-    name: 'DAO', 
-    href: '/dao', 
-    icon: ShieldCheckIcon, 
-    iconSolid: ShieldCheckIconSolid,
-    badge: '2',
-    description: 'Community governance'
-  },
-  { 
-    name: 'Staking', 
-    href: '/staking', 
-    icon: CurrencyDollarIcon, 
-    iconSolid: CurrencyDollarIconSolid,
-    badge: null,
-    description: 'Earn rewards'
-  },
-  { 
-    name: 'Analytics', 
-    href: '/analytics', 
-    icon: ChartBarIcon, 
-    iconSolid: ChartBarIconSolid,
-    badge: null,
-    description: 'Your performance'
-  },
-];
+const getNavigationForSection = (currentPath: string) => {
+  const baseNavigation = [
+    { 
+      name: 'Home', 
+      href: '/', 
+      icon: HomeIcon, 
+      iconSolid: HomeIconSolid,
+      badge: null,
+      description: 'Discover and explore'
+    }
+  ];
+
+  // Navigation específica para cada sección
+  if (currentPath.startsWith('/feed')) {
+    return [
+      ...baseNavigation,
+      { 
+        name: 'Feed', 
+        href: '/feed', 
+        icon: NewspaperIcon, 
+        iconSolid: NewspaperIconSolid,
+        badge: '12',
+        description: 'Latest posts and updates'
+      },
+      { 
+        name: 'Trending', 
+        href: '/feed?filter=trending', 
+        icon: FireIcon, 
+        iconSolid: FireIconSolid,
+        badge: null,
+        description: 'Most popular content'
+      },
+      { 
+        name: 'Jobs', 
+        href: '/feed?filter=jobs', 
+        icon: CurrencyDollarIcon, 
+        iconSolid: CurrencyDollarIconSolid,
+        badge: '8',
+        description: 'Job opportunities'
+      },
+      { 
+        name: 'Achievements', 
+        href: '/feed?filter=achievements', 
+        icon: TrophyIcon, 
+        iconSolid: TrophyIconSolid,
+        badge: null,
+        description: 'Community achievements'
+      },
+      { 
+        name: 'Skills', 
+        href: '/feed?filter=skills', 
+        icon: SparklesIcon, 
+        iconSolid: SparklesIconSolid,
+        badge: null,
+        description: 'Skill showcases'
+      }
+    ];
+  }
+
+  if (currentPath.startsWith('/marketplace')) {
+    return [
+      ...baseNavigation,
+      { 
+        name: 'Marketplace', 
+        href: '/marketplace', 
+        icon: ShoppingBagIcon, 
+        iconSolid: ShoppingBagIconSolid,
+        badge: null,
+        description: 'Services and skills'
+      },
+      { 
+        name: 'Services', 
+        href: '/marketplace/services', 
+        icon: CogIcon, 
+        iconSolid: CogIconSolid,
+        badge: null,
+        description: 'Browse services'
+      },
+      { 
+        name: 'Skills', 
+        href: '/marketplace/skills', 
+        icon: SparklesIcon, 
+        iconSolid: SparklesIconSolid,
+        badge: null,
+        description: 'Find talent'
+      },
+      { 
+        name: 'My Listings', 
+        href: '/marketplace/my-listings', 
+        icon: UserIcon, 
+        iconSolid: UserIconSolid,
+        badge: null,
+        description: 'Your offerings'
+      }
+    ];
+  }
+
+  if (currentPath.startsWith('/contracts')) {
+    return [
+      ...baseNavigation,
+      { 
+        name: 'Contracts', 
+        href: '/contracts', 
+        icon: DocumentTextIcon, 
+        iconSolid: DocumentTextIconSolid,
+        badge: null,
+        description: 'Smart contracts'
+      },
+      { 
+        name: 'Templates', 
+        href: '/contracts/templates', 
+        icon: ClipboardDocumentListIcon, 
+        iconSolid: ClipboardDocumentListIconSolid,
+        badge: null,
+        description: 'Contract templates'
+      },
+      { 
+        name: 'My Contracts', 
+        href: '/contracts/my-contracts', 
+        icon: FolderIcon, 
+        iconSolid: FolderIconSolid,
+        badge: null,
+        description: 'Your contracts'
+      },
+      { 
+        name: 'Negotiations', 
+        href: '/contracts/negotiations', 
+        icon: ChatBubbleLeftRightIcon, 
+        iconSolid: ChatBubbleLeftRightIconSolid,
+        badge: '3',
+        description: 'Active negotiations'
+      }
+    ];
+  }
+
+  // Navigation por defecto
+  return [
+    ...baseNavigation,
+    { 
+      name: 'Feed', 
+      href: '/feed', 
+      icon: NewspaperIcon, 
+      iconSolid: NewspaperIconSolid,
+      badge: '12',
+      description: 'Latest posts and updates'
+    },
+    { 
+      name: 'Connections', 
+      href: '/connections', 
+      icon: UserGroupIcon, 
+      iconSolid: UserGroupIconSolid,
+      badge: '5',
+      description: 'Your professional network'
+    },
+    { 
+      name: 'Messages', 
+      href: '/messages', 
+      icon: ChatBubbleLeftRightIcon, 
+      iconSolid: ChatBubbleLeftRightIconSolid,
+      badge: '3',
+      description: 'Direct messages'
+    },
+    { 
+      name: 'Marketplace', 
+      href: '/marketplace', 
+      icon: ShoppingBagIcon, 
+      iconSolid: ShoppingBagIconSolid,
+      badge: null,
+      description: 'Services and skills'
+    },
+    { 
+      name: 'DAO', 
+      href: '/dao', 
+      icon: ShieldCheckIcon, 
+      iconSolid: ShieldCheckIconSolid,
+      badge: '2',
+      description: 'Community governance'
+    },
+    { 
+      name: 'Staking', 
+      href: '/staking', 
+      icon: CurrencyDollarIcon, 
+      iconSolid: CurrencyDollarIconSolid,
+      badge: null,
+      description: 'Earn rewards'
+    },
+    { 
+      name: 'Analytics', 
+      href: '/analytics', 
+      icon: ChartBarIcon, 
+      iconSolid: ChartBarIconSolid,
+      badge: null,
+      description: 'Your performance'
+    },
+  ];
+};
 
 const quickActions = [
   { name: 'Create Post', icon: PlusIcon, color: 'from-blue-500 to-purple-600' },
@@ -129,11 +269,17 @@ const trendingTopics = [
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
-  const { isConnected, address } = useAccount();
+  const activeAccount = useActiveAccount();
+  const isConnected = !!activeAccount;
+  const address = activeAccount?.address;
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showPostCreation, setShowPostCreation] = useState(false);
 
   const toggleSidebar = () => setIsCollapsed(!isCollapsed);
+  
+  // Obtener navegación contextual basada en la ruta actual
+  const navigation = getNavigationForSection(location.pathname);
 
   return (
     <div className={`flex flex-col h-full bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 ${
@@ -268,6 +414,11 @@ const Sidebar: React.FC = () => {
             {quickActions.map((action, index) => (
               <button
                 key={index}
+                onClick={() => {
+                  if (action.name === 'Create Post') {
+                    setShowPostCreation(true);
+                  }
+                }}
                 className={`flex items-center justify-center px-3 py-2 text-xs font-medium text-white bg-gradient-to-r ${action.color} rounded-lg hover:shadow-lg transition-all duration-200`}
               >
                 <action.icon className="h-4 w-4 mr-1" />
@@ -324,46 +475,23 @@ const Sidebar: React.FC = () => {
         </div>
       )}
 
-      {/* Notifications Panel */}
-      {showNotifications && !isCollapsed && (
-        <div className="absolute right-0 top-20 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50">
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Notifications
-            </h3>
-          </div>
-          <div className="max-h-96 overflow-y-auto">
-            {[
-              { type: 'connection', message: 'John Doe wants to connect', time: '2m ago' },
-              { type: 'like', message: 'Sarah liked your post', time: '5m ago' },
-              { type: 'comment', message: 'Mike commented on your post', time: '1h ago' },
-              { type: 'dao', message: 'New DAO proposal available', time: '2h ago' },
-              { type: 'staking', message: 'Staking rewards available', time: '3h ago' },
-            ].map((notification, index) => (
-              <div key={index} className="p-4 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
-                <div className="flex items-start space-x-3">
-                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                    <BellIcon className="h-4 w-4 text-white" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-900 dark:text-white">
-                      {notification.message}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {notification.time}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-            <button className="w-full text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium">
-              View all notifications
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Smart Notifications */}
+      <SmartNotifications
+        isOpen={showNotifications}
+        onClose={() => setShowNotifications(false)}
+        userId={address || 'current_user'}
+      />
+
+      {/* Post Creation Form */}
+      <PostCreationForm
+        isOpen={showPostCreation}
+        onClose={() => setShowPostCreation(false)}
+        onSubmit={(postData) => {
+          console.log('New post:', postData);
+          // Aquí se enviaría el post al backend
+        }}
+        userName={address?.slice(0, 6) || 'Usuario'}
+      />
     </div>
   );
 };

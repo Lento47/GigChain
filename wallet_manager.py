@@ -12,8 +12,13 @@ from datetime import datetime
 from typing import Optional, Dict, Any, List
 from contextlib import contextmanager
 import logging
+from decimal import Decimal, getcontext, ROUND_HALF_UP
 
 logger = logging.getLogger(__name__)
+
+# Set up decimal context for currency precision (2 decimal places)
+getcontext().prec = 10  # Sufficient precision for calculations
+getcontext().rounding = ROUND_HALF_UP
 
 class GigChainWallet:
     """Represents an internal GigChain wallet"""
@@ -24,7 +29,7 @@ class GigChainWallet:
         wallet_address: str,
         user_address: str,
         name: str,
-        balance: float = 0.0,
+        balance: Decimal = Decimal('0.00'),
         currency: str = "GIG",
         created_at: Optional[str] = None,
         updated_at: Optional[str] = None,
@@ -34,7 +39,7 @@ class GigChainWallet:
         self.wallet_address = wallet_address  # Internal GigChain address
         self.user_address = user_address  # User's blockchain wallet address
         self.name = name
-        self.balance = balance
+        self.balance = Decimal(str(balance)).quantize(Decimal('0.01'))
         self.currency = currency
         self.created_at = created_at or datetime.now().isoformat()
         self.updated_at = updated_at or datetime.now().isoformat()
@@ -47,7 +52,7 @@ class GigChainWallet:
             "wallet_address": self.wallet_address,
             "user_address": self.user_address,
             "name": self.name,
-            "balance": self.balance,
+            "balance": float(self.balance),  # Convert to float for JSON serialization
             "currency": self.currency,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
@@ -64,9 +69,11 @@ class WalletManager:
     
     @contextmanager
     def _get_connection(self):
-        """Context manager for database connections"""
+        """Context manager for database connections with foreign key enforcement"""
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
+        # Enable foreign key constraints
+        conn.execute("PRAGMA foreign_keys = ON")
         try:
             yield conn
             conn.commit()
@@ -88,12 +95,12 @@ class WalletManager:
                     wallet_address TEXT UNIQUE NOT NULL,
                     user_address TEXT NOT NULL,
                     name TEXT NOT NULL,
-                    balance REAL DEFAULT 0.0,
+                    balance TEXT DEFAULT '0.00',
                     currency TEXT DEFAULT 'GIG',
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL,
                     is_active INTEGER DEFAULT 1,
-                    UNIQUE(user_address)
+                    UNIQUE(user_address, name)
                 )
             """)
             
@@ -103,10 +110,11 @@ class WalletManager:
                     transaction_id TEXT PRIMARY KEY,
                     wallet_id TEXT NOT NULL,
                     type TEXT NOT NULL,
-                    amount REAL NOT NULL,
+                    amount TEXT NOT NULL,
                     description TEXT,
                     created_at TEXT NOT NULL,
-                    FOREIGN KEY (wallet_id) REFERENCES wallets (wallet_id)
+                    FOREIGN KEY (wallet_id) REFERENCES wallets (wallet_id) ON DELETE CASCADE,
+                    UNIQUE(wallet_id, created_at, type, amount)
                 )
             """)
             
@@ -137,6 +145,47 @@ class WalletManager:
         data = f"{user_address}{timestamp}{secrets.token_hex(8)}"
         return hashlib.sha256(data.encode()).hexdigest()
     
+    def _generate_transaction_id(self, wallet_id: str, timestamp: str) -> str:
+        """Generate collision-safe transaction ID"""
+        # Use more entropy to prevent collisions
+        entropy = secrets.token_hex(16)
+        data = f"{wallet_id}{timestamp}{entropy}"
+        return hashlib.sha256(data.encode()).hexdigest()
+    
+    def _insert_transaction(
+        self, 
+        cursor, 
+        wallet_id: str, 
+        transaction_type: str, 
+        amount: str, 
+        description: str, 
+        timestamp: str
+    ) -> bool:
+        """
+        Insert transaction with proper error handling for unique constraints
+        
+        Returns:
+            True if successful, False if unique constraint violation
+        """
+        try:
+            transaction_id = self._generate_transaction_id(wallet_id, timestamp)
+            cursor.execute("""
+                INSERT INTO wallet_transactions (
+                    transaction_id, wallet_id, type, amount, description, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?)
+            """, (transaction_id, wallet_id, transaction_type, amount, description, timestamp))
+            return True
+        except sqlite3.IntegrityError as e:
+            if "UNIQUE constraint failed" in str(e):
+                logger.warning(f"⚠️ Duplicate transaction prevented: {wallet_id}, {transaction_type}, {amount}")
+                return False
+            else:
+                logger.error(f"❌ Transaction insertion failed: {str(e)}")
+                raise
+        except Exception as e:
+            logger.error(f"❌ Unexpected error inserting transaction: {str(e)}")
+            raise
+    
     def create_wallet(
         self, 
         user_address: str, 
@@ -153,13 +202,13 @@ class WalletManager:
             GigChainWallet object if successful, None otherwise
             
         Raises:
-            ValueError: If user already has a wallet
+            ValueError: If wallet with same name already exists for user
         """
         try:
-            # Check if user already has a wallet
-            existing_wallet = self.get_wallet_by_user(user_address)
+            # Check if user already has a wallet with this name
+            existing_wallet = self.get_wallet_by_user_and_name(user_address, name)
             if existing_wallet:
-                raise ValueError(f"User {user_address[:10]}... already has a wallet")
+                raise ValueError(f"User {user_address[:10]}... already has a wallet named '{name}'")
             
             # Generate wallet details
             wallet_id = self._generate_wallet_id(user_address)
@@ -175,22 +224,14 @@ class WalletManager:
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     wallet_id, wallet_address, user_address, name,
-                    0.0, "GIG", now, now, 1
+                    "0.00", "GIG", now, now, 1
                 ))
                 
                 # Log creation transaction
-                transaction_id = hashlib.sha256(
-                    f"{wallet_id}{now}{secrets.token_hex(4)}".encode()
-                ).hexdigest()
-                
-                cursor.execute("""
-                    INSERT INTO wallet_transactions (
-                        transaction_id, wallet_id, type, amount, description, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?)
-                """, (
-                    transaction_id, wallet_id, "created", 0.0, 
+                self._insert_transaction(
+                    cursor, wallet_id, "created", "0.00", 
                     "Wallet created", now
-                ))
+                )
                 
                 conn.commit()
                 
@@ -199,14 +240,14 @@ class WalletManager:
                 wallet_address=wallet_address,
                 user_address=user_address,
                 name=name,
-                balance=0.0,
+                balance=Decimal('0.00'),
                 currency="GIG",
                 created_at=now,
                 updated_at=now,
                 is_active=True
             )
             
-            logger.info(f"✅ Created wallet {wallet_address} for user {user_address[:10]}...")
+            logger.info(f"✅ Created wallet {wallet_address} ({name}) for user {user_address[:10]}...")
             return wallet
             
         except ValueError as e:
@@ -217,13 +258,15 @@ class WalletManager:
             return None
     
     def get_wallet_by_user(self, user_address: str) -> Optional[GigChainWallet]:
-        """Get wallet by user's blockchain address"""
+        """Get the first active wallet by user's blockchain address (for backward compatibility)"""
         try:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute("""
                     SELECT * FROM wallets 
                     WHERE user_address = ? AND is_active = 1
+                    ORDER BY created_at ASC
+                    LIMIT 1
                 """, (user_address,))
                 
                 row = cursor.fetchone()
@@ -235,7 +278,7 @@ class WalletManager:
                     wallet_address=row['wallet_address'],
                     user_address=row['user_address'],
                     name=row['name'],
-                    balance=row['balance'],
+                    balance=Decimal(row['balance']),
                     currency=row['currency'],
                     created_at=row['created_at'],
                     updated_at=row['updated_at'],
@@ -245,6 +288,67 @@ class WalletManager:
         except Exception as e:
             logger.error(f"❌ Error getting wallet: {str(e)}")
             return None
+    
+    def get_wallet_by_user_and_name(self, user_address: str, name: str) -> Optional[GigChainWallet]:
+        """Get wallet by user's blockchain address and wallet name"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT * FROM wallets 
+                    WHERE user_address = ? AND name = ? AND is_active = 1
+                """, (user_address, name))
+                
+                row = cursor.fetchone()
+                if not row:
+                    return None
+                
+                return GigChainWallet(
+                    wallet_id=row['wallet_id'],
+                    wallet_address=row['wallet_address'],
+                    user_address=row['user_address'],
+                    name=row['name'],
+                    balance=Decimal(row['balance']),
+                    currency=row['currency'],
+                    created_at=row['created_at'],
+                    updated_at=row['updated_at'],
+                    is_active=bool(row['is_active'])
+                )
+                
+        except Exception as e:
+            logger.error(f"❌ Error getting wallet: {str(e)}")
+            return None
+    
+    def get_all_wallets_by_user(self, user_address: str) -> List[GigChainWallet]:
+        """Get all active wallets for a user"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT * FROM wallets 
+                    WHERE user_address = ? AND is_active = 1
+                    ORDER BY created_at ASC
+                """, (user_address,))
+                
+                wallets = []
+                for row in cursor.fetchall():
+                    wallets.append(GigChainWallet(
+                        wallet_id=row['wallet_id'],
+                        wallet_address=row['wallet_address'],
+                        user_address=row['user_address'],
+                        name=row['name'],
+                        balance=Decimal(row['balance']),
+                        currency=row['currency'],
+                        created_at=row['created_at'],
+                        updated_at=row['updated_at'],
+                        is_active=bool(row['is_active'])
+                    ))
+                
+                return wallets
+                
+        except Exception as e:
+            logger.error(f"❌ Error getting wallets: {str(e)}")
+            return []
     
     def get_wallet_by_address(self, wallet_address: str) -> Optional[GigChainWallet]:
         """Get wallet by GigChain wallet address"""
@@ -265,7 +369,7 @@ class WalletManager:
                     wallet_address=row['wallet_address'],
                     user_address=row['user_address'],
                     name=row['name'],
-                    balance=row['balance'],
+                    balance=Decimal(row['balance']),
                     currency=row['currency'],
                     created_at=row['created_at'],
                     updated_at=row['updated_at'],
@@ -279,7 +383,7 @@ class WalletManager:
     def update_balance(
         self, 
         wallet_address: str, 
-        amount: float, 
+        amount: Decimal, 
         transaction_type: str,
         description: str = ""
     ) -> bool:
@@ -308,8 +412,9 @@ class WalletManager:
                     return False
                 
                 wallet_id = row['wallet_id']
-                current_balance = row['balance']
-                new_balance = current_balance + amount
+                current_balance = Decimal(row['balance'])
+                amount_decimal = Decimal(str(amount)).quantize(Decimal('0.01'))
+                new_balance = current_balance + amount_decimal
                 
                 # Prevent negative balance
                 if new_balance < 0:
@@ -322,21 +427,13 @@ class WalletManager:
                     UPDATE wallets 
                     SET balance = ?, updated_at = ?
                     WHERE wallet_address = ?
-                """, (new_balance, now, wallet_address))
+                """, (str(new_balance), now, wallet_address))
                 
                 # Log transaction
-                transaction_id = hashlib.sha256(
-                    f"{wallet_id}{now}{secrets.token_hex(4)}".encode()
-                ).hexdigest()
-                
-                cursor.execute("""
-                    INSERT INTO wallet_transactions (
-                        transaction_id, wallet_id, type, amount, description, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?)
-                """, (
-                    transaction_id, wallet_id, transaction_type, 
-                    amount, description, now
-                ))
+                self._insert_transaction(
+                    cursor, wallet_id, transaction_type, 
+                    str(amount_decimal), description, now
+                )
                 
                 conn.commit()
                 logger.info(f"✅ Updated balance for {wallet_address}: {current_balance} -> {new_balance}")
@@ -429,6 +526,70 @@ class WalletManager:
         except Exception as e:
             logger.error(f"❌ Error counting wallets: {str(e)}")
             return 0
+    
+    def delete_wallet(self, wallet_address: str) -> bool:
+        """
+        Permanently delete a wallet and all its transactions (hard delete).
+        This will test cascade deletion of transactions.
+        
+        Args:
+            wallet_address: GigChain wallet address to delete
+            
+        Returns:
+            True if deleted successfully, False otherwise
+        """
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Get wallet_id first
+                cursor.execute("""
+                    SELECT wallet_id FROM wallets 
+                    WHERE wallet_address = ?
+                """, (wallet_address,))
+                
+                row = cursor.fetchone()
+                if not row:
+                    logger.warning(f"⚠️ Wallet not found for deletion: {wallet_address}")
+                    return False
+                
+                wallet_id = row['wallet_id']
+                
+                # Count transactions before deletion
+                cursor.execute("""
+                    SELECT COUNT(*) as count FROM wallet_transactions 
+                    WHERE wallet_id = ?
+                """, (wallet_id,))
+                
+                transaction_count = cursor.fetchone()['count']
+                
+                # Delete wallet (transactions will cascade due to foreign key constraint)
+                cursor.execute("""
+                    DELETE FROM wallets WHERE wallet_address = ?
+                """, (wallet_address,))
+                
+                # Verify transactions were also deleted
+                cursor.execute("""
+                    SELECT COUNT(*) as count FROM wallet_transactions 
+                    WHERE wallet_id = ?
+                """, (wallet_id,))
+                
+                remaining_transactions = cursor.fetchone()['count']
+                
+                conn.commit()
+                logger.info(f"✅ Deleted wallet {wallet_address} and {transaction_count} transactions")
+                
+                # Verify cascade deletion worked
+                if remaining_transactions == 0:
+                    logger.info(f"✅ Cascade deletion verified: {transaction_count} transactions deleted")
+                    return True
+                else:
+                    logger.error(f"❌ Cascade deletion failed: {remaining_transactions} transactions remain")
+                    return False
+                
+        except Exception as e:
+            logger.error(f"❌ Error deleting wallet: {str(e)}")
+            return False
 
 
 # Singleton instance

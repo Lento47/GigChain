@@ -12,6 +12,8 @@ from typing import Dict, Any, Optional
 import logging
 import time
 
+from security.secure_logger import get_secure_logger, LogLevel, LogScrubMode
+
 from auth.schemas import (
     AuthChallengeRequest,
     AuthChallengeResponse,
@@ -48,6 +50,7 @@ from auth.database import get_database
 from auth.config import get_config
 
 logger = logging.getLogger(__name__)
+secure_logger = get_secure_logger('auth.routes', LogLevel.INFO, LogScrubMode.STRICT)
 
 # Create router
 router = APIRouter(
@@ -158,7 +161,7 @@ async def request_challenge(
             user_agent=client_info["user_agent"]
         )
         
-        logger.info(f"🎯 Challenge generated for {challenge.wallet_address[:10]}...")
+        secure_logger.info("🎯 Challenge generated", extra={"wallet_address": challenge.wallet_address})
         
         return AuthChallengeResponse(
             success=True,
@@ -258,7 +261,7 @@ async def verify_signature(
             user_agent=client_info["user_agent"]
         )
         
-        logger.info(f"✅ Authentication successful for {session_assertion.wallet_address[:10]}...")
+        secure_logger.info("✅ Authentication successful", extra={"wallet_address": session_assertion.wallet_address})
         
         return AuthVerifyResponse(
             success=True,
@@ -344,7 +347,7 @@ async def refresh_session(
             ip_address=client_info["ip_address"]
         )
         
-        logger.info(f"🔄 Session refreshed for {new_session.wallet_address[:10]}...")
+        secure_logger.info("🔄 Session refreshed", extra={"wallet_address": new_session.wallet_address})
         
         return AuthRefreshResponse(
             success=True,
@@ -448,7 +451,7 @@ async def logout(
                 ip_address=get_client_info(request)["ip_address"]
             )
         
-        logger.info(f"👋 Logout successful for {wallet['address'][:10]}...")
+        secure_logger.info("👋 Logout successful", extra={"wallet_address": wallet['address']})
         
         return AuthLogoutResponse(
             success=True,

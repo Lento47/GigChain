@@ -3,15 +3,15 @@ GigChain.io - AI-Powered Dispute Mediation System
 Sistema de mediación inteligente para resolver disputas antes de votación oracle.
 """
 
-import os
 import json
 import logging
 from datetime import datetime
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List, Optional, Tuple, Union
 from dataclasses import dataclass, asdict
 from enum import Enum
-from openai import OpenAI
 
+# Import centralized OpenAI service
+from services import get_openai_client, OpenAIClientProtocol, MockOpenAIClient
 from dispute_oracle_system import DisputeStatus, DisputeOutcome, dispute_oracle
 
 logger = logging.getLogger(__name__)
@@ -77,8 +77,16 @@ class DisputeMediationAgent:
     Analiza evidencias, propone soluciones y facilita acuerdos.
     """
     
-    def __init__(self, model: str = "gpt-4o-mini", temperature: float = 0.3):
-        self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+    def __init__(self, model: str = "gpt-4o-mini", temperature: float = 0.3, client: Optional[Union[OpenAIClientProtocol, MockOpenAIClient]] = None):
+        """
+        Initialize dispute mediation agent with proper dependency injection.
+        
+        Args:
+            model: AI model to use
+            temperature: Temperature for AI responses
+            client: OpenAI client (injected dependency)
+        """
+        self.client = client or get_openai_client()
         self.model = model
         self.temperature = temperature
     

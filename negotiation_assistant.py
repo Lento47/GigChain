@@ -3,12 +3,13 @@ Interactive AI Negotiation Assistant for GigChain.io
 Provides real-time coaching, insights, and recommendations during contract negotiations
 """
 
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Union
 from dataclasses import dataclass
 from datetime import datetime
-from openai import OpenAI
-import os
 import json
+
+# Import centralized OpenAI service
+from services import get_openai_client, OpenAIClientProtocol, MockOpenAIClient
 
 
 @dataclass
@@ -45,8 +46,14 @@ class NegotiationStrategy:
 class NegotiationAssistant:
     """Interactive AI assistant for contract negotiation"""
     
-    def __init__(self):
-        self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+    def __init__(self, client: Optional[Union[OpenAIClientProtocol, MockOpenAIClient]] = None):
+        """
+        Initialize negotiation assistant with proper dependency injection.
+        
+        Args:
+            client: OpenAI client (injected dependency)
+        """
+        self.client = client or get_openai_client()
         self.model = "gpt-4o-mini"
         self.temperature = 0.3  # Low temperature for consistent advice
     

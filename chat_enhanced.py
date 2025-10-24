@@ -3,16 +3,17 @@ GigChain.io - Enhanced AI Chat Module
 Sistema de chat mejorado con persistencia, WebSockets y agentes especializados
 """
 
-import os
 import json
 import uuid
 import asyncio
 import sqlite3
 from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional, Set
+from typing import Dict, Any, List, Optional, Set, Union
 from dataclasses import dataclass, asdict
 import logging
-from openai import OpenAI
+
+# Import centralized OpenAI service
+from services import get_openai_client, OpenAIClientProtocol, MockOpenAIClient
 from fastapi import WebSocket, WebSocketDisconnect
 import threading
 import time
@@ -258,8 +259,16 @@ class WebSocketManager:
 class EnhancedChatAgent:
     """Agente de chat mejorado con persistencia y WebSockets"""
     
-    def __init__(self, model: str = "gpt-4o-mini", temperature: float = 0.7):
-        self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY')) if os.getenv('OPENAI_API_KEY') else None
+    def __init__(self, model: str = "gpt-4o-mini", temperature: float = 0.7, client: Optional[Union[OpenAIClientProtocol, MockOpenAIClient]] = None):
+        """
+        Initialize enhanced chat agent with proper dependency injection.
+        
+        Args:
+            model: AI model to use
+            temperature: Temperature for AI responses
+            client: OpenAI client (injected dependency)
+        """
+        self.client = client or get_openai_client()
         self.model = model
         self.temperature = temperature
         self.db = ChatDatabase()

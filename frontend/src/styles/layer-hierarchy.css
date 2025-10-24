@@ -1,0 +1,403 @@
+/* GigChain Layer Hierarchy System */
+
+/* Z-Index Scale */
+:root {
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-popover: 1060;
+  --z-tooltip: 1070;
+  --z-toast: 1080;
+  --z-debug: 1090;
+}
+
+/* Layer 1: Background & Base */
+.layer-background {
+  z-index: 1;
+  position: relative;
+}
+
+.layer-background .app {
+  background: var(--theme-bg-primary);
+  color: var(--theme-text-primary);
+}
+
+/* Layer 2: Layout Containers */
+.layer-layout {
+  z-index: 10;
+  position: relative;
+}
+
+.layer-layout .sidebar {
+  z-index: var(--z-fixed);
+}
+
+.layer-layout .app-header {
+  z-index: var(--z-sticky);
+}
+
+.layer-layout .main-content {
+  z-index: 1;
+}
+
+/* Layer 3: Content Areas */
+.layer-content {
+  z-index: 20;
+  position: relative;
+}
+
+.layer-content .content-body {
+  z-index: 1;
+}
+
+.layer-content .content-grid {
+  z-index: 1;
+}
+
+.layer-content .content-card {
+  z-index: 1;
+  position: relative;
+}
+
+/* Layer 4: Interactive Elements */
+.layer-interactive {
+  z-index: 30;
+  position: relative;
+}
+
+.layer-interactive .nav-item {
+  z-index: 1;
+}
+
+.layer-interactive .theme-toggle {
+  z-index: 1;
+}
+
+.layer-interactive .notification-toggle {
+  z-index: 1;
+}
+
+.layer-interactive .wallet-connection {
+  z-index: 1;
+}
+
+/* Layer 5: Dropdowns & Overlays */
+.layer-dropdown {
+  z-index: var(--z-dropdown);
+  position: relative;
+}
+
+.layer-dropdown .theme-palette-dropdown {
+  z-index: var(--z-dropdown);
+}
+
+.layer-dropdown .notification-dropdown {
+  z-index: var(--z-dropdown);
+}
+
+.layer-dropdown .wallet-dropdown {
+  z-index: var(--z-dropdown);
+}
+
+/* Layer 6: Modals & Dialogs */
+.layer-modal {
+  z-index: var(--z-modal);
+  position: relative;
+}
+
+.layer-modal .modal-backdrop {
+  z-index: var(--z-modal-backdrop);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.layer-modal .modal-content {
+  z-index: var(--z-modal);
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--theme-card-bg);
+  border: 1px solid var(--theme-border);
+  border-radius: 12px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+/* Layer 7: Tooltips & Popovers */
+.layer-tooltip {
+  z-index: var(--z-tooltip);
+  position: relative;
+}
+
+.layer-tooltip .tooltip {
+  z-index: var(--z-tooltip);
+  position: absolute;
+  background: var(--theme-bg-tertiary);
+  color: var(--theme-text-primary);
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--theme-border);
+}
+
+/* Layer 8: Toast Notifications */
+.layer-toast {
+  z-index: var(--z-toast);
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  pointer-events: none;
+}
+
+.layer-toast .toast {
+  z-index: var(--z-toast);
+  position: relative;
+  background: var(--theme-card-bg);
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  pointer-events: auto;
+  animation: slideInFromRight 0.3s ease-out;
+}
+
+/* Layer 9: Mobile Overlays */
+.layer-mobile {
+  z-index: var(--z-fixed);
+  position: relative;
+}
+
+.layer-mobile .sidebar-overlay {
+  z-index: calc(var(--z-fixed) - 1);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.layer-mobile .mobile-bottom-nav {
+  z-index: var(--z-fixed);
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--theme-card-bg);
+  border-top: 1px solid var(--theme-border);
+  backdrop-filter: blur(10px);
+}
+
+/* Layer 10: Debug & Development */
+.layer-debug {
+  z-index: var(--z-debug);
+  position: relative;
+}
+
+.layer-debug .debug-panel {
+  z-index: var(--z-debug);
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 1rem;
+  border-radius: 8px;
+  font-family: monospace;
+  font-size: 0.75rem;
+  max-width: 300px;
+  max-height: 200px;
+  overflow: auto;
+}
+
+/* Responsive Layer Adjustments */
+@media (max-width: 768px) {
+  .layer-modal .modal-content {
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    transform: none;
+    border-radius: 0;
+    max-height: 100vh;
+    overflow-y: auto;
+  }
+  
+  .layer-toast {
+    top: 0.5rem;
+    right: 0.5rem;
+    left: 0.5rem;
+  }
+  
+  .layer-toast .toast {
+    margin-bottom: 0.25rem;
+  }
+}
+
+/* Focus Management */
+.focus-trap {
+  position: relative;
+}
+
+.focus-trap:focus-within {
+  z-index: calc(var(--z-modal) + 1);
+}
+
+/* Accessibility Layers */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+  .layer-content .content-card {
+    border-width: 2px;
+  }
+  
+  .layer-dropdown .theme-palette-dropdown,
+  .layer-dropdown .notification-dropdown {
+    border-width: 2px;
+  }
+  
+  .layer-modal .modal-content {
+    border-width: 2px;
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .layer-toast .toast {
+    animation: none;
+  }
+  
+  .layer-modal .modal-content {
+    transition: none;
+  }
+}
+
+/* Print Layers */
+@media print {
+  .layer-dropdown,
+  .layer-modal,
+  .layer-tooltip,
+  .layer-toast,
+  .layer-mobile,
+  .layer-debug {
+    display: none !important;
+  }
+  
+  .layer-content {
+    z-index: 1;
+  }
+  
+  .layer-layout .sidebar {
+    display: none;
+  }
+}
+
+/* Layer State Management */
+.layer-state-loading {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.layer-state-error {
+  border-color: var(--error-color);
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.layer-state-success {
+  border-color: var(--success-color);
+  background: rgba(16, 185, 129, 0.05);
+}
+
+.layer-state-warning {
+  border-color: var(--warning-color);
+  background: rgba(245, 158, 11, 0.05);
+}
+
+/* Animation Classes */
+.layer-enter {
+  animation: layerEnter 0.3s ease-out;
+}
+
+.layer-exit {
+  animation: layerExit 0.3s ease-in;
+}
+
+@keyframes layerEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes layerExit {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+/* Layer Interactions */
+.layer-interactive .interactive-element {
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.layer-interactive .interactive-element:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.layer-interactive .interactive-element:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Layer Depth Indicators */
+.layer-depth-1 {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.layer-depth-2 {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.layer-depth-3 {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.layer-depth-4 {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.layer-depth-5 {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}

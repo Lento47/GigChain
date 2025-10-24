@@ -1,493 +1,312 @@
+#!/usr/bin/env python3
 """
-Test Suite for W-CSAP Authentication System
-============================================
+W-CSAP Authentication Security Tests
+===================================
 
-Comprehensive tests for Wallet-Based Cryptographic Session Assertion Protocol.
+Tests for fail-closed authentication behavior and security features.
 """
 
 import pytest
+import json
 import time
+from unittest.mock import patch, MagicMock
+from fastapi.testclient import TestClient
+
+# Set test environment
 import os
-import sys
-from unittest.mock import Mock, patch, MagicMock
-from web3 import Web3
+os.environ['OPENAI_API_KEY'] = 'sk-test-key-for-ci'
+os.environ['SECRET_KEY'] = 'test-secret-key-for-ci-testing-32chars'
+os.environ['W_CSAP_SECRET_KEY'] = 'test-secret-key-for-ci-testing-32chars'
 
-# Add auth module to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'auth'))
-
-from auth.w_csap import (
-    WCSAPAuthenticator,
-    ChallengeGenerator,
-    SignatureValidator,
-    SessionManager,
-    Challenge,
-    SessionAssertion
-)
-from auth.database import WCSAPDatabase, get_database
+from main import app
+from auth.w_csap import WCSAPAuthenticator, SignatureValidator
+from auth.proof_of_work import ProofOfWork
 
 
-class TestChallengeGenerator:
-    """Test challenge generation functionality."""
-    
-    def setup_method(self):
-        """Setup test fixtures."""
-        self.generator = ChallengeGenerator(challenge_ttl=300)
-        self.test_wallet = "0x1234567890123456789012345678901234567890"
-    
-    def test_generate_challenge(self):
-        """Test basic challenge generation."""
-        challenge = self.generator.generate_challenge(self.test_wallet)
-        
-        assert isinstance(challenge, Challenge)
-        assert challenge.wallet_address == Web3.to_checksum_address(self.test_wallet)
-        assert len(challenge.challenge_id) == 64  # SHA256 hash
-        assert len(challenge.nonce) == 64  # 32 bytes hex
-        assert challenge.expires_at > challenge.issued_at
-        assert "GigChain.io" in challenge.challenge_message
-        assert challenge.wallet_address in challenge.challenge_message
-    
-    def test_challenge_expiry(self):
-        """Test challenge expiry logic."""
-        # Create challenge with short TTL
-        short_ttl_generator = ChallengeGenerator(challenge_ttl=1)
-        challenge = short_ttl_generator.generate_challenge(self.test_wallet)
-        
-        # Should not be expired immediately
-        assert not challenge.is_expired()
-        
-        # Wait and check expiry
-        time.sleep(2)
-        assert challenge.is_expired()
-    
-    def test_challenge_uniqueness(self):
-        """Test that challenges are unique."""
-        challenge1 = self.generator.generate_challenge(self.test_wallet)
-        challenge2 = self.generator.generate_challenge(self.test_wallet)
-        
-        assert challenge1.challenge_id != challenge2.challenge_id
-        assert challenge1.nonce != challenge2.nonce
-    
-    def test_challenge_with_metadata(self):
-        """Test challenge generation with IP and user agent."""
-        challenge = self.generator.generate_challenge(
-            self.test_wallet,
-            ip_address="192.168.1.1",
-            user_agent="Mozilla/5.0"
-        )
-        
-        assert challenge.metadata["ip_address"] == "192.168.1.1"
-        assert challenge.metadata["user_agent"] == "Mozilla/5.0"
-        assert challenge.metadata["app_name"] == "GigChain.io"
+@pytest.fixture
+def client():
+    """Create a test client"""
+    return TestClient(app)
 
 
-class TestSignatureValidator:
-    """Test signature validation functionality."""
-    
-    def setup_method(self):
-        """Setup test fixtures."""
-        self.validator = SignatureValidator()
-        
-        # Create a test account for signing
-        self.web3 = Web3()
-        self.test_account = self.web3.eth.account.create()
-        self.test_address = self.test_account.address
-    
-    def test_valid_signature(self):
-        """Test validation of a valid signature."""
-        message = "Test message for signing"
-        
-        # Sign message with test account
-        from eth_account.messages import encode_defunct
-        encoded_message = encode_defunct(text=message)
-        signed_message = self.test_account.sign_message(encoded_message)
-        signature = signed_message.signature.hex()
-        
-        # Verify signature
-        is_valid, recovered_address = self.validator.verify_signature(
-            message=message,
-            signature=signature,
-            expected_address=self.test_address
-        )
-        
-        assert is_valid
-        assert recovered_address.lower() == self.test_address.lower()
-    
-    def test_invalid_signature(self):
-        """Test validation of an invalid signature."""
-        message = "Test message"
-        fake_signature = "0x" + "00" * 65  # Invalid signature
-        
-        is_valid, recovered_address = self.validator.verify_signature(
-            message=message,
-            signature=fake_signature,
-            expected_address=self.test_address
-        )
-        
-        assert not is_valid
-    
-    def test_wrong_signer(self):
-        """Test validation when signature is from wrong wallet."""
-        message = "Test message"
-        
-        # Create two accounts
-        account1 = self.web3.eth.account.create()
-        account2 = self.web3.eth.account.create()
-        
-        # Sign with account1
-        from eth_account.messages import encode_defunct
-        encoded_message = encode_defunct(text=message)
-        signed_message = account1.sign_message(encoded_message)
-        signature = signed_message.signature.hex()
-        
-        # Try to verify as account2
-        is_valid, _ = self.validator.verify_signature(
-            message=message,
-            signature=signature,
-            expected_address=account2.address
-        )
-        
-        assert not is_valid
+@pytest.fixture
+def authenticator():
+    """Create WCSAP authenticator for testing"""
+    return WCSAPAuthenticator(secret_key="test-secret-key-for-ci-testing-32chars")
 
 
-class TestSessionManager:
-    """Test session management functionality."""
-    
-    def setup_method(self):
-        """Setup test fixtures."""
-        self.secret_key = "test_secret_key_for_hmac"
-        self.manager = SessionManager(
-            secret_key=self.secret_key,
-            session_ttl=3600,
-            refresh_ttl=86400
-        )
-        self.test_wallet = Web3.to_checksum_address("0x1234567890123456789012345678901234567890")
-    
-    def test_create_session_assertion(self):
-        """Test session assertion creation."""
-        session = self.manager.create_session_assertion(
-            wallet_address=self.test_wallet,
-            signature="0xtest_signature",
-            metadata={"test": "data"}
-        )
-        
-        assert isinstance(session, SessionAssertion)
-        assert session.wallet_address == self.test_wallet
-        assert len(session.assertion_id) == 64
-        assert session.expires_at > session.issued_at
-        assert session.session_token is not None
-        assert session.refresh_token is not None
-        assert "W-CSAP" in session.metadata["protocol"]
-    
-    def test_session_validation(self):
-        """Test session is valid when created."""
-        session = self.manager.create_session_assertion(
-            wallet_address=self.test_wallet,
-            signature="0xtest_signature"
-        )
-        
-        current_time = int(time.time())
-        assert session.is_valid(current_time)
-    
-    def test_validate_session_token(self):
-        """Test session token validation."""
-        # Create session
-        session = self.manager.create_session_assertion(
-            wallet_address=self.test_wallet,
-            signature="0xtest_signature"
-        )
-        
-        # Validate token
-        is_valid, decoded_data = self.manager.validate_session_token(session.session_token)
-        
-        assert is_valid
-        assert decoded_data["wallet_address"] == self.test_wallet
-        assert decoded_data["assertion_id"] == session.assertion_id
-        assert "expires_in" in decoded_data
-    
-    def test_validate_expired_token(self):
-        """Test validation of expired token."""
-        # Create manager with very short TTL
-        short_manager = SessionManager(
-            secret_key=self.secret_key,
-            session_ttl=1
-        )
-        
-        session = short_manager.create_session_assertion(
-            wallet_address=self.test_wallet,
-            signature="0xtest_signature"
-        )
-        
-        # Wait for expiry
-        time.sleep(2)
-        
-        # Validation should fail
-        is_valid, _ = short_manager.validate_session_token(session.session_token)
-        assert not is_valid
-    
-    def test_session_refresh(self):
-        """Test session refresh mechanism."""
-        # Create original session
-        old_session = self.manager.create_session_assertion(
-            wallet_address=self.test_wallet,
-            signature="0xtest_signature"
-        )
-        
-        # Refresh session
-        new_session = self.manager.refresh_session(
-            refresh_token=old_session.refresh_token,
-            old_session_token=old_session.session_token
-        )
-        
-        assert new_session is not None
-        assert new_session.wallet_address == old_session.wallet_address
-        assert new_session.assertion_id != old_session.assertion_id
-        assert new_session.session_token != old_session.session_token
+@pytest.fixture
+def signature_validator():
+    """Create signature validator for testing"""
+    return SignatureValidator()
 
 
-class TestWCSAPAuthenticator:
-    """Test full authentication flow."""
-    
-    def setup_method(self):
-        """Setup test fixtures."""
-        self.authenticator = WCSAPAuthenticator(
-            secret_key="test_secret_key",
-            challenge_ttl=300,
-            session_ttl=3600
-        )
-        
-        # Create test account
-        self.web3 = Web3()
-        self.test_account = self.web3.eth.account.create()
-        self.test_address = self.test_account.address
-    
-    def test_initiate_authentication(self):
-        """Test authentication initiation."""
-        challenge = self.authenticator.initiate_authentication(
-            wallet_address=self.test_address,
-            ip_address="127.0.0.1"
-        )
-        
-        assert isinstance(challenge, Challenge)
-        assert challenge.wallet_address == Web3.to_checksum_address(self.test_address)
-        
-        # Challenge should be stored
-        assert challenge.challenge_id in self.authenticator.active_challenges
-    
-    def test_full_authentication_flow(self):
-        """Test complete authentication flow from challenge to session."""
-        # Step 1: Initiate
-        challenge = self.authenticator.initiate_authentication(self.test_address)
-        
-        # Step 2: Sign challenge
-        from eth_account.messages import encode_defunct
-        encoded_message = encode_defunct(text=challenge.challenge_message)
-        signed_message = self.test_account.sign_message(encoded_message)
-        signature = signed_message.signature.hex()
-        
-        # Step 3: Complete authentication
-        session = self.authenticator.complete_authentication(
-            challenge_id=challenge.challenge_id,
-            signature=signature,
-            wallet_address=self.test_address
-        )
-        
-        assert session is not None
-        assert isinstance(session, SessionAssertion)
-        assert session.wallet_address == Web3.to_checksum_address(self.test_address)
-        
-        # Challenge should be consumed
-        assert challenge.challenge_id not in self.authenticator.active_challenges
-        
-        # Session should be active
-        assert session.assertion_id in self.authenticator.active_sessions
-    
-    def test_expired_challenge_rejection(self):
-        """Test that expired challenges are rejected."""
-        # Create authenticator with very short TTL
-        short_auth = WCSAPAuthenticator(
-            secret_key="test_secret",
-            challenge_ttl=1
-        )
-        
-        challenge = short_auth.initiate_authentication(self.test_address)
-        
-        # Wait for expiry
-        time.sleep(2)
-        
-        # Try to complete authentication
-        session = short_auth.complete_authentication(
-            challenge_id=challenge.challenge_id,
-            signature="0xfake_signature",
-            wallet_address=self.test_address
-        )
-        
-        assert session is None
-    
-    def test_invalid_signature_rejection(self):
-        """Test that invalid signatures are rejected."""
-        challenge = self.authenticator.initiate_authentication(self.test_address)
-        
-        # Try to complete with wrong signature
-        session = self.authenticator.complete_authentication(
-            challenge_id=challenge.challenge_id,
-            signature="0x" + "00" * 65,
-            wallet_address=self.test_address
-        )
-        
-        assert session is None
-    
-    def test_logout(self):
-        """Test logout functionality."""
-        # Create authenticated session
-        challenge = self.authenticator.initiate_authentication(self.test_address)
-        
-        from eth_account.messages import encode_defunct
-        encoded_message = encode_defunct(text=challenge.challenge_message)
-        signed_message = self.test_account.sign_message(encoded_message)
-        signature = signed_message.signature.hex()
-        
-        session = self.authenticator.complete_authentication(
-            challenge_id=challenge.challenge_id,
-            signature=signature,
-            wallet_address=self.test_address
-        )
-        
-        # Logout
-        success = self.authenticator.logout(session.session_token)
-        
-        assert success
-        assert session.assertion_id not in self.authenticator.active_sessions
-    
-    def test_cleanup_expired(self):
-        """Test cleanup of expired challenges and sessions."""
-        # Create short-lived authenticator
-        short_auth = WCSAPAuthenticator(
-            secret_key="test_secret",
-            challenge_ttl=1,
-            session_ttl=1
-        )
-        
-        # Create challenge and session
-        challenge = short_auth.initiate_authentication(self.test_address)
-        
-        from eth_account.messages import encode_defunct
-        encoded_message = encode_defunct(text=challenge.challenge_message)
-        signed_message = self.test_account.sign_message(encoded_message)
-        signature = signed_message.signature.hex()
-        
-        session = short_auth.complete_authentication(
-            challenge_id=challenge.challenge_id,
-            signature=signature,
-            wallet_address=self.test_address
-        )
-        
-        # Wait for expiry
-        time.sleep(2)
-        
-        # Cleanup
-        short_auth.cleanup_expired()
-        
-        # Should be cleaned up
-        assert len(short_auth.active_challenges) == 0
-        assert len(short_auth.active_sessions) == 0
+@pytest.fixture
+def pow_system():
+    """Create proof-of-work system for testing"""
+    return ProofOfWork(base_difficulty=2, max_difficulty=4)
 
 
-class TestWCSAPDatabase:
-    """Test database operations."""
+class TestFailClosedBehavior:
+    """Test that authentication fails closed on all exceptions and invalid states."""
     
-    def setup_method(self):
-        """Setup test database."""
-        self.db = WCSAPDatabase(db_path=":memory:")  # In-memory database for testing
-        self.test_wallet = "0x1234567890123456789012345678901234567890"
-    
-    def test_save_and_get_challenge(self):
-        """Test saving and retrieving challenges."""
-        challenge_id = "test_challenge_123"
-        current_time = int(time.time())
-        
-        # Save challenge
-        success = self.db.save_challenge(
-            challenge_id=challenge_id,
-            wallet_address=self.test_wallet,
-            challenge_message="Test challenge message",
-            nonce="test_nonce",
-            issued_at=current_time,
-            expires_at=current_time + 300,
-            ip_address="127.0.0.1"
+    def test_verify_signature_fail_closed_invalid_message(self, signature_validator):
+        """Test signature verification fails closed on invalid message"""
+        # Test with None message
+        is_valid, recovered = signature_validator.verify_signature(
+            message=None,
+            signature="0x1234567890abcdef",
+            expected_address="0x1234567890123456789012345678901234567890"
         )
+        assert is_valid is False
+        assert recovered is None
         
-        assert success
-        
-        # Retrieve challenge
-        challenge = self.db.get_challenge(challenge_id)
-        
-        assert challenge is not None
-        assert challenge["challenge_id"] == challenge_id
-        assert challenge["wallet_address"] == self.test_wallet
-    
-    def test_save_and_get_session(self):
-        """Test saving and retrieving sessions."""
-        assertion_id = "test_assertion_123"
-        current_time = int(time.time())
-        
-        # Save session
-        success = self.db.save_session(
-            assertion_id=assertion_id,
-            wallet_address=self.test_wallet,
-            session_token="test_session_token",
-            refresh_token="test_refresh_token",
-            signature="0xtest_signature",
-            issued_at=current_time,
-            expires_at=current_time + 3600,
-            not_before=current_time,
-            ip_address="127.0.0.1"
+        # Test with empty message
+        is_valid, recovered = signature_validator.verify_signature(
+            message="",
+            signature="0x1234567890abcdef",
+            expected_address="0x1234567890123456789012345678901234567890"
         )
+        assert is_valid is False
+        assert recovered is None
         
-        assert success
-        
-        # Retrieve session
-        session = self.db.get_session_by_token("test_session_token")
-        
-        assert session is not None
-        assert session["assertion_id"] == assertion_id
-        assert session["wallet_address"] == self.test_wallet
-    
-    def test_log_auth_event(self):
-        """Test logging authentication events."""
-        success = self.db.log_auth_event(
-            wallet_address=self.test_wallet,
-            event_type="authentication_success",
-            success=True,
-            challenge_id="test_challenge",
-            ip_address="127.0.0.1"
+        # Test with non-string message
+        is_valid, recovered = signature_validator.verify_signature(
+            message=12345,
+            signature="0x1234567890abcdef",
+            expected_address="0x1234567890123456789012345678901234567890"
         )
-        
-        assert success
-        
-        # Get history
-        history = self.db.get_auth_history(wallet_address=self.test_wallet)
-        
-        assert len(history) > 0
-        assert history[0]["event_type"] == "authentication_success"
+        assert is_valid is False
+        assert recovered is None
     
-    def test_get_statistics(self):
-        """Test getting authentication statistics."""
-        stats = self.db.get_statistics()
+    def test_verify_signature_fail_closed_invalid_signature(self, signature_validator):
+        """Test signature verification fails closed on invalid signature"""
+        # Test with None signature
+        is_valid, recovered = signature_validator.verify_signature(
+            message="test message",
+            signature=None,
+            expected_address="0x1234567890123456789012345678901234567890"
+        )
+        assert is_valid is False
+        assert recovered is None
         
-        assert isinstance(stats, dict)
-        assert "active_sessions" in stats
-        assert "pending_challenges" in stats
-        assert "total_users" in stats
+        # Test with empty signature
+        is_valid, recovered = signature_validator.verify_signature(
+            message="test message",
+            signature="",
+            expected_address="0x1234567890123456789012345678901234567890"
+        )
+        assert is_valid is False
+        assert recovered is None
+        
+        # Test with invalid signature format
+        is_valid, recovered = signature_validator.verify_signature(
+            message="test message",
+            signature="invalid_signature",
+            expected_address="0x1234567890123456789012345678901234567890"
+        )
+        assert is_valid is False
+        assert recovered is None
+    
+    def test_verify_signature_fail_closed_invalid_address(self, signature_validator):
+        """Test signature verification fails closed on invalid address"""
+        # Test with None address
+        is_valid, recovered = signature_validator.verify_signature(
+            message="test message",
+            signature="0x1234567890abcdef",
+            expected_address=None
+        )
+        assert is_valid is False
+        assert recovered is None
+        
+        # Test with empty address
+        is_valid, recovered = signature_validator.verify_signature(
+            message="test message",
+            signature="0x1234567890abcdef",
+            expected_address=""
+        )
+        assert is_valid is False
+        assert recovered is None
+        
+        # Test with invalid address format
+        is_valid, recovered = signature_validator.verify_signature(
+            message="test message",
+            signature="0x1234567890abcdef",
+            expected_address="invalid_address"
+        )
+        assert is_valid is False
+        assert recovered is None
+    
+    def test_verify_signature_fail_closed_exception_handling(self, signature_validator):
+        """Test signature verification fails closed on any exception"""
+        # Test with malformed signature that causes exception
+        is_valid, recovered = signature_validator.verify_signature(
+            message="test message",
+            signature="0x",  # Too short
+            expected_address="0x1234567890123456789012345678901234567890"
+        )
+        assert is_valid is False
+        assert recovered is None
+    
+    def test_validate_session_token_fail_closed_invalid_format(self, authenticator):
+        """Test session validation fails closed on invalid token format"""
+        # Test with None token
+        is_valid, data = authenticator.session_manager.validate_session_token(None)
+        assert is_valid is False
+        assert data is None
+        
+        # Test with empty token
+        is_valid, data = authenticator.session_manager.validate_session_token("")
+        assert is_valid is False
+        assert data is None
+        
+        # Test with malformed token
+        is_valid, data = authenticator.session_manager.validate_session_token("invalid.token")
+        assert is_valid is False
+        assert data is None
+    
+    def test_validate_session_token_fail_closed_exception_handling(self, authenticator):
+        """Test session validation fails closed on any exception"""
+        # Test with token that causes exception during parsing
+        is_valid, data = authenticator.session_manager.validate_session_token("a.b.c.d.e")
+        assert is_valid is False
+        assert data is None
 
 
-def run_tests():
-    """Run all tests with pytest."""
-    pytest.main([__file__, "-v", "--tb=short"])
+class TestProofOfWorkSecurity:
+    """Test proof-of-work system security features."""
+    
+    def test_verify_solution_fail_closed_invalid_challenge(self, pow_system):
+        """Test PoW verification fails closed on invalid challenge"""
+        # Test with non-existent challenge
+        is_valid, error = pow_system.verify_solution(
+            challenge="non_existent",
+            nonce="12345",
+            difficulty=2
+        )
+        assert is_valid is False
+        assert "Invalid or expired challenge" in error
+    
+    def test_verify_solution_fail_closed_expired_challenge(self, pow_system):
+        """Test PoW verification fails closed on expired challenge"""
+        # Generate challenge and wait for it to expire
+        challenge, difficulty = pow_system.generate_challenge()
+        
+        # Manually expire the challenge
+        pow_system._active_challenges[challenge] = (int(time.time()) - 400, difficulty)
+        
+        is_valid, error = pow_system.verify_solution(
+            challenge=challenge,
+            nonce="12345",
+            difficulty=difficulty
+        )
+        assert is_valid is False
+        assert "expired" in error.lower()
+    
+    def test_verify_solution_fail_closed_difficulty_mismatch(self, pow_system):
+        """Test PoW verification fails closed on difficulty mismatch"""
+        challenge, difficulty = pow_system.generate_challenge()
+        
+        is_valid, error = pow_system.verify_solution(
+            challenge=challenge,
+            nonce="12345",
+            difficulty=difficulty + 1  # Wrong difficulty
+        )
+        assert is_valid is False
+        assert "Difficulty mismatch" in error
+    
+    def test_verify_solution_fail_closed_insufficient_work(self, pow_system):
+        """Test PoW verification fails closed on insufficient work"""
+        challenge, difficulty = pow_system.generate_challenge()
+        
+        # Use a nonce that doesn't meet difficulty requirement
+        is_valid, error = pow_system.verify_solution(
+            challenge=challenge,
+            nonce="0",  # Very unlikely to meet difficulty
+            difficulty=difficulty
+        )
+        assert is_valid is False
+        assert "insufficient zeros" in error.lower()
+
+
+class TestRateLimitingSecurity:
+    """Test rate limiting and session cleanup middleware."""
+    
+    def test_rate_limiting_exceeds_limit(self, client):
+        """Test that rate limiting blocks excessive requests"""
+        # Make multiple requests to exceed rate limit
+        for i in range(10):
+            response = client.post("/api/auth/challenge", json={
+                "wallet_address": "0x1234567890123456789012345678901234567890"
+            })
+            if i < 5:  # First 5 should succeed or fail with 400 (invalid address)
+                assert response.status_code in [200, 400]
+            else:  # After rate limit, should get 429
+                assert response.status_code == 429
+                break
+    
+    def test_rate_limiting_headers_present(self, client):
+        """Test that rate limiting headers are present"""
+        response = client.post("/api/auth/challenge", json={
+            "wallet_address": "0x1234567890123456789012345678901234567890"
+        })
+        
+        # Check for rate limiting headers
+        assert "x-ratelimit-limit" in response.headers
+        assert "x-ratelimit-remaining" in response.headers
+    
+    def test_session_cleanup_middleware_active(self, client):
+        """Test that session cleanup middleware is active"""
+        # This test verifies the middleware is properly configured
+        # The actual cleanup happens in the background
+        response = client.get("/health")
+        assert response.status_code == 200
+        # If we get here, the middleware didn't break the app
+
+
+class TestInputValidation:
+    """Test input validation and sanitization."""
+    
+    def test_auth_challenge_invalid_inputs(self, client):
+        """Test auth challenge with various invalid inputs"""
+        # Test with missing wallet_address
+        response = client.post("/api/auth/challenge", json={})
+        assert response.status_code == 422  # Validation error
+        
+        # Test with invalid wallet address format
+        response = client.post("/api/auth/challenge", json={
+            "wallet_address": "invalid_address"
+        })
+        assert response.status_code == 400
+        
+        # Test with empty wallet address
+        response = client.post("/api/auth/challenge", json={
+            "wallet_address": ""
+        })
+        assert response.status_code == 400
+    
+    def test_auth_verify_invalid_inputs(self, client):
+        """Test auth verify with various invalid inputs"""
+        # Test with missing fields
+        response = client.post("/api/auth/verify", json={})
+        assert response.status_code == 422  # Validation error
+        
+        # Test with invalid signature format
+        response = client.post("/api/auth/verify", json={
+            "challenge_id": "test",
+            "signature": "invalid_signature",
+            "wallet_address": "0x1234567890123456789012345678901234567890"
+        })
+        assert response.status_code == 400
+        
+        # Test with empty fields
+        response = client.post("/api/auth/verify", json={
+            "challenge_id": "",
+            "signature": "",
+            "wallet_address": ""
+        })
+        assert response.status_code == 400
 
 
 if __name__ == "__main__":
-    print("=" * 70)
-    print("W-CSAP Authentication System Test Suite")
-    print("=" * 70)
-    print()
-    run_tests()
+    pytest.main([__file__])

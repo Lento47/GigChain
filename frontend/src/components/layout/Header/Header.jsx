@@ -3,10 +3,12 @@ import { useLocation } from 'react-router-dom';
 import WalletConnection from '../../features/Wallet/WalletConnection';
 import { WalletAuthButton } from '../../features';
 import ThemeToggle from '../../common/ThemeToggle/ThemeToggle';
+import { NotificationCenter, useNotifications } from '../../common/NotificationCenter/NotificationCenter';
 import './Header.css';
 
 const Header = ({ walletInfo, isConnected, client }) => {
   const location = useLocation();
+  const { notifications, markAsRead, clearAll } = useNotifications();
   
   // Get current view from pathname
   const currentView = location.pathname.slice(1) || 'dashboard';
@@ -91,7 +93,15 @@ const Header = ({ walletInfo, isConnected, client }) => {
         
         <div className="header-actions">
           <div className="theme-toggle-container">
-            <ThemeToggle size="small" />
+            <ThemeToggle size="small" variant="palette" />
+          </div>
+          
+          <div className="notifications-container">
+            <NotificationCenter 
+              notifications={notifications}
+              onMarkAsRead={markAsRead}
+              onClearAll={clearAll}
+            />
           </div>
           
           <div className="wallet-container">

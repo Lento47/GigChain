@@ -59,8 +59,9 @@ redis==5.0.8  # Token revocation cache
 # hvac==2.3.0  # HashiCorp Vault (uncomment if using Vault)
 
 # IPFS Integration
-ipfshttpclient==0.8.0a2  # IPFS Python client
+ipfshttpclient==0.8.0a2  # IPFS Python client (alpha - wrapped in adapter for stability)
 py-cid==0.3.0  # Content Identifier utilities
+tenacity==9.0.0  # Retry library with exponential backoff
 
 # Additional utilities
 typing-extensions==4.12.2

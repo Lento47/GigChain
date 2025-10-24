@@ -2,15 +2,16 @@
 
 ## 🎯 Overview
 
-GigChain provides a **dual-wallet system** that gives users flexibility while maintaining platform control for contracts:
+GigChain provides a **multi-wallet system** that gives users maximum flexibility while maintaining platform control for contracts:
 
-1. **Internal Wallet (GigChain Wallet)** - Platform-created, user-owned
-2. **External Wallet** - User's own wallet (MetaMask, etc.), optionally linked
+1. **Internal Wallets (GigChain Wallets)** - Platform-created, user-owned (multiple per user)
+2. **External Wallets** - User's own wallets (MetaMask, etc.), optionally linked
 
 **Key Design**:
-- Users can authenticate with EITHER wallet
-- Internal wallet for contract signing (platform-managed)
-- External wallet for payments (user-controlled, off-platform)
+- Users can have multiple internal wallets with unique names
+- Users can authenticate with ANY wallet (internal or external)
+- Internal wallets for contract signing (platform-managed)
+- External wallets for payments (user-controlled, off-platform)
 - Professional Services requires linked & verified external wallet
 - Platform records transaction metadata but NOT responsible for actual transfers
 
@@ -748,6 +749,28 @@ async function payFreelancer(contractId, amount, freelancerExternalWallet) {
 
 ---
 
+## 🔄 Migration Guide
+
+### ✅ Migration Completed
+
+The wallet constraint migration has been **successfully completed**. The database now supports multiple wallets per user with the constraint `UNIQUE(user_address, name)`.
+
+### Migration Process (Completed)
+
+1. ✅ **Backup**: Created automatic backup before migration
+2. ✅ **Duplicate Check**: Identified wallets with duplicate names (none found)
+3. ✅ **Constraint Update**: Changed `UNIQUE(user_address)` to `UNIQUE(user_address, name)`
+4. ✅ **Verification**: All constraints are properly applied
+
+### Current State
+
+- ✅ **Multiple Wallets**: Users can now have multiple internal wallets with unique names
+- ✅ **Backward Compatibility**: `get_wallet_by_user()` returns first wallet for compatibility
+- ✅ **New Methods**: `get_all_wallets_by_user()` and `get_wallet_by_user_and_name()` available
+- ✅ **Constraint**: `UNIQUE(user_address, name)` prevents duplicate names per user
+
+---
+
 ## ⚠️ Important Disclaimers
 
 ### For Developers
@@ -810,16 +833,18 @@ const WALLET_DISCLAIMERS = {
 ## 📊 Database Schema
 
 ```sql
--- Internal Wallets
+-- Internal Wallets (Multiple per user)
 CREATE TABLE internal_wallets (
     wallet_id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL UNIQUE,
+    user_id TEXT NOT NULL,
     address TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
     encrypted_private_key TEXT NOT NULL,
     encrypted_mnemonic TEXT NOT NULL,
     created_at TIMESTAMP NOT NULL,
     is_active BOOLEAN DEFAULT 1,
-    metadata TEXT
+    metadata TEXT,
+    UNIQUE(user_id, name)  -- Allow multiple wallets per user with unique names
 );
 
 -- External Wallet Links

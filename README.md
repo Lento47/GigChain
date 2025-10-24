@@ -144,6 +144,14 @@ python test_contract_ai.py
 
 ## 🔧 Configuración Avanzada
 
+### **⚠️ NOTA DE DEPRECACIÓN - App Entrypoints**
+**IMPORTANTE**: Se han eliminado múltiples puntos de entrada de la aplicación para evitar confusión:
+- ❌ **App.tsx** (Wagmi/RainbowKit) - Removido
+- ❌ **NewApp.tsx** (UI Demo) - Removido  
+- ✅ **App.jsx** (Thirdweb/Vite) - **ACTIVO**
+
+La aplicación ahora usa un solo punto de entrada: `App.jsx` con integración Thirdweb, Vite y funcionalidades completas de Web3.
+
 ### **Blockchain Networks**
 - **Polygon Amoy** (Testnet) - Desarrollo y testing actual
 - **Polygon Mainnet** (Futuro) - Red principal de producción

@@ -1,0 +1,563 @@
+/* Mobile-First Responsive Design System */
+
+/* Base Mobile Styles */
+@media (max-width: 768px) {
+  /* App Layout */
+  .app {
+    flex-direction: column;
+  }
+  
+  .main-content {
+    margin-left: 0;
+    width: 100%;
+  }
+  
+  .main-content.sidebar-closed {
+    margin-left: 0;
+  }
+  
+  /* Sidebar Mobile Behavior */
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 1001;
+  }
+  
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  
+  .sidebar-overlay {
+    display: block;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+  }
+  
+  /* Header Mobile */
+  .app-header {
+    padding: 0.75rem 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  
+  .header-content {
+    gap: 0.75rem;
+  }
+  
+  .header-actions {
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  
+  .header-info h1 {
+    font-size: 1.125rem;
+  }
+  
+  .header-info p {
+    font-size: 0.75rem;
+  }
+  
+  /* Content Body Mobile */
+  .content-body {
+    padding: 1rem;
+    padding-bottom: 5rem; /* Space for mobile bottom nav */
+  }
+  
+  /* Grid Layouts Mobile */
+  .content-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+  
+  .featured-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  /* Cards Mobile */
+  .content-card {
+    padding: 1rem;
+    border-radius: 8px;
+  }
+  
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .card-title {
+    font-size: 1rem;
+  }
+  
+  .card-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  
+  /* Stats Mobile */
+  .stat-card {
+    padding: 1rem;
+  }
+  
+  .stat-value {
+    font-size: 1.5rem;
+  }
+  
+  .stat-label {
+    font-size: 0.75rem;
+  }
+  
+  /* Right Sidebar Mobile */
+  .right-sidebar {
+    position: static;
+    margin-bottom: 1rem;
+    order: -1; /* Move to top on mobile */
+  }
+  
+  /* Typography Mobile */
+  .text-display {
+    font-size: 2rem;
+  }
+  
+  .text-heading-1 {
+    font-size: 1.75rem;
+  }
+  
+  .text-heading-2 {
+    font-size: 1.5rem;
+  }
+  
+  .text-heading-3 {
+    font-size: 1.25rem;
+  }
+  
+  /* Mobile Bottom Navigation */
+  .mobile-bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--theme-card-bg);
+    border-top: 1px solid var(--theme-border);
+    padding: 0.5rem;
+    z-index: 1000;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    backdrop-filter: blur(10px);
+  }
+  
+  .mobile-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.5rem;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    color: var(--theme-text-secondary);
+    text-decoration: none;
+    min-width: 60px;
+  }
+  
+  .mobile-nav-item.active {
+    color: var(--theme-accent);
+    background: var(--theme-hover);
+  }
+  
+  .mobile-nav-item:hover {
+    color: var(--theme-accent);
+    background: var(--theme-hover);
+  }
+  
+  .mobile-nav-icon {
+    font-size: 1.25rem;
+  }
+  
+  .mobile-nav-label {
+    font-size: 0.625rem;
+    font-weight: 500;
+    text-align: center;
+  }
+  
+  /* Touch-friendly interactions */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Swipe gestures */
+  .swipe-container {
+    touch-action: pan-x;
+    overflow-x: hidden;
+  }
+  
+  /* Mobile-specific utilities */
+  .mobile-only {
+    display: block;
+  }
+  
+  .desktop-only {
+    display: none;
+  }
+  
+  /* Safe area handling for notched devices */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .safe-area-left {
+    padding-left: env(safe-area-inset-left);
+  }
+  
+  .safe-area-right {
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+/* Small Mobile Devices */
+@media (max-width: 480px) {
+  .content-body {
+    padding: 0.75rem;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .content-card {
+    padding: 0.75rem;
+  }
+  
+  .stat-card {
+    padding: 0.75rem;
+  }
+  
+  .stat-value {
+    font-size: 1.25rem;
+  }
+  
+  .card-title {
+    font-size: 0.875rem;
+  }
+  
+  .text-display {
+    font-size: 1.75rem;
+  }
+  
+  .text-heading-1 {
+    font-size: 1.5rem;
+  }
+  
+  .text-heading-2 {
+    font-size: 1.25rem;
+  }
+  
+  .text-heading-3 {
+    font-size: 1.125rem;
+  }
+  
+  .mobile-nav-item {
+    min-width: 50px;
+    padding: 0.375rem;
+  }
+  
+  .mobile-nav-icon {
+    font-size: 1.125rem;
+  }
+  
+  .mobile-nav-label {
+    font-size: 0.5rem;
+  }
+}
+
+/* Extra Small Devices */
+@media (max-width: 360px) {
+  .content-body {
+    padding: 0.5rem;
+  }
+  
+  .content-card {
+    padding: 0.5rem;
+  }
+  
+  .stat-card {
+    padding: 0.5rem;
+  }
+  
+  .header-actions {
+    gap: 0.375rem;
+  }
+  
+  .mobile-nav-item {
+    min-width: 45px;
+    padding: 0.25rem;
+  }
+  
+  .mobile-nav-icon {
+    font-size: 1rem;
+  }
+  
+  .mobile-nav-label {
+    font-size: 0.45rem;
+  }
+}
+
+/* Tablet Portrait */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .content-body {
+    padding: 1.5rem;
+  }
+  
+  .content-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .featured-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .right-sidebar {
+    position: static;
+    margin-bottom: 1.5rem;
+  }
+}
+
+/* Tablet Landscape */
+@media (min-width: 1024px) and (max-width: 1280px) {
+  .content-body {
+    padding: 2rem;
+  }
+  
+  .content-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  
+  .featured-grid {
+    grid-template-columns: 2fr 1fr;
+  }
+  
+  .right-sidebar {
+    position: sticky;
+    top: 2rem;
+  }
+}
+
+/* Desktop */
+@media (min-width: 1280px) {
+  .content-body {
+    padding: 1.5rem 1%;
+    max-width: 98%;
+    margin: 0 auto;
+  }
+  
+  .content-grid {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+  }
+  
+  .featured-grid {
+    grid-template-columns: 2fr 1fr;
+  }
+  
+  .right-sidebar {
+    position: sticky;
+    top: 2rem;
+  }
+}
+
+/* Large Desktop */
+@media (min-width: 1536px) {
+  .content-body {
+    max-width: 99%;
+    padding: 1.5rem 0.5%;
+  }
+  
+  .content-grid {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.75rem;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.75rem;
+  }
+}
+
+/* Ultra-wide screens */
+@media (min-width: 1920px) {
+  .content-body {
+    max-width: 99.5%;
+    padding: 1.5rem 0.25%;
+  }
+  
+  .content-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.5rem;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.5rem;
+  }
+}
+
+/* High DPI Displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .content-card {
+    border-width: 0.5px;
+  }
+  
+  .sidebar {
+    border-right-width: 0.5px;
+  }
+  
+  .app-header {
+    border-bottom-width: 0.5px;
+  }
+}
+
+/* Dark Mode Mobile Adjustments */
+@media (max-width: 768px) and (prefers-color-scheme: dark) {
+  .mobile-bottom-nav {
+    background: var(--theme-card-bg);
+    border-top-color: var(--theme-border);
+  }
+  
+  .sidebar-overlay {
+    background: rgba(0, 0, 0, 0.7);
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .content-card,
+  .stat-card,
+  .nav-item,
+  .mobile-nav-item {
+    transition: none;
+  }
+  
+  .content-card:hover,
+  .stat-card:hover {
+    transform: none;
+  }
+  
+  .nav-item:hover {
+    transform: none;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .sidebar,
+  .mobile-bottom-nav,
+  .app-header {
+    display: none;
+  }
+  
+  .main-content {
+    margin-left: 0;
+  }
+  
+  .content-body {
+    padding: 0;
+  }
+  
+  .content-card {
+    break-inside: avoid;
+    box-shadow: none;
+    border: 1px solid #000;
+  }
+}
+
+/* Utility Classes */
+.hide-mobile {
+  display: block;
+}
+
+.show-mobile {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .hide-mobile {
+    display: none;
+  }
+  
+  .show-mobile {
+    display: block;
+  }
+}
+
+/* Mobile-specific animations */
+@keyframes slideInFromLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromBottom {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.slide-in-left {
+  animation: slideInFromLeft 0.3s ease-out;
+}
+
+.slide-in-right {
+  animation: slideInFromRight 0.3s ease-out;
+}
+
+.slide-in-bottom {
+  animation: slideInFromBottom 0.3s ease-out;
+}

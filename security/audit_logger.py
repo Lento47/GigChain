@@ -11,7 +11,10 @@ from typing import Dict, Any, Optional
 from contextlib import contextmanager
 from enum import Enum
 
+from security.secure_logger import get_audit_logger, SecureLogger
+
 logger = logging.getLogger(__name__)
+secure_logger = get_audit_logger()
 
 
 class AuditEventType(str, Enum):
@@ -189,9 +192,18 @@ class SecurityAuditLogger:
             if severity in [AuditSeverity.ERROR, AuditSeverity.CRITICAL]:
                 self._check_and_create_alert(event_type, severity, wallet_address, ip_address, now)
             
-            # Log to standard logger
-            log_method = getattr(logger, severity.value)
-            log_method(f"[AUDIT] {event_type.value}: wallet={wallet_address}, success={success}")
+            # Log to secure logger with scrubbing
+            secure_logger.info(
+                f"[AUDIT] {event_type.value}: success={success}",
+                extra={
+                    "wallet_address": wallet_address,
+                    "event_type": event_type.value,
+                    "severity": severity.value,
+                    "success": success,
+                    "session_id": session_id,
+                    "request_id": request_id
+                }
+            )
             
             return log_id
             
@@ -200,15 +212,12 @@ class SecurityAuditLogger:
             return ""
     
     def _sanitize_event_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Remove sensitive fields from event data"""
-        sensitive_fields = ['password', 'secret', 'token', 'private_key', 'api_key']
-        sanitized = data.copy()
+        """Remove sensitive fields from event data using secure logger scrubbing"""
+        if not data:
+            return data
         
-        for field in sensitive_fields:
-            if field in sanitized:
-                sanitized[field] = "[REDACTED]"
-        
-        return sanitized
+        # Use secure logger to scrub sensitive data
+        return secure_logger._scrub_dict(data)
     
     def _check_and_create_alert(
         self,

@@ -64,7 +64,7 @@
 }
 
 .dashboard-web3-container {
-  max-width: 1600px;
+  max-width: 99%;
   margin: 0 auto;
   padding: 2rem 1rem 4rem 1rem;
   position: relative;
@@ -315,7 +315,7 @@
   color: #a0aec0;
   font-weight: 500;
   line-height: 1.6;
-  max-width: 600px; /* Limit width for readability */
+  max-width: 100%; /* Full width for better space utilization */
 }
 
 .welcome-message {

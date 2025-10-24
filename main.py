@@ -1,135 +1,55 @@
 """GigChain.io FastAPI Backend - Production-ready API server."""
 
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect, Depends
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
 import logging
-import os
-import json
-import hashlib
 import uuid
 from datetime import datetime
-from typing import Dict, Any, Optional, List
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
 
-# Import existing modules
-from contract_ai import full_flow, generate_contract
-from agents import AgentInput, get_agent_status
-from security.template_security import validate_template_security
-from security.validators import validator
-from chat_enhanced import chat_manager
+# Import centralized configuration
+from config import get_config, is_ai_agents_enabled
 
 # Import custom exceptions
-from exceptions import (
-    GigChainBaseException,
-    ContractGenerationError,
-    ValidationError,
-    MissingRequiredFieldError
-)
+from exceptions import GigChainBaseException
 
 # Import W-CSAP authentication
 from auth import (
     WCSAPAuthenticator, 
     get_database, 
-    get_current_wallet, 
-    get_optional_wallet,
     RateLimitMiddleware,
     SessionCleanupMiddleware
 )
 
-# Import auth schemas for proper response models
-try:
-    from auth.schemas import (
-        AuthChallengeRequest,
-        AuthChallengeResponse,
-        AuthVerifyRequest,
-        AuthVerifyResponse,
-        AuthRefreshRequest,
-        AuthRefreshResponse
-    )
-except ImportError:
-    # Fallback: Define basic models if auth.schemas not available
-    class AuthChallengeRequest(BaseModel):
-        wallet_address: str
-        
-    class AuthVerifyRequest(BaseModel):
-        challenge_id: str
-        signature: str
-        wallet_address: str
-        
-    class AuthRefreshRequest(BaseModel):
-        refresh_token: str
-        session_token: str
-        
-    # Response models will use APIResponseWrapper format
-    AuthChallengeResponse = dict
-    AuthVerifyResponse = dict  
-    AuthRefreshResponse = dict
-
-# Import Wallet Manager
-from wallet_manager import get_wallet_manager
-
-# Import Contract Storage and Utilities
-from contracts_storage import save_contract_to_dashboard
-from utils.text_constructor import construct_text_from_structured_data
-
-# Import Security Utilities
-from security.input_sanitizer import sanitizer
-from security.validators import validator
-from security.audit_logger import get_audit_logger, AuditEventType, AuditSeverity
-
 # Import API Response Wrapper
-from api_response_wrapper import (
-    APIResponseWrapper, ResponseTimingMiddleware,
-    create_validation_error, create_auth_error, create_not_found_error,
-    create_rate_limit_error, create_server_error, paginated_response,
-    created_response, no_content_response
-)
+from api_response_wrapper import APIResponseWrapper
 
-# Import Gamification & Negotiation System
+# Import all routers
+from auth_router import router as auth_router
+from wallet_router import router as wallet_router
+from contract_router import router as contract_router
+from agent_router import router as agent_router
+# from chat_router import router as chat_router  # Temporarily disabled due to import issues
+from profile_router import router as profile_router
+from template_router import router as template_router
+
+# Import existing module routers
 from gamification_api import router as gamification_router
-
-# Import Token System
 from token_api import router as token_router
-
-# Import Contracts System
 from contracts_api import router as contracts_router
-
-# Import I18n System
 from i18n_api import router as i18n_router
-
-# Import Analytics System
 from analytics_api import router as analytics_router
-
-# Import Dispute Oracle System
 from dispute_oracle_api import router as dispute_oracle_router
-
-# Import Reputation NFT System
 from reputation_nft_api import router as reputation_nft_router
-
-# Import Template Marketplace System
 from template_marketplace_api import router as marketplace_router
-
-# Import Admin System
 from admin_api import router as admin_router
-
-# Import Dispute Mediation System
 from dispute_mediation_api import router as mediation_router
-
-# Import IPFS Storage System
 from ipfs_api import router as ipfs_router
-
-# Import Private Jobs System (TEMPORARILY DISABLED - missing models directory)
-# from private_jobs_api import router as private_jobs_router
-
-# Import Engagement System (TEMPORARILY DISABLED - missing models directory)
-# from engagement_api import router as engagement_router
 
 # Configure logging - ONLY W-CSAP Authentication logs
 logging.basicConfig(
@@ -151,31 +71,33 @@ logging.getLogger('security.audit_logger').setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)  # Reduce main logger noise
 
-# Initialize security audit logger
-audit_logger = get_audit_logger()
+# Get configuration instance
+config = get_config()
+
+# Validate configuration on startup
+if not config.validate_configuration():
+    validation_errors = config.get_validation_errors()
+    logger.error("Configuration validation failed:")
+    for error in validation_errors:
+        logger.error(f"  - {error}")
+    raise ValueError("Configuration validation failed. Check logs for details.")
 
 # Lifespan context manager for startup/shutdown events
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize resources on startup and cleanup on shutdown."""
     # Startup: Initialize authentication system
-    secret_key = os.getenv('W_CSAP_SECRET_KEY')
-    if not secret_key:
-        raise ValueError(
-            "W_CSAP_SECRET_KEY environment variable is required. "
-            "Generate a secure 32+ character secret key."
-        )
-    
     app.state.authenticator = WCSAPAuthenticator(
-        secret_key=secret_key,
-        challenge_ttl=300,  # 5 minutes
-        session_ttl=86400,  # 24 hours
-        refresh_ttl=604800  # 7 days
+        secret_key=config.security.w_csap_secret_key,
+        challenge_ttl=config.security.challenge_ttl,
+        session_ttl=config.security.access_token_ttl,
+        refresh_ttl=config.security.refresh_ttl
     )
     
     app.state.auth_db = get_database()
     
     logger.info("🔐 W-CSAP Authentication system initialized")
+    logger.info(f"Configuration loaded: {config.server.environment.value} environment")
     
     yield
     
@@ -192,284 +114,188 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Include gamification router
+# ==================== ROUTER INCLUDES ====================
+
+# Include custom routers (extracted from main.py)
+app.include_router(auth_router)
+app.include_router(wallet_router)
+app.include_router(contract_router)
+app.include_router(agent_router)
+# app.include_router(chat_router)  # Temporarily disabled due to import issues
+app.include_router(profile_router)
+app.include_router(template_router)
+
+# Include existing module routers
 app.include_router(gamification_router)
-
-# Include token router
 app.include_router(token_router)
-
-# Include i18n router
+app.include_router(contracts_router)
 app.include_router(i18n_router)
-
-# Include analytics router
 app.include_router(analytics_router)
-
-# Include dispute oracle router
 app.include_router(dispute_oracle_router)
-
-# Include reputation NFT router
 app.include_router(reputation_nft_router)
-
-# Include marketplace router
 app.include_router(marketplace_router)
-
-# Include admin router
 app.include_router(admin_router)
-
-# Include mediation router
 app.include_router(mediation_router)
-
-# Include IPFS router
 app.include_router(ipfs_router)
 
-# Include Private Jobs router (TEMPORARILY DISABLED)
-# app.include_router(private_jobs_router)
+# ==================== CORS MIDDLEWARE ====================
 
-# Include Engagement router (TEMPORARILY DISABLED)
-# app.include_router(engagement_router)
-
-# Include Contracts router
-app.include_router(contracts_router)
-
-# CORS middleware - Security-hardened configuration
-# Get allowed origins from environment with development defaults
-ALLOWED_ORIGINS_ENV = os.getenv(
-    'ALLOWED_ORIGINS',
-    'http://localhost:3000,http://localhost:3001,http://localhost:5173,http://localhost:5174,http://127.0.0.1:3000,http://127.0.0.1:3001,http://127.0.0.1:5173,http://127.0.0.1:5174,http://10.0.175.113:5173,http://192.168.223.1:5173,http://192.168.32.1:5173,http://172.27.80.1:5173'
-)
-if not ALLOWED_ORIGINS_ENV:
-    raise ValueError(
-        "ALLOWED_ORIGINS environment variable is required. "
-        "Specify comma-separated list of allowed origins."
-    )
-
-ALLOWED_ORIGINS = [origin.strip() for origin in ALLOWED_ORIGINS_ENV.split(',') if origin.strip()]
-
-# Validate origins format
-for origin in ALLOWED_ORIGINS:
-    if not (origin.startswith('http://') or origin.startswith('https://')):
-        raise ValueError(f"Invalid origin format: {origin}. Must include protocol (http:// or https://)")
-
-# Custom CORS middleware for mobile compatibility
-class CustomCORSMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        # Handle OPTIONS preflight requests directly
-        if request.method == "OPTIONS":
-            response = JSONResponse(content={"message": "CORS preflight OK"})
-            response.headers["Access-Control-Allow-Origin"] = "*"
-            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
-            response.headers["Access-Control-Allow-Headers"] = "*"
-            response.headers["Access-Control-Max-Age"] = "3600"
-            return response
+def parse_cors_origins():
+    """
+    Parse and validate CORS_ORIGINS environment variable with comprehensive validation.
+    
+    Returns:
+        List[str]: Validated list of allowed origins
         
-        # Process normal requests
-        response = await call_next(request)
-        
-        # Add CORS headers to all responses
-        response.headers["Access-Control-Allow-Origin"] = "*"
-        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "*"
-        
-        return response
+    Raises:
+        ValueError: If parsing fails or invalid origins are found
+    """
+    import re
+    from urllib.parse import urlparse
+    
+    # Get CORS origins from centralized config
+    cors_origins_env = ','.join(config.get_cors_origins()) if config.get_cors_origins() else ""
+    
+    # Development fallback if no environment variable is set or is empty/whitespace only
+    if not cors_origins_env or not cors_origins_env.strip():
+        logger.warning("No CORS_ORIGINS environment variable found or empty, using development fallback")
+        cors_origins_env = (
+            'http://localhost:3000,http://localhost:3001,http://localhost:5173,http://localhost:5174,'
+            'http://127.0.0.1:3000,http://127.0.0.1:3001,http://127.0.0.1:5173,http://127.0.0.1:5174,'
+            'http://10.0.175.113:5173,http://192.168.223.1:5173,http://192.168.32.1:5173,http://172.27.80.1:5173'
+        )
+    
+    # Split by comma and clean up
+    raw_origins = cors_origins_env.split(',')
+    cleaned_origins = []
+    
+    for origin in raw_origins:
+        # Strip whitespace and filter out empty strings
+        cleaned_origin = origin.strip()
+        if not cleaned_origin:
+            continue
+            
+        # Validate URL format
+        try:
+            parsed = urlparse(cleaned_origin)
+            
+            # Must have scheme (http/https)
+            if not parsed.scheme:
+                logger.warning(f"Invalid origin (missing protocol): {cleaned_origin}")
+                continue
+                
+            # Must be http or https
+            if parsed.scheme not in ['http', 'https']:
+                logger.warning(f"Invalid origin (unsupported protocol): {cleaned_origin}")
+                continue
+                
+            # Must have netloc (hostname)
+            if not parsed.netloc:
+                logger.warning(f"Invalid origin (missing hostname): {cleaned_origin}")
+                continue
+                
+            # Validate hostname format (basic check)
+            hostname_pattern = re.compile(
+                r'^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?$'
+            )
+            
+            # Allow localhost, IP addresses, and valid hostnames
+            if (parsed.hostname == 'localhost' or 
+                re.match(r'^127\.\d+\.\d+\.\d+$', parsed.hostname) or  # 127.x.x.x
+                re.match(r'^192\.168\.\d+\.\d+$', parsed.hostname) or  # 192.168.x.x
+                re.match(r'^10\.\d+\.\d+\.\d+$', parsed.hostname) or   # 10.x.x.x
+                re.match(r'^172\.(1[6-9]|2[0-9]|3[0-1])\.\d+\.\d+$', parsed.hostname) or  # 172.16-31.x.x
+                hostname_pattern.match(parsed.hostname)):
+                
+                cleaned_origins.append(cleaned_origin)
+                logger.debug(f"Valid origin added: {cleaned_origin}")
+            else:
+                logger.warning(f"Invalid origin (invalid hostname): {cleaned_origin}")
+                
+        except Exception as e:
+            logger.warning(f"Error parsing origin '{cleaned_origin}': {str(e)}")
+            continue
+    
+    # Ensure we have at least one valid origin
+    if not cleaned_origins:
+        raise ValueError(
+            "No valid CORS origins found. Please check your CORS_ORIGINS environment variable. "
+            "Origins must be valid URLs with http:// or https:// protocol."
+        )
+    
+    # Log final configuration
+    logger.info(f"CORS origins parsed successfully: {len(cleaned_origins)} valid origins")
+    logger.debug(f"Final CORS origins: {cleaned_origins}")
+    
+    return cleaned_origins
 
-# Add custom CORS middleware FIRST (before other middlewares)
-app.add_middleware(CustomCORSMiddleware)
+# Parse CORS origins with robust validation
+try:
+    ALLOWED_ORIGINS = parse_cors_origins()
+except ValueError as e:
+    logger.error(f"CORS configuration error: {str(e)}")
+    raise
 
-# Log allowed origins for debugging
-print(f"CORS DEBUG: Using custom CORS middleware for mobile compatibility")
-
-# Apply standard CORS middleware as backup
+# Consolidated CORS middleware configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for mobile development
-    allow_credentials=False,  # Must be False when using allow_origins=["*"]  
-    allow_methods=["*"],  # Allow all methods including OPTIONS
-    allow_headers=["*"],  # Allow all headers
-    max_age=3600,
+    allow_origins=ALLOWED_ORIGINS,  # Use configured allowed origins
+    allow_credentials=True,  # Enable credentials for authenticated requests
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],  # Explicit methods
+    allow_headers=[
+        "Accept",
+        "Accept-Language",
+        "Content-Language",
+        "Content-Type",
+        "Authorization",
+        "X-Requested-With",
+        "X-CSRFToken",
+        "X-Session-Token",
+        "X-Refresh-Token",
+        "Origin",
+        "Referer",
+        "User-Agent"
+    ],
+    max_age=3600,  # Cache preflight for 1 hour
+    expose_headers=["X-Request-ID", "X-Response-Time"]  # Expose custom headers
 )
 
+# Log CORS configuration for debugging
+logger.info(f"CORS configured with {len(ALLOWED_ORIGINS)} allowed origins")
+logger.debug(f"Allowed origins: {ALLOWED_ORIGINS}")
+
+# ==================== MIDDLEWARE ====================
+
 # Add W-CSAP authentication middleware
-# Note: RateLimitMiddleware and SessionCleanupMiddleware enabled for security
-app.add_middleware(SessionCleanupMiddleware, cleanup_interval=3600)  # Auto cleanup expired sessions
-app.add_middleware(RateLimitMiddleware, max_attempts=5, window_seconds=300)  # Enable rate limiting
+from auth.config import get_config as get_auth_config
+
+# Get configuration for middleware
+auth_config = get_auth_config()
+
+# Apply rate limiting and session cleanup middleware with configuration values
+app.add_middleware(
+    SessionCleanupMiddleware, 
+    cleanup_interval=config.security.cleanup_interval_seconds
+)
+app.add_middleware(
+    RateLimitMiddleware, 
+    max_attempts=auth_config.rate_limit_verify,
+    window_seconds=auth_config.rate_limit_window_seconds
+)
 
 # Add API response timing middleware
+from api_response_wrapper import ResponseTimingMiddleware
 app.add_middleware(ResponseTimingMiddleware)
 
 # Add security middleware
 from auth.security_middleware import get_security_middleware
-
-# Apply security middleware
 security_middleware = get_security_middleware(
     app,
-    secret_key=os.getenv('W_CSAP_SECRET_KEY'),
-    environment=os.getenv('ENVIRONMENT', 'production')
+    secret_key=config.security.w_csap_secret_key,
+    environment=config.server.environment.value
 )
 
-# Note: Security middleware is applied in the middleware list above
-
-# Pydantic models for authentication
-class AuthChallengeRequest(BaseModel):
-    wallet_address: str = Field(..., min_length=42, max_length=42, description="Wallet address")
-
-class AuthChallengeResponse(BaseModel):
-    challenge_id: str
-    wallet_address: str
-    challenge_message: str
-    expires_at: int
-    
-class AuthVerifyRequest(BaseModel):
-    challenge_id: str = Field(..., description="Challenge ID from initiate step")
-    signature: str = Field(..., description="Hex-encoded signature from wallet")
-    wallet_address: str = Field(..., min_length=42, max_length=42, description="Wallet address")
-
-class AuthVerifyResponse(BaseModel):
-    success: bool
-    session_token: Optional[str] = None
-    refresh_token: Optional[str] = None
-    wallet_address: Optional[str] = None
-    expires_at: Optional[int] = None
-    expires_in: Optional[int] = None
-    error: Optional[str] = None
-
-class AuthRefreshRequest(BaseModel):
-    refresh_token: str = Field(..., description="Refresh token from original authentication")
-    session_token: str = Field(..., description="Expired session token")
-
-class AuthRefreshResponse(BaseModel):
-    success: bool
-    session_token: Optional[str] = None
-    refresh_token: Optional[str] = None
-    expires_at: Optional[int] = None
-    expires_in: Optional[int] = None
-    error: Optional[str] = None
-
-class AuthStatusResponse(BaseModel):
-    authenticated: bool
-    wallet_address: Optional[str] = None
-    expires_in: Optional[int] = None
-    session_info: Optional[Dict[str, Any]] = None
-
-# Pydantic models
-class ContractRequest(BaseModel):
-    text: str = Field(..., min_length=1, max_length=2000, description="Contract description")
-    formData: Optional[Dict[str, Any]] = Field(None, description="Structured form data")
-    
-class SimpleContractRequest(BaseModel):
-    text: str = Field(..., min_length=1, max_length=2000, description="Simple contract description")
-
-class TemplateValidationRequest(BaseModel):
-    template_json: str = Field(..., min_length=1, max_length=1048576, description="Template JSON string")
-    user_id: Optional[str] = Field(None, description="User ID for audit logging")
-
-class TemplateUploadRequest(BaseModel):
-    template_data: Dict[str, Any] = Field(..., description="Template data object")
-    user_id: Optional[str] = Field(None, description="User ID for audit logging")
-
-class ChatMessage(BaseModel):
-    message: str = Field(..., min_length=1, max_length=2000, description="User message")
-    user_id: Optional[str] = Field(None, description="User ID for chat history")
-    session_id: Optional[str] = Field(None, description="Chat session ID")
-    context: Optional[Dict[str, Any]] = Field(None, description="Additional context for the AI")
-
-class ChatResponse(BaseModel):
-    response: str = Field(..., description="AI response message")
-    session_id: str = Field(..., description="Chat session ID")
-    timestamp: str = Field(..., description="Response timestamp")
-    agent_type: str = Field(..., description="Type of AI agent used")
-    suggestions: Optional[List[str]] = Field(None, description="Suggested follow-up questions")
-
-class StructuredContractRequest(BaseModel):
-    description: str = Field(..., min_length=1, max_length=2000, description="Project description")
-    offeredAmount: Optional[float] = Field(None, ge=0, description="Amount offered by freelancer")
-    requestedAmount: Optional[float] = Field(None, ge=0, description="Amount requested by client")
-    days: Optional[int] = Field(None, ge=1, description="Project duration in days")
-    role: str = Field(..., description="User role: freelancer or client")
-    freelancerWallet: Optional[str] = Field(None, description="Freelancer wallet address")
-    clientWallet: Optional[str] = Field(None, description="Client wallet address")
-    
-    # Freelancer Profile
-    freelancerName: Optional[str] = Field(None, description="Freelancer full name")
-    freelancerTitle: Optional[str] = Field(None, description="Freelancer professional title")
-    freelancerBio: Optional[str] = Field(None, description="Freelancer bio")
-    freelancerSkills: Optional[str] = Field(None, description="Freelancer skills")
-    freelancerExperience: Optional[str] = Field(None, description="Freelancer experience level")
-    freelancerLocation: Optional[str] = Field(None, description="Freelancer location")
-    freelancerRate: Optional[float] = Field(None, ge=0, description="Freelancer hourly rate")
-    
-    # Social Links
-    freelancerX: Optional[str] = Field(None, description="Freelancer X (Twitter) profile")
-    freelancerFacebook: Optional[str] = Field(None, description="Freelancer Facebook profile")
-    freelancerInstagram: Optional[str] = Field(None, description="Freelancer Instagram profile")
-    freelancerTikTok: Optional[str] = Field(None, description="Freelancer TikTok profile")
-    freelancerLinkedIn: Optional[str] = Field(None, description="Freelancer LinkedIn profile")
-    freelancerGithub: Optional[str] = Field(None, description="Freelancer GitHub profile")
-    freelancerPortfolio: Optional[str] = Field(None, description="Freelancer portfolio website")
-    
-    # Client Profile
-    clientName: Optional[str] = Field(None, description="Client contact name")
-    clientCompany: Optional[str] = Field(None, description="Client company/project name")
-    clientBio: Optional[str] = Field(None, description="Client project description")
-    clientLocation: Optional[str] = Field(None, description="Client location")
-    
-    # Additional Frontend Form Fields
-    projectTitle: Optional[str] = Field(None, description="Project/Service title")
-    category: Optional[str] = Field(None, description="Project/Service category")
-    contractType: Optional[str] = Field(None, description="Type: project (client) or service (freelancer)")
-    budgetType: Optional[str] = Field(None, description="Budget type: fixed or hourly")
-    hourlyRate: Optional[float] = Field(None, ge=0, description="Hourly rate for hourly projects")
-    estimatedHours: Optional[int] = Field(None, ge=1, description="Estimated hours for hourly projects")
-    fixedBudget: Optional[float] = Field(None, ge=0, description="Fixed budget amount")
-    projectDuration: Optional[int] = Field(None, ge=1, description="Project duration in days")
-    requiredSkills: Optional[str] = Field(None, description="Required skills")
-    experienceLevel: Optional[str] = Field(None, description="Required experience level")
-    deliverables: Optional[str] = Field(None, description="Expected deliverables")
-    milestones: Optional[str] = Field(None, description="Project milestones")
-    additionalRequirements: Optional[str] = Field(None, description="Additional requirements")
-    deadline: Optional[str] = Field(None, description="Project deadline")
-
-class WalletValidationRequest(BaseModel):
-    address: str = Field(..., min_length=42, max_length=42, description="Wallet address to validate")
-    network: str = Field(..., description="Network to validate against (polygon, ethereum, etc.)")
-
-class WalletValidationResponse(BaseModel):
-    valid: bool = Field(..., description="Whether the wallet address is valid")
-    address: str = Field(..., description="The validated address")
-    network: str = Field(..., description="The network it was validated against")
-    error: Optional[str] = Field(None, description="Error message if validation failed")
-    balance: Optional[float] = Field(None, description="Wallet balance if available")
-
-# GigChain Internal Wallet Models
-class CreateWalletRequest(BaseModel):
-    name: str = Field(default="Mi Wallet GigChain", description="Name for the wallet")
-
-class CreateWalletResponse(BaseModel):
-    success: bool
-    wallet: Optional[Dict[str, Any]] = None
-    error: Optional[str] = None
-
-class GetWalletResponse(BaseModel):
-    success: bool
-    wallet: Optional[Dict[str, Any]] = None
-    has_wallet: bool = False
-    error: Optional[str] = None
-
-class WalletTransactionRequest(BaseModel):
-    amount: float = Field(..., gt=0, description="Transaction amount")
-    transaction_type: str = Field(..., description="Transaction type")
-    description: Optional[str] = Field("", description="Transaction description")
-
-class WalletTransactionResponse(BaseModel):
-    success: bool
-    new_balance: Optional[float] = None
-    error: Optional[str] = None
-
-class HealthResponse(BaseModel):
-    status: str
-    timestamp: str
-    service: str
-    version: str
-    ai_agents_active: bool
+# ==================== EXCEPTION HANDLERS ====================
 
 # Global exception handler for custom exceptions
 @app.exception_handler(GigChainBaseException)
@@ -498,7 +324,8 @@ async def log_requests(request: Request, call_next):
     logger.info(f"{request.method} {request.url.path} - {response.status_code} - {process_time:.3f}s")
     return response
 
-# Health check endpoint
+# ==================== HEALTH CHECK ====================
+
 @app.get("/health")
 async def health_check(request: Request):
     """Health check endpoint with AI agent status."""
@@ -509,7 +336,9 @@ async def health_check(request: Request):
         "timestamp": datetime.now().isoformat(),
         "service": "GigChain API",
         "version": "1.0.0",
-        "ai_agents_active": bool(os.getenv('OPENAI_API_KEY'))
+        "ai_agents_active": is_ai_agents_enabled(),
+        "environment": config.server.environment.value,
+        "debug_mode": config.server.debug
     }
     
     return APIResponseWrapper.success(
@@ -517,1789 +346,10 @@ async def health_check(request: Request):
         request_id=request_id
     )
 
-# ==================== W-CSAP AUTHENTICATION ENDPOINTS ====================
+# ==================== ERROR HANDLERS ====================
 
-@app.post("/api/auth/challenge", response_model=AuthChallengeResponse)
-async def auth_challenge(request: Request, body: AuthChallengeRequest):
-    """
-    Step 1: Initiate authentication by requesting a challenge.
-    The challenge must be signed by the user's wallet.
-    
-    Returns a unique challenge message to be signed.
-    """
-    try:
-        # Get or initialize authenticator (for test compatibility)
-        if not hasattr(request.app.state, 'authenticator'):
-            secret_key = os.getenv('W_CSAP_SECRET_KEY')
-            if not secret_key:
-                raise HTTPException(
-                    status_code=500,
-                    detail="Authentication system not properly configured"
-                )
-            request.app.state.authenticator = WCSAPAuthenticator(
-                secret_key=secret_key,
-                challenge_ttl=300,
-                session_ttl=86400,
-                refresh_ttl=604800
-            )
-            request.app.state.auth_db = get_database()
-        
-        authenticator: WCSAPAuthenticator = request.app.state.authenticator
-        db = request.app.state.auth_db
-        
-        # Get client info
-        ip_address = request.client.host if request.client else None
-        user_agent = request.headers.get("user-agent")
-        
-        # Generate challenge
-        challenge = authenticator.initiate_authentication(
-            wallet_address=body.wallet_address,
-            ip_address=ip_address,
-            user_agent=user_agent
-        )
-        
-        # Save to database
-        db.save_challenge(
-            challenge_id=challenge.challenge_id,
-            wallet_address=challenge.wallet_address,
-            challenge_message=challenge.challenge_message,
-            nonce=challenge.nonce,
-            issued_at=challenge.issued_at,
-            expires_at=challenge.expires_at,
-            ip_address=ip_address,
-            user_agent=user_agent,
-            metadata=challenge.metadata
-        )
-        
-        # Log event
-        db.log_auth_event(
-            wallet_address=body.wallet_address,
-            event_type="challenge_requested",
-            success=True,
-            challenge_id=challenge.challenge_id,
-            ip_address=ip_address,
-            user_agent=user_agent
-        )
-        
-        # Security audit log
-        audit_logger.log_event(
-            event_type=AuditEventType.AUTH_CHALLENGE_REQUESTED,
-            severity=AuditSeverity.INFO,
-            wallet_address=body.wallet_address,
-            ip_address=ip_address,
-            user_agent=user_agent,
-            event_data={"challenge_id": challenge.challenge_id},
-            success=True
-        )
-        
-        logger.info(f"🎯 Challenge generated for {body.wallet_address[:10]}...")
-        
-        return AuthChallengeResponse(
-            success=True,
-            challenge_id=challenge.challenge_id,
-            wallet_address=challenge.wallet_address,
-            challenge_message=challenge.challenge_message,
-            nonce=challenge.nonce,
-            issued_at=challenge.issued_at,
-            expires_at=challenge.expires_at,
-            expires_in=int(challenge.expires_at - challenge.issued_at),
-            metadata=challenge.metadata
-        )
-        
-    except Exception as e:
-        logger.error(f"Challenge generation error: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to generate authentication challenge"
-        )
-
-@app.post("/api/auth/verify")
-async def auth_verify(request: Request, body: AuthVerifyRequest):
-    """
-    Step 2: Verify the signed challenge and create a session.
-    
-    Returns session tokens for authenticated access.
-    """
-    try:
-        authenticator: WCSAPAuthenticator = request.app.state.authenticator
-        db = request.app.state.auth_db
-        
-        # Get client info
-        ip_address = request.client.host if request.client else None
-        user_agent = request.headers.get("user-agent")
-        
-        # Complete authentication (with database fallback)
-        session_assertion = authenticator.complete_authentication(
-            challenge_id=body.challenge_id,
-            signature=body.signature,
-            wallet_address=body.wallet_address,
-            db=db
-        )
-        
-        if not session_assertion:
-            # Log failed attempt
-            db.log_auth_event(
-                wallet_address=body.wallet_address,
-                event_type="authentication_failed",
-                success=False,
-                challenge_id=body.challenge_id,
-                error_message="Invalid signature or expired challenge",
-                ip_address=ip_address,
-                user_agent=user_agent
-            )
-            
-            # Security audit log - WARNING level for failed auth
-            audit_logger.log_event(
-                event_type=AuditEventType.AUTH_FAILURE,
-                severity=AuditSeverity.WARNING,
-                wallet_address=body.wallet_address,
-                ip_address=ip_address,
-                user_agent=user_agent,
-                event_data={"challenge_id": body.challenge_id},
-                success=False,
-                error_message="Invalid signature or expired challenge"
-            )
-            
-            logger.warning(f"❌ Authentication failed for {body.wallet_address[:10]}...")
-            
-            request_id = getattr(request.scope, 'request_id', str(uuid.uuid4()))
-            
-            return create_auth_error(
-                message="Invalid signature or expired challenge",
-                request_id=request_id
-            )
-        
-        # Save session to database
-        db.save_session(
-            assertion_id=session_assertion.assertion_id,
-            wallet_address=session_assertion.wallet_address,
-            session_token=session_assertion.session_token,
-            refresh_token=session_assertion.refresh_token,
-            signature=session_assertion.signature,
-            issued_at=session_assertion.issued_at,
-            expires_at=session_assertion.expires_at,
-            not_before=session_assertion.not_before,
-            ip_address=ip_address,
-            user_agent=user_agent,
-            metadata=session_assertion.metadata
-        )
-        
-        # Log successful authentication
-        db.log_auth_event(
-            wallet_address=body.wallet_address,
-            event_type="authentication_success",
-            success=True,
-            challenge_id=body.challenge_id,
-            assertion_id=session_assertion.assertion_id,
-            ip_address=ip_address,
-            user_agent=user_agent
-        )
-        
-        # Update challenge status
-        db.update_challenge_status(body.challenge_id, "used")
-        
-        # Security audit log - Successful authentication
-        audit_logger.log_event(
-            event_type=AuditEventType.AUTH_SUCCESS,
-            severity=AuditSeverity.INFO,
-            wallet_address=body.wallet_address,
-            ip_address=ip_address,
-            user_agent=user_agent,
-            session_id=session_assertion.assertion_id,
-            event_data={"challenge_id": body.challenge_id},
-            success=True
-        )
-        
-        logger.info(f"✅ Authentication successful for {body.wallet_address[:10]}...")
-        
-        request_id = getattr(request.scope, 'request_id', str(uuid.uuid4()))
-        
-        auth_data = {
-            "session_token": session_assertion.session_token,
-            "refresh_token": session_assertion.refresh_token,
-            "wallet_address": session_assertion.wallet_address,
-            "expires_at": session_assertion.expires_at,
-            "expires_in": session_assertion.expires_at - session_assertion.issued_at
-        }
-        
-        return APIResponseWrapper.success(
-            data=auth_data,
-            request_id=request_id
-        )
-        
-    except Exception as e:
-        logger.error(f"Authentication verification error: {str(e)}")
-        request_id = getattr(request.scope, 'request_id', str(uuid.uuid4()))
-        
-        return create_server_error(
-            message="Failed to verify authentication",
-            request_id=request_id
-        )
-
-@app.post("/api/auth/refresh", response_model=AuthRefreshResponse)
-async def auth_refresh(request: Request, body: AuthRefreshRequest):
-    """
-    Refresh an expired session using a valid refresh token.
-    """
-    try:
-        authenticator: WCSAPAuthenticator = request.app.state.authenticator
-        db = request.app.state.auth_db
-        
-        # Refresh session
-        new_session = authenticator.refresh_session(
-            refresh_token=body.refresh_token,
-            old_session_token=body.session_token
-        )
-        
-        if not new_session:
-            logger.warning("❌ Session refresh failed")
-            return AuthRefreshResponse(
-                success=False,
-                error="Invalid refresh token or session"
-            )
-        
-        # Save new session to database
-        ip_address = request.client.host if request.client else None
-        user_agent = request.headers.get("user-agent")
-        
-        db.save_session(
-            assertion_id=new_session.assertion_id,
-            wallet_address=new_session.wallet_address,
-            session_token=new_session.session_token,
-            refresh_token=new_session.refresh_token,
-            signature=new_session.signature,
-            issued_at=new_session.issued_at,
-            expires_at=new_session.expires_at,
-            not_before=new_session.not_before,
-            ip_address=ip_address,
-            user_agent=user_agent,
-            metadata=new_session.metadata
-        )
-        
-        # Log refresh event
-        db.log_auth_event(
-            wallet_address=new_session.wallet_address,
-            event_type="session_refreshed",
-            success=True,
-            assertion_id=new_session.assertion_id,
-            ip_address=ip_address,
-            user_agent=user_agent
-        )
-        
-        logger.info(f"🔄 Session refreshed for {new_session.wallet_address[:10]}...")
-        
-        return AuthRefreshResponse(
-            success=True,
-            session_token=new_session.session_token,
-            refresh_token=new_session.refresh_token,
-            expires_at=new_session.expires_at,
-            expires_in=new_session.expires_at - new_session.issued_at
-        )
-        
-    except Exception as e:
-        logger.error(f"Session refresh error: {str(e)}")
-        return AuthRefreshResponse(
-            success=False,
-            error="Failed to refresh session"
-        )
-
-@app.get("/api/auth/status", response_model=AuthStatusResponse)
-async def auth_status(wallet: Optional[Dict[str, Any]] = Depends(get_optional_wallet)):
-    """
-    Check authentication status for current session.
-    """
-    if not wallet:
-        return AuthStatusResponse(authenticated=False)
-    
-    return AuthStatusResponse(
-        authenticated=True,
-        wallet_address=wallet["address"],
-        expires_in=wallet["expires_in"],
-        session_info={
-            "assertion_id": wallet["assertion_id"],
-            "expires_at": wallet["expires_at"]
-        }
-    )
-
-@app.post("/api/auth/logout")
-async def auth_logout(request: Request, wallet: Dict[str, Any] = Depends(get_current_wallet)):
-    """
-    Logout and invalidate current session.
-    """
-    try:
-        authenticator: WCSAPAuthenticator = request.app.state.authenticator
-        db = request.app.state.auth_db
-        
-        # Get session token from wallet info
-        session = wallet.get("session")
-        if session:
-            # Invalidate in database
-            db.invalidate_session(session["assertion_id"])
-        
-        # Log logout event
-        db.log_auth_event(
-            wallet_address=wallet["address"],
-            event_type="logout",
-            success=True,
-            assertion_id=wallet.get("assertion_id"),
-            ip_address=request.client.host if request.client else None,
-            user_agent=request.headers.get("user-agent")
-        )
-        
-        logger.info(f"👋 Logout successful for {wallet['address'][:10]}...")
-        
-        return {"success": True, "message": "Logged out successfully"}
-        
-    except Exception as e:
-        logger.error(f"Logout error: {str(e)}")
-        return {"success": False, "error": "Failed to logout"}
-
-@app.get("/api/auth/sessions")
-async def get_user_sessions(wallet: Dict[str, Any] = Depends(get_current_wallet)):
-    """
-    Get all active sessions for the authenticated wallet.
-    """
-    try:
-        db = get_database()
-        sessions = db.get_active_sessions_by_wallet(wallet["address"])
-        
-        return {
-            "wallet_address": wallet["address"],
-            "active_sessions": len(sessions),
-            "sessions": [
-                {
-                    "assertion_id": s["assertion_id"],
-                    "created_at": s["created_at"],
-                    "last_activity": s["last_activity"],
-                    "expires_at": s["expires_at"],
-                    "ip_address": s["ip_address"],
-                    "user_agent": s["user_agent"]
-                }
-                for s in sessions
-            ]
-        }
-        
-    except Exception as e:
-        logger.error(f"Get sessions error: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to retrieve sessions")
-
-# ==================== GIGCHAIN INTERNAL WALLETS ENDPOINTS ====================
-
-@app.post("/api/wallets/create", response_model=CreateWalletResponse)
-async def create_internal_wallet(
-    request: CreateWalletRequest,
-    wallet: Dict[str, Any] = Depends(get_current_wallet)
-):
-    """
-    Create a new internal GigChain wallet for the authenticated user.
-    Limited to 1 wallet per user (future: paid upgrade for more wallets).
-    """
-    try:
-        wallet_manager = get_wallet_manager()
-        user_address = wallet["address"]
-        
-        # Check if user already has a wallet
-        wallet_count = wallet_manager.count_user_wallets(user_address)
-        if wallet_count >= 1:
-            return CreateWalletResponse(
-                success=False,
-                error="Ya tienes una wallet de GigChain. Actualiza a Premium para tener más wallets."
-            )
-        
-        # Create wallet
-        new_wallet = wallet_manager.create_wallet(
-            user_address=user_address,
-            name=request.name
-        )
-        
-        if not new_wallet:
-            return CreateWalletResponse(
-                success=False,
-                error="Error al crear la wallet. Intenta de nuevo."
-            )
-        
-        logger.info(f"✅ Created wallet for user {user_address[:10]}...")
-        
-        return CreateWalletResponse(
-            success=True,
-            wallet=new_wallet.to_dict()
-        )
-        
-    except ValueError as e:
-        logger.warning(f"⚠️ Wallet creation validation error: {str(e)}")
-        return CreateWalletResponse(
-            success=False,
-            error=str(e)
-        )
-    except Exception as e:
-        logger.error(f"❌ Error creating wallet: {str(e)}")
-        return CreateWalletResponse(
-            success=False,
-            error="Error al crear la wallet"
-        )
-
-@app.get("/api/wallets/me", response_model=GetWalletResponse)
-async def get_my_wallet(wallet: Dict[str, Any] = Depends(get_current_wallet)):
-    """
-    Get the authenticated user's internal GigChain wallet.
-    """
-    try:
-        wallet_manager = get_wallet_manager()
-        user_address = wallet["address"]
-        
-        # Get user's wallet
-        user_wallet = wallet_manager.get_wallet_by_user(user_address)
-        
-        if not user_wallet:
-            return GetWalletResponse(
-                success=True,
-                has_wallet=False,
-                wallet=None
-            )
-        
-        return GetWalletResponse(
-            success=True,
-            has_wallet=True,
-            wallet=user_wallet.to_dict()
-        )
-        
-    except Exception as e:
-        logger.error(f"❌ Error getting wallet: {str(e)}")
-        return GetWalletResponse(
-            success=False,
-            has_wallet=False,
-            error="Error al obtener la wallet"
-        )
-
-@app.get("/api/wallets/{wallet_address}")
-async def get_wallet_by_address(
-    wallet_address: str,
-    current_wallet: Dict[str, Any] = Depends(get_current_wallet)
-):
-    """
-    Get wallet information by GigChain wallet address.
-    Only the wallet owner can view full details.
-    """
-    try:
-        wallet_manager = get_wallet_manager()
-        
-        # Get wallet
-        target_wallet = wallet_manager.get_wallet_by_address(wallet_address)
-        
-        if not target_wallet:
-            raise HTTPException(status_code=404, detail="Wallet no encontrada")
-        
-        # Check if requester is the owner
-        is_owner = target_wallet.user_address == current_wallet["address"]
-        
-        if not is_owner:
-            # Return limited information for non-owners
-            return {
-                "success": True,
-                "wallet": {
-                    "wallet_address": target_wallet.wallet_address,
-                    "name": target_wallet.name,
-                    "is_active": target_wallet.is_active
-                }
-            }
-        
-        # Return full information for owner
-        return {
-            "success": True,
-            "wallet": target_wallet.to_dict()
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"❌ Error getting wallet by address: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error al obtener la wallet")
-
-@app.get("/api/wallets/{wallet_address}/transactions")
-async def get_wallet_transactions(
-    wallet_address: str,
-    limit: int = 50,
-    current_wallet: Dict[str, Any] = Depends(get_current_wallet)
-):
-    """
-    Get transaction history for a wallet.
-    Only the wallet owner can view transactions.
-    """
-    try:
-        wallet_manager = get_wallet_manager()
-        
-        # Verify ownership
-        target_wallet = wallet_manager.get_wallet_by_address(wallet_address)
-        if not target_wallet:
-            raise HTTPException(status_code=404, detail="Wallet no encontrada")
-        
-        if target_wallet.user_address != current_wallet["address"]:
-            raise HTTPException(status_code=403, detail="No autorizado")
-        
-        # Get transactions
-        transactions = wallet_manager.get_transactions(wallet_address, limit)
-        
-        return {
-            "success": True,
-            "wallet_address": wallet_address,
-            "transactions": transactions
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"❌ Error getting transactions: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error al obtener transacciones")
-
-@app.post("/api/wallets/{wallet_address}/transaction", response_model=WalletTransactionResponse)
-async def add_wallet_transaction(
-    wallet_address: str,
-    request: WalletTransactionRequest,
-    current_wallet: Dict[str, Any] = Depends(get_current_wallet)
-):
-    """
-    Add a transaction to a wallet (for testing/admin purposes).
-    Only the wallet owner can add transactions.
-    """
-    try:
-        wallet_manager = get_wallet_manager()
-        
-        # Verify ownership
-        target_wallet = wallet_manager.get_wallet_by_address(wallet_address)
-        if not target_wallet:
-            return WalletTransactionResponse(
-                success=False,
-                error="Wallet no encontrada"
-            )
-        
-        if target_wallet.user_address != current_wallet["address"]:
-            return WalletTransactionResponse(
-                success=False,
-                error="No autorizado"
-            )
-        
-        # Update balance
-        success = wallet_manager.update_balance(
-            wallet_address=wallet_address,
-            amount=request.amount,
-            transaction_type=request.transaction_type,
-            description=request.description
-        )
-        
-        if not success:
-            return WalletTransactionResponse(
-                success=False,
-                error="Error al procesar la transacción"
-            )
-        
-        # Get updated wallet
-        updated_wallet = wallet_manager.get_wallet_by_address(wallet_address)
-        
-        return WalletTransactionResponse(
-            success=True,
-            new_balance=updated_wallet.balance if updated_wallet else None
-        )
-        
-    except Exception as e:
-        logger.error(f"❌ Error adding transaction: {str(e)}")
-        return WalletTransactionResponse(
-            success=False,
-            error="Error al agregar transacción"
-        )
-
-@app.delete("/api/wallets/{wallet_address}")
-async def deactivate_wallet(
-    wallet_address: str,
-    current_wallet: Dict[str, Any] = Depends(get_current_wallet)
-):
-    """
-    Deactivate a wallet (soft delete).
-    Only the wallet owner can deactivate their wallet.
-    """
-    try:
-        wallet_manager = get_wallet_manager()
-        
-        # Verify ownership
-        target_wallet = wallet_manager.get_wallet_by_address(wallet_address)
-        if not target_wallet:
-            raise HTTPException(status_code=404, detail="Wallet no encontrada")
-        
-        if target_wallet.user_address != current_wallet["address"]:
-            raise HTTPException(status_code=403, detail="No autorizado")
-        
-        # Deactivate
-        success = wallet_manager.deactivate_wallet(wallet_address)
-        
-        if not success:
-            raise HTTPException(status_code=500, detail="Error al desactivar wallet")
-        
-        logger.info(f"✅ Deactivated wallet {wallet_address}")
-        
-        return {
-            "success": True,
-            "message": "Wallet desactivada exitosamente"
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"❌ Error deactivating wallet: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error al desactivar wallet")
-
-@app.get("/api/auth/stats")
-async def get_auth_stats():
-    """
-    Get authentication system statistics (public endpoint).
-    """
-    try:
-        db = get_database()
-        stats = db.get_statistics()
-        
-        return {
-            "protocol": "W-CSAP",
-            "version": "1.0.0",
-            "statistics": stats,
-            "timestamp": datetime.now().isoformat()
-        }
-        
-    except Exception as e:
-        logger.error(f"Get stats error: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to retrieve statistics")
-
-# ==================== END W-CSAP ENDPOINTS ====================
-
-# Main AI-powered contract generation
-@app.post("/api/full_flow")
-async def api_full_flow(request: ContractRequest):
-    """
-    Generate AI-powered contract with agent chaining.
-    
-    Uses NegotiationAgent, ContractGeneratorAgent, and DisputeResolverAgent
-    for complex contract negotiations and generation.
-    """
-    try:
-        # Validate input
-        is_valid, errors = validator.validate_contract_request(request.dict())
-        if not is_valid:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Invalid input: {'; '.join(errors)}"
-            )
-        
-        logger.info(f"Processing AI contract request: {request.text[:100]}...")
-        
-        # Process with full AI flow
-        result = full_flow(request.text)
-        
-        # Save to contracts database for dashboard integration
-        try:
-            contract_id = result.get('contract_id', f"gig_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
-            
-            # Save to dashboard database
-            user_address = None  # TODO: Get from authentication when implemented
-            dashboard_saved = save_contract_to_dashboard(
-                contract_id, 
-                {'text': request.text, 'result': result}, 
-                user_address
-            )
-            
-            if dashboard_saved:
-                logger.info(f"✅ Full flow contract saved to dashboard: {contract_id}")
-            else:
-                logger.warning(f"⚠️ Failed to save full flow contract to dashboard: {contract_id}")
-            
-        except Exception as db_error:
-            logger.warning(f"Failed to save full flow contract to database: {db_error}")
-            # Continue without failing the request
-        
-        # Add API metadata
-        result['api_metadata'] = {
-            'timestamp': datetime.now().isoformat(),
-            'endpoint': 'full_flow',
-            'ai_agents_used': 'json' in result,
-            'processing_time': 'calculated_by_client',
-            'database_saved': True
-        }
-        
-        # Audit log contract creation
-        audit_logger.log_event(
-            event_type=AuditEventType.CONTRACT_CREATED,
-            severity=AuditSeverity.INFO,
-            event_data={
-                "contract_id": result.get('contract_id', 'unknown'),
-                "endpoint": "full_flow",
-                "has_ai": True
-            },
-            success=True
-        )
-        
-        logger.info(f"Successfully generated contract: {result.get('contract_id', 'unknown')}")
-        return result
-        
-    except ValueError as e:
-        logger.error(f"Validation error: {str(e)}")
-        raise HTTPException(status_code=400, detail=f"Validation error: {str(e)}")
-        
-    except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal server error occurred")
-
-# Simple rule-based contract generation
-@app.post("/api/contract")
-async def api_simple_contract(request: SimpleContractRequest):
-    """
-    Generate simple rule-based contract without AI agents.
-    
-    Faster response for simple contracts without complex negotiations.
-    """
-    try:
-        # Validate input
-        is_valid, error = validator.validate_text(request.text, 'text')
-        if not is_valid:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Invalid input: {error}"
-            )
-        
-        logger.info(f"Processing simple contract: {request.text[:100]}...")
-        
-        # Process with rule-based generation only
-        result = generate_contract(request.text)
-        
-        # Save to contracts database for dashboard integration
-        try:
-            contract_id = result.get('contract_id', f"simple_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
-            
-            # Save to dashboard database
-            user_address = None  # TODO: Get from authentication when implemented
-            dashboard_saved = save_contract_to_dashboard(
-                contract_id, 
-                {'text': request.text, 'result': result}, 
-                user_address
-            )
-            
-            if dashboard_saved:
-                logger.info(f"✅ Simple contract saved to dashboard: {contract_id}")
-            else:
-                logger.warning(f"⚠️ Failed to save simple contract to dashboard: {contract_id}")
-            
-        except Exception as db_error:
-            logger.warning(f"Failed to save simple contract to database: {db_error}")
-            # Continue without failing the request
-        
-        # Add API metadata
-        result['api_metadata'] = {
-            'timestamp': datetime.now().isoformat(),
-            'endpoint': 'contract',
-            'ai_agents_used': False,
-            'processing_time': 'calculated_by_client',
-            'database_saved': True
-        }
-        
-        # Audit log simple contract creation
-        audit_logger.log_event(
-            event_type=AuditEventType.CONTRACT_CREATED,
-            severity=AuditSeverity.INFO,
-            event_data={
-                "contract_id": result.get('contract_id', 'unknown'),
-                "endpoint": "contract",
-                "has_ai": False
-            },
-            success=True
-        )
-        
-        logger.info("Successfully generated simple contract")
-        return result
-        
-    except ValueError as e:
-        logger.error(f"Validation error: {str(e)}")
-        raise HTTPException(status_code=400, detail=f"Validation error: {str(e)}")
-        
-    except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal server error occurred")
-
-# Structured contract generation endpoint
-@app.post("/api/structured_contract")
-async def api_structured_contract(request: StructuredContractRequest):
-    """
-    Generate a contract from structured form data.
-    
-    Accepts individual form fields and constructs the contract text internally.
-    """
-    try:
-        # Validate input
-        is_valid, errors = validator.validate_contract_request(request.dict())
-        if not is_valid:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Invalid input: {'; '.join(errors)}"
-            )
-        
-        logger.info(f"Processing structured contract for role: {request.role}")
-        
-        # Construct text from structured data
-        try:
-            constructed_text = construct_text_from_structured_data(request)
-            logger.info(f"Constructed text length: {len(constructed_text)}")
-        except Exception as e:
-            logger.error(f"Error constructing text: {str(e)}")
-            raise HTTPException(status_code=400, detail=f"Error processing form data: {str(e)}")
-        
-        # Generate contract using the AI module
-        try:
-            result = generate_contract(constructed_text)
-            logger.info(f"Contract generated successfully, keys: {list(result.keys())}")
-        except Exception as e:
-            logger.error(f"Error generating contract: {str(e)}")
-            raise HTTPException(status_code=500, detail=f"Error generating contract: {str(e)}")
-        
-        # Generate contract_id if not present
-        if 'contract_id' not in result:
-            contract_id = f"gig_{datetime.now().isoformat().replace(':', '-').replace('.', '-')}"
-            result['contract_id'] = contract_id
-        
-        # Add structured data to response for reference
-        result["formData"] = {
-            "description": request.description,
-            "offeredAmount": request.offeredAmount,
-            "requestedAmount": request.requestedAmount,
-            "days": request.days,
-            "role": request.role,
-            "freelancerWallet": request.freelancerWallet,
-            "clientWallet": request.clientWallet,
-            # Freelancer Profile
-            "freelancerName": request.freelancerName,
-            "freelancerTitle": request.freelancerTitle,
-            "freelancerBio": request.freelancerBio,
-            "freelancerSkills": request.freelancerSkills,
-            "freelancerExperience": request.freelancerExperience,
-            "freelancerLocation": request.freelancerLocation,
-            "freelancerRate": request.freelancerRate,
-            # Social Links
-            "freelancerX": request.freelancerX,
-            "freelancerFacebook": request.freelancerFacebook,
-            "freelancerInstagram": request.freelancerInstagram,
-            "freelancerTikTok": request.freelancerTikTok,
-            "freelancerLinkedIn": request.freelancerLinkedIn,
-            "freelancerGithub": request.freelancerGithub,
-            "freelancerPortfolio": request.freelancerPortfolio,
-            # Client Profile
-            "clientName": request.clientName,
-            "clientCompany": request.clientCompany,
-            "clientBio": request.clientBio,
-            "clientLocation": request.clientLocation
-        }
-        
-        # Save to contracts database for dashboard integration
-        try:
-            contract_id = result.get('contract_id')
-            logger.info(f"Saving contract {contract_id} for role: {request.role}")
-            
-            # Save to dashboard database with form data
-            dashboard_saved = save_contract_to_dashboard(
-                contract_id, 
-                {
-                    'text': constructed_text,
-                    'formData': result['formData'],
-                    'result': result
-                }
-            )
-            
-            if dashboard_saved:
-                logger.info(f"Structured contract saved to dashboard: {contract_id}")
-            else:
-                logger.warning(f"Failed to save structured contract to dashboard: {contract_id}")
-            
-        except Exception as db_error:
-            logger.error(f"Error saving structured contract to database: {str(db_error)}")
-            # Continue without failing the request
-        
-        # Add API metadata
-        result['api_metadata'] = {
-            'timestamp': datetime.now().isoformat(),
-            'endpoint': 'structured_contract',
-            'ai_agents_used': False,
-            'processing_time': 'calculated_by_client',
-            'database_saved': True
-        }
-        
-        # Audit log structured contract creation
-        audit_logger.log_event(
-            event_type=AuditEventType.CONTRACT_CREATED,
-            severity=AuditSeverity.INFO,
-            event_data={
-                "contract_id": result.get('contract_id', 'unknown'),
-                "endpoint": "structured_contract",
-                "role": request.role,
-                "has_ai": False
-            },
-            success=True
-        )
-        
-        logger.info("Successfully generated structured contract")
-        return result
-        
-    except ValueError as e:
-        logger.error(f"Validation error: {str(e)}")
-        raise HTTPException(status_code=400, detail=f"Validation error: {str(e)}")
-        
-    except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal server error occurred")
-
-# Wallet validation endpoint
-@app.post("/api/validate_wallet", response_model=WalletValidationResponse)
-async def validate_wallet(request: WalletValidationRequest):
-    """Validate a wallet address and check its status on the specified network."""
-    try:
-        logger.info(f"Validating wallet: {request.address[:10]}... on {request.network}")
-        
-        # Basic format validation
-        if not request.address.startswith('0x') or len(request.address) != 42:
-            return WalletValidationResponse(
-                valid=False,
-                address=request.address,
-                network=request.network,
-                error="Invalid address format. Must be 42 characters starting with 0x."
-            )
-        
-        # Check if address contains only valid hex characters
-        if not all(c in '0123456789abcdefABCDEF' for c in request.address[2:]):
-            return WalletValidationResponse(
-                valid=False,
-                address=request.address,
-                network=request.network,
-                error="Invalid address format. Must contain only hexadecimal characters."
-            )
-        
-        # For now, we'll do basic validation
-        # In a real implementation, you would:
-        # 1. Check if the address exists on the blockchain
-        # 2. Verify it's a valid contract or EOA
-        # 3. Check balance if needed
-        # 4. Verify network compatibility
-        
-        # Simulate network validation
-        if request.network.lower() not in ['polygon', 'ethereum', 'mumbai']:
-            return WalletValidationResponse(
-                valid=False,
-                address=request.address,
-                network=request.network,
-                error=f"Unsupported network: {request.network}"
-            )
-        
-        # For demo purposes, we'll consider valid addresses as valid
-        # In production, you'd integrate with web3 libraries or APIs
-        logger.info(f"Wallet validation successful for {request.address[:10]}...")
-        
-        return WalletValidationResponse(
-            valid=True,
-            address=request.address,
-            network=request.network,
-            error=None,
-            balance=None  # Would be populated with actual balance check
-        )
-        
-    except Exception as e:
-        logger.error(f"Wallet validation error: {str(e)}")
-        return WalletValidationResponse(
-            valid=False,
-            address=request.address,
-            network=request.network,
-            error=f"Validation failed: {str(e)}"
-        )
-
-# Agent status endpoint
-@app.get("/api/agents/status")
-async def agents_status():
-    """Check AI agent availability and configuration."""
-    return get_agent_status()
-
-# AI Agents Management Endpoints
-@app.post("/api/agents/{agent_id}/toggle")
-async def toggle_agent(agent_id: int, enabled: bool):
-    """
-    Toggle AI agent on/off.
-    This controls whether the agent is active for processing requests.
-    """
-    try:
-        # Get current agent status
-        status = get_agent_status()
-        agents = status.get("available_agents", [])
-        
-        # Find the agent
-        agent = next((a for i, a in enumerate(agents) if i == agent_id - 1), None)
-        if not agent:
-            raise HTTPException(status_code=404, detail="Agent not found")
-        
-        # Update agent status (in production, this would update database)
-        new_status = "active" if enabled else "inactive"
-        
-        logger.info(f"Agent {agent['name']} toggled to {new_status}")
-        
-        return {
-            "success": True,
-            "agent_id": agent_id,
-            "agent_name": agent["name"],
-            "status": new_status,
-            "message": f"Agent {agent['name']} {'activated' if enabled else 'deactivated'} successfully"
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error toggling agent: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to toggle agent")
-
-@app.post("/api/agents/{agent_id}/configure")
-async def configure_agent(agent_id: int, config: Dict[str, Any]):
-    """
-    Configure AI agent parameters.
-    Allows customization of agent behavior, temperature, and other settings.
-    """
-    try:
-        # Get current agent status
-        status = get_agent_status()
-        agents = status.get("available_agents", [])
-        
-        # Find the agent
-        agent = next((a for i, a in enumerate(agents) if i == agent_id - 1), None)
-        if not agent:
-            raise HTTPException(status_code=404, detail="Agent not found")
-        
-        # Validate configuration
-        valid_config_keys = ["temperature", "model", "max_tokens", "system_prompt"]
-        filtered_config = {k: v for k, v in config.items() if k in valid_config_keys}
-        
-        if not filtered_config:
-            raise HTTPException(status_code=400, detail="No valid configuration parameters provided")
-        
-        logger.info(f"Agent {agent['name']} configured with: {filtered_config}")
-        
-        return {
-            "success": True,
-            "agent_id": agent_id,
-            "agent_name": agent["name"],
-            "configuration": filtered_config,
-            "message": f"Agent {agent['name']} configured successfully"
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error configuring agent: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to configure agent")
-
-@app.post("/api/agents/{agent_id}/test")
-async def test_agent(agent_id: int, test_input: Dict[str, Any]):
-    """
-    Test AI agent with sample input.
-    Returns agent response for testing and debugging purposes.
-    """
-    try:
-        from agents import (
-            NegotiationAgent, 
-            ContractGeneratorAgent, 
-            DisputeResolverAgent, 
-            QualityAgent, 
-            PaymentAgent,
-            AgentInput
-        )
-        
-        # Get current agent status
-        status = get_agent_status()
-        agents = status.get("available_agents", [])
-        
-        # Find the agent
-        agent = next((a for i, a in enumerate(agents) if i == agent_id - 1), None)
-        if not agent:
-            raise HTTPException(status_code=404, detail="Agent not found")
-        
-        # Map agent ID to agent class
-        agent_classes = {
-            0: NegotiationAgent,
-            1: ContractGeneratorAgent,
-            2: QualityAgent,
-            3: PaymentAgent,
-            4: DisputeResolverAgent
-        }
-        
-        agent_class = agent_classes.get(agent_id - 1)
-        if not agent_class:
-            raise HTTPException(status_code=400, detail="Agent not testable")
-        
-        # Create test input
-        if agent_id == 1:  # NegotiationAgent
-            from contract_ai import parse_input, _detect_role, _determine_total_amount, _extract_days, _derive_risks, parsed_to_dict
-            text = test_input.get("text", "Cliente ofrece $1000 por proyecto en 10 días")
-            parsed = parse_input(text)
-            role = _detect_role(text)
-            total_amount = _determine_total_amount(parsed, role) or 1000.0
-            total_days = _extract_days(text) or 10
-            risks = _derive_risks(total_days, parsed)
-            
-            test_data = AgentInput(
-                parsed=parsed_to_dict(parsed, role, total_amount, total_days, risks),
-                role=role or "cliente",
-                complexity="medium"
-            )
-            result = agent_class().run(test_data)
-        else:
-            # For other agents, use provided test input
-            result = agent_class().run(test_input)
-        
-        logger.info(f"Agent {agent['name']} tested successfully")
-        
-        return {
-            "success": True,
-            "agent_id": agent_id,
-            "agent_name": agent["name"],
-            "test_result": result,
-            "message": f"Agent {agent['name']} test completed successfully"
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error testing agent: {str(e)}")
-        return JSONResponse(
-            status_code=500,
-            content={
-                "success": False,
-                "error": f"Agent test failed: {str(e)}",
-                "fallback_response": "Agent is currently unavailable. Please ensure OpenAI API key is configured."
-            }
-        )
-
-# Template security endpoints
-@app.post("/api/templates/validate")
-async def validate_template(request: TemplateValidationRequest):
-    """
-    Valida la seguridad de una plantilla JSON antes de procesarla.
-    Endpoint crítico para prevenir ejecución de código malicioso.
-    """
-    try:
-        logger.info(f"Validating template for user: {request.user_id or 'anonymous'}")
-        
-        # Validar seguridad de la plantilla
-        validation_result = validate_template_security(request.template_json)
-        
-        # Log de seguridad
-        if not validation_result.is_valid:
-            logger.warning(f"Template validation failed for user {request.user_id}: {validation_result.errors}")
-        else:
-            logger.info(f"Template validation successful for user {request.user_id}, score: {validation_result.security_score}")
-        
-        return {
-            "valid": validation_result.is_valid,
-            "security_score": validation_result.security_score,
-            "sanitized_template": validation_result.sanitized_data,
-            "errors": validation_result.errors or [],
-            "warnings": validation_result.warnings or [],
-            "timestamp": datetime.now().isoformat()
-        }
-        
-    except Exception as e:
-        logger.error(f"Template validation error: {str(e)}")
-        return JSONResponse(
-            status_code=500,
-            content={
-                "valid": False,
-                "error": "Error interno validando plantilla",
-                "security_score": 0,
-                "timestamp": datetime.now().isoformat()
-            }
-        )
-
-@app.post("/api/templates/upload")
-async def upload_template(request: TemplateUploadRequest):
-    """
-    Sube una plantilla validada de manera segura.
-    Solo acepta plantillas pre-validadas por el endpoint /validate.
-    """
-    try:
-        logger.info(f"Uploading template for user: {request.user_id or 'anonymous'}")
-        
-        # Convertir a JSON string para validación
-        template_json = json.dumps(request.template_data, ensure_ascii=False)
-        
-        # Validar seguridad
-        validation_result = validate_template_security(template_json)
-        
-        if not validation_result.is_valid:
-            logger.warning(f"Template upload rejected for user {request.user_id}: {validation_result.errors}")
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "success": False,
-                    "error": "Plantilla no válida",
-                    "details": validation_result.errors,
-                    "security_score": validation_result.security_score
-                }
-            )
-        
-        # Generar ID único y metadatos
-        template_id = hashlib.sha256(template_json.encode()).hexdigest()[:16]
-        sanitized_template = validation_result.sanitized_data.copy()
-        
-        # Añadir metadatos de seguridad
-        sanitized_template.update({
-            "id": template_id,
-            "uploaded_at": datetime.now().isoformat(),
-            "uploaded_by": request.user_id or "anonymous",
-            "security_validated": True,
-            "security_score": validation_result.security_score
-        })
-        
-        # Aquí se guardaría en base de datos en producción
-        # Por ahora solo retornamos el template sanitizado
-        
-        logger.info(f"Template uploaded successfully: {template_id}")
-        
-        return {
-            "success": True,
-            "template_id": template_id,
-            "template": sanitized_template,
-            "security_score": validation_result.security_score,
-            "warnings": validation_result.warnings or [],
-            "timestamp": datetime.now().isoformat()
-        }
-        
-    except Exception as e:
-        logger.error(f"Template upload error: {str(e)}")
-        return JSONResponse(
-            status_code=500,
-            content={
-                "success": False,
-                "error": "Error interno subiendo plantilla",
-                "timestamp": datetime.now().isoformat()
-            }
-        )
-
-@app.get("/api/templates/security/info")
-async def template_security_info():
-    """
-    Información sobre las medidas de seguridad implementadas.
-    """
-    return {
-        "security_measures": [
-            "Validación de estructura JSON estricta",
-            "Whitelist de campos permitidos",
-            "Sanitización de contenido HTML/JS",
-            "Detección de patrones peligrosos",
-            "Límites de tamaño de archivo",
-            "Validación de tipos de datos",
-            "Escapado de caracteres especiales",
-            "Audit logging de seguridad"
-        ],
-        "allowed_fields": [
-            "name", "description", "category", "projectType", "skills",
-            "pricing", "timeline", "deliverables", "terms", "createdAt",
-            "id", "uploadedAt", "author", "rating", "downloads", "thumbnail"
-        ],
-        "max_file_size": "1MB",
-        "max_field_length": "10KB",
-        "security_score_threshold": 70,
-        "version": "1.0.0"
-    }
-
-# Chat AI endpoints
-@app.post("/api/chat/message", response_model=ChatResponse)
-async def send_chat_message(request: ChatMessage):
-    """
-    Envía un mensaje al chat con IA y obtiene respuesta.
-    Soporta múltiples tipos de agentes especializados con persistencia.
-    """
-    try:
-        # Validate and sanitize chat message
-        is_valid, error = sanitizer.validate_contract_input(request.message)
-        if not is_valid:
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "response": "Tu mensaje contiene contenido no permitido. Por favor, reformúlalo.",
-                    "session_id": request.session_id or str(uuid.uuid4()),
-                    "timestamp": datetime.now().isoformat(),
-                    "agent_type": "error",
-                    "suggestions": []
-                }
-            )
-        
-        # Sanitize message before AI processing
-        sanitized_message = sanitizer.sanitize_text(request.message)
-        logger.info(f"Processing chat message from user: {request.user_id or 'anonymous'}")
-        
-        # Generar o usar session_id existente
-        session_id = request.session_id or str(uuid.uuid4())
-        
-        # Si no existe la sesión, crearla
-        if not chat_manager.db.get_session(session_id):
-            chat_manager.create_session(
-                user_id=request.user_id,
-                agent_type=request.context.get("agent_type", "contract") if request.context else "contract"
-            )
-        
-        # Obtener respuesta del chat mejorado with sanitized message
-        response_data = await chat_manager.process_message(
-            message=sanitized_message,
-            session_id=session_id,
-            user_id=request.user_id,
-            context=request.context
-        )
-        
-        logger.info(f"Chat response generated for session: {session_id}")
-        
-        return ChatResponse(
-            response=response_data["response"],
-            session_id=response_data["session_id"],
-            timestamp=response_data["timestamp"],
-            agent_type=response_data["agent_type"],
-            suggestions=response_data.get("suggestions", [])
-        )
-        
-    except Exception as e:
-        logger.error(f"Chat message error: {str(e)}")
-        return JSONResponse(
-            status_code=500,
-            content={
-                "response": "Lo siento, hubo un error procesando tu mensaje. Por favor, inténtalo de nuevo.",
-                "session_id": request.session_id or str(uuid.uuid4()),
-                "timestamp": datetime.now().isoformat(),
-                "agent_type": "error",
-                "suggestions": ["¿Puedes repetir tu pregunta?", "¿Necesitas ayuda con contratos?"]
-            }
-        )
-
-@app.post("/api/chat/session")
-async def create_chat_session(user_id: Optional[str] = None, agent_type: str = "contract"):
-    """
-    Crea una nueva sesión de chat con persistencia.
-    """
-    try:
-        session_id = chat_manager.create_session(user_id, agent_type)
-        
-        return {
-            "session_id": session_id,
-            "agent_type": agent_type,
-            "created_at": datetime.now().isoformat(),
-            "message": "Sesión de chat creada exitosamente",
-            "available_agents": chat_manager.get_available_agents()
-        }
-        
-    except Exception as e:
-        logger.error(f"Chat session creation error: {str(e)}")
-        return JSONResponse(
-            status_code=500,
-            content={
-                "error": "Error creando sesión de chat",
-                "timestamp": datetime.now().isoformat()
-            }
-        )
-
-@app.get("/api/chat/session/{session_id}/history")
-async def get_chat_history(session_id: str, limit: int = 50):
-    """
-    Obtiene el historial de una sesión de chat con persistencia.
-    """
-    try:
-        history = chat_manager.get_session_history(session_id, limit)
-        
-        if not history:
-            return JSONResponse(
-                status_code=404,
-                content={
-                    "error": "Sesión no encontrada o sin historial",
-                    "timestamp": datetime.now().isoformat()
-                }
-            )
-        
-        return {
-            "session_id": session_id,
-            "history": history,
-            "message_count": len(history),
-            "timestamp": datetime.now().isoformat()
-        }
-        
-    except Exception as e:
-        logger.error(f"Chat history error: {str(e)}")
-        return JSONResponse(
-            status_code=500,
-            content={
-                "error": "Error obteniendo historial de chat",
-                "timestamp": datetime.now().isoformat()
-            }
-        )
-
-@app.put("/api/chat/session/{session_id}/agent")
-async def switch_chat_agent(session_id: str, agent_type: str):
-    """
-    Cambia el tipo de agente para una sesión de chat.
-    """
-    try:
-        success = chat_manager.switch_agent(session_id, agent_type)
-        
-        if not success:
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "error": "Tipo de agente no válido o sesión no encontrada",
-                    "available_agents": [agent["id"] for agent in chat_manager.get_available_agents()],
-                    "timestamp": datetime.now().isoformat()
-                }
-            )
-        
-        return {
-            "session_id": session_id,
-            "agent_type": agent_type,
-            "message": f"Agente cambiado a {agent_type}",
-            "timestamp": datetime.now().isoformat()
-        }
-        
-    except Exception as e:
-        logger.error(f"Chat agent switch error: {str(e)}")
-        return JSONResponse(
-            status_code=500,
-            content={
-                "error": "Error cambiando agente de chat",
-                "timestamp": datetime.now().isoformat()
-            }
-        )
-
-@app.get("/api/chat/agents")
-async def get_available_agents():
-    """
-    Obtiene la lista de agentes de IA disponibles.
-    """
-    try:
-        agents = chat_manager.get_available_agents()
-        
-        return {
-            "agents": agents,
-            "total": len(agents),
-            "timestamp": datetime.now().isoformat()
-        }
-        
-    except Exception as e:
-        logger.error(f"Get agents error: {str(e)}")
-        return JSONResponse(
-            status_code=500,
-            content={
-                "error": "Error obteniendo agentes disponibles",
-                "timestamp": datetime.now().isoformat()
-            }
-        )
-
-# WebSocket endpoint para chat en tiempo real
-@app.websocket("/ws/chat/{session_id}")
-async def websocket_chat(websocket: WebSocket, session_id: str):
-    """
-    WebSocket para chat en tiempo real con persistencia.
-    """
-    connection_id = str(uuid.uuid4())
-    
-    try:
-        await chat_manager.websocket_manager.connect(websocket, connection_id, session_id)
-        
-        while True:
-            # Recibir mensaje del cliente
-            data = await websocket.receive_text()
-            message_data = json.loads(data)
-            
-            # Procesar mensaje
-            response = await chat_manager.process_message(
-                message=message_data.get("message", ""),
-                session_id=session_id,
-                user_id=message_data.get("user_id"),
-                context=message_data.get("context", {})
-            )
-            
-            # Enviar respuesta (ya se envía automáticamente en process_message)
-            logger.info(f"WebSocket message processed for session {session_id}")
-            
-    except WebSocketDisconnect:
-        logger.info(f"WebSocket disconnected: {connection_id}")
-    except Exception as e:
-        logger.error(f"WebSocket error: {str(e)}")
-    finally:
-        chat_manager.websocket_manager.disconnect(connection_id, session_id)
-
-# Import profile management
-from profile_manager import (
-    get_profile_db, UserProfile, UserSkill, UserNFT,
-    ProfileDatabase
-)
-
-# Profile management endpoints (Development version - no auth required)
-@app.get("/api/profile/{wallet_address}")
-async def get_user_profile(wallet_address: str):
-    """Get user profile by wallet address."""
-    try:
-        profile_db = get_profile_db()
-        profile = profile_db.get_profile(wallet_address)
-        
-        if not profile:
-            return JSONResponse(
-                status_code=404,
-                content={"error": "Profile not found"}
-            )
-        
-        # Get additional data
-        skills = profile_db.get_skills(wallet_address)
-        nfts = profile_db.get_nfts(wallet_address)
-        
-        return {
-            "profile": {
-                "wallet_address": profile.wallet_address,
-                "display_name": profile.display_name,
-                "bio": profile.bio,
-                "avatar_url": profile.avatar_url,  # ✅ AGREGADO!
-                "location": profile.location,
-                "website": profile.website,
-                "twitter_handle": profile.twitter_handle,
-                "github_handle": profile.github_handle,
-                "linkedin_handle": profile.linkedin_handle,
-                "is_verified": profile.is_verified,
-                "verification_level": profile.verification_level,
-                "profile_completeness": profile.profile_completeness,
-                "current_tier": profile.current_tier,
-                "tier_progress": profile.tier_progress,
-                "total_xp": profile.total_xp,
-                "created_at": profile.created_at,
-                "updated_at": profile.updated_at,
-                "last_active": profile.last_active,
-                "preferences": profile.preferences,
-                "settings": profile.settings
-            },
-            "skills": [
-                {
-                    "wallet_address": skill.wallet_address,
-                    "skill_name": skill.skill_name,
-                    "skill_level": skill.skill_level,
-                    "endorsements": skill.endorsements,
-                    "is_verified": skill.is_verified,
-                    "created_at": skill.created_at
-                } for skill in skills
-            ],
-            "nfts": [
-                {
-                    "wallet_address": nft.wallet_address,
-                    "nft_name": nft.nft_name,
-                    "nft_type": nft.nft_type,
-                    "tier_level": nft.tier_level,
-                    "rarity": nft.rarity,
-                    "image_file": nft.image_file,
-                    "description": nft.description,
-                    "earned_at": nft.earned_at
-                } for nft in nfts
-            ]
-        }
-        
-    except Exception as e:
-        logger.error(f"Error getting profile: {e}")
-        return JSONResponse(
-            status_code=500,
-            content={"error": "Internal server error"}
-        )
-
-@app.post("/api/profile/create")
-async def create_user_profile(profile_data: dict):
-    """Create a new user profile."""
-    try:
-        profile_db = get_profile_db()
-        
-        # Use wallet address from profile_data or default test address
-        wallet_address = profile_data.get("wallet_address", "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0")
-        
-        # Log avatar_url info
-        avatar_url = profile_data.get("avatar_url")
-        if avatar_url:
-            logger.info(f"📸 Creating profile with avatar_url (size: {len(avatar_url)} chars)")
-        else:
-            logger.info("Creating profile without avatar")
-        
-        # Create UserProfile object
-        profile = UserProfile(
-            wallet_address=wallet_address,
-            username=profile_data.get("username"),
-            display_name=profile_data.get("display_name"),
-            bio=profile_data.get("bio"),
-            avatar_url=avatar_url,
-            location=profile_data.get("location"),
-            website=profile_data.get("website"),
-            twitter_handle=profile_data.get("twitter_handle"),
-            github_handle=profile_data.get("github_handle"),
-            linkedin_handle=profile_data.get("linkedin_handle"),
-            preferences=profile_data.get("preferences", {}),
-            settings=profile_data.get("settings", {})
-        )
-        
-        success = profile_db.create_profile(profile)
-        
-        if success:
-            logger.info(f"✅ Profile created successfully for {wallet_address}")
-            return {"message": "Profile created successfully", "wallet": wallet_address}
-        else:
-            return JSONResponse(
-                status_code=400,
-                content={"error": "Profile already exists"}
-            )
-            
-    except Exception as e:
-        logger.error(f"❌ Error creating profile: {e}")
-        return JSONResponse(
-            status_code=500,
-            content={"error": "Internal server error"}
-        )
-
-@app.put("/api/profile/update")
-async def update_user_profile(updates: dict):
-    """Update user profile."""
-    try:
-        print(f"\n{'='*80}")
-        print(f"🔥 PROFILE UPDATE REQUEST RECEIVED")
-        print(f"📦 Raw updates keys: {list(updates.keys())}")
-        print(f"{'='*80}\n")
-        
-        profile_db = get_profile_db()
-        
-        # Use wallet address from updates or default test address
-        wallet_address = updates.get("wallet_address", "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0")
-        
-        # Log avatar_url info
-        if "avatar_url" in updates:
-            avatar_url = updates.get("avatar_url")
-            if avatar_url:
-                print(f"📸 avatar_url FOUND: {len(avatar_url)} chars")
-                logger.info(f"📸 Updating profile with avatar_url (size: {len(avatar_url)} chars)")
-            else:
-                print(f"⚠️ avatar_url is EMPTY")
-                logger.info("Removing avatar from profile")
-        else:
-            print(f"❌ avatar_url NOT IN UPDATES")
-        
-        # Remove wallet_address from updates to avoid updating it
-        clean_updates = {k: v for k, v in updates.items() if k != "wallet_address" and v is not None}
-        print(f"🧹 clean_updates keys: {list(clean_updates.keys())}")
-        print(f"📸 avatar_url in clean_updates: {'avatar_url' in clean_updates}")
-        
-        logger.info(f"📝 Updating profile for {wallet_address} with fields: {list(clean_updates.keys())}")
-        
-        success = profile_db.update_profile(wallet_address, clean_updates)
-        
-        if success:
-            logger.info(f"✅ Profile updated successfully for {wallet_address}")
-            return {"message": "Profile updated successfully", "wallet": wallet_address}
-        else:
-            logger.warning(f"⚠️ Failed to update profile for {wallet_address}")
-            return JSONResponse(
-                status_code=400,
-                content={"error": "Failed to update profile"}
-            )
-            
-    except Exception as e:
-        logger.error(f"❌ Error updating profile: {e}")
-        return JSONResponse(
-            status_code=500,
-            content={"error": "Internal server error"}
-        )
-
-@app.post("/api/profile/skills/add")
-async def add_user_skill(
-    skill_data: dict,
-    wallet: str = Depends(get_current_wallet)
-):
-    """Add or update user skill."""
-    try:
-        profile_db = get_profile_db()
-        
-        skill = UserSkill(
-            wallet_address=wallet,
-            skill_name=skill_data["skill_name"],
-            skill_level=skill_data.get("skill_level", 0),
-            endorsements=skill_data.get("endorsements", 0),
-            is_verified=skill_data.get("is_verified", False)
-        )
-        
-        success = profile_db.add_skill(skill)
-        
-        if success:
-            return {"message": "Skill added successfully", "wallet": wallet}
-        else:
-            return JSONResponse(
-                status_code=400,
-                content={"error": "Failed to add skill"}
-            )
-            
-    except Exception as e:
-        logger.error(f"Error adding skill: {e}")
-        return JSONResponse(
-            status_code=500,
-            content={"error": "Internal server error"}
-        )
-
-@app.post("/api/profile/nfts/add")
-async def add_user_nft(
-    nft_data: dict,
-    wallet: str = Depends(get_current_wallet)
-):
-    """Add user NFT/achievement."""
-    try:
-        profile_db = get_profile_db()
-        
-        nft = UserNFT(
-            wallet_address=wallet,
-            nft_name=nft_data["nft_name"],
-            nft_type=nft_data["nft_type"],
-            tier_level=nft_data.get("tier_level"),
-            rarity=nft_data.get("rarity"),
-            image_file=nft_data.get("image_file"),
-            description=nft_data.get("description")
-        )
-        
-        success = profile_db.add_nft(nft)
-        
-        if success:
-            return {"message": "NFT added successfully", "wallet": wallet}
-        else:
-            return JSONResponse(
-                status_code=400,
-                content={"error": "Failed to add NFT"}
-            )
-            
-    except Exception as e:
-        logger.error(f"Error adding NFT: {e}")
-        return JSONResponse(
-            status_code=500,
-            content={"error": "Internal server error"}
-        )
-
-@app.get("/api/profile/tier/{wallet_address}")
-async def get_user_tier(wallet_address: str):
-    """Get user tier information."""
-    try:
-        profile_db = get_profile_db()
-        profile = profile_db.get_profile(wallet_address)
-        
-        if not profile:
-            return JSONResponse(
-                status_code=404,
-                content={"error": "Profile not found"}
-            )
-        
-        return {
-            "current_tier": profile.current_tier,
-            "tier_progress": profile.tier_progress,
-            "total_xp": profile.total_xp,
-            "next_tier_xp": (profile.current_tier + 1) * 1000  # Example calculation
-        }
-        
-    except Exception as e:
-        logger.error(f"Error getting tier: {e}")
-        return JSONResponse(
-            status_code=500,
-            content={"error": "Internal server error"}
-        )
+@app.exception_handler(404)
+async def not_found_handler(request: Request, exc):
     return JSONResponse(
         status_code=404,
         content={
@@ -2313,10 +363,14 @@ async def get_user_tier(wallet_address: str):
                 "timestamp": datetime.now().isoformat(),
                 "available_endpoints": [
                     "/health",
-                    "/api/full_flow",
-                    "/api/contract",
-                    "/api/agents/status",
-                    "/docs"
+                    "/docs",
+                    "/api/auth/*",
+                    "/api/wallets/*",
+                    "/api/contract*",
+                    "/api/agents/*",
+                    "/api/chat/*",
+                    "/api/profile/*",
+                    "/api/templates/*"
                 ]
             }
         }
@@ -2354,15 +408,19 @@ async def internal_server_error_handler(request: Request, exc):
         }
     )
 
+# ==================== MAIN ====================
+
 if __name__ == "__main__":
     import uvicorn
     
-    # Development server
-    port = int(os.getenv('PORT', 5000))
-    debug = os.getenv('DEBUG', 'False').lower() == 'true'
+    # Use centralized configuration
+    port = config.server.port
+    debug = config.server.debug
     
     logger.info(f"Starting GigChain FastAPI server on port {port}")
     logger.info(f"Debug mode: {debug}")
+    logger.info(f"Environment: {config.server.environment.value}")
+    logger.info(f"AI Agents enabled: {is_ai_agents_enabled()}")
     
     uvicorn.run(
         "main:app",

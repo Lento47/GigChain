@@ -7,7 +7,7 @@ import {
   BookmarkIcon,
   CurrencyDollarIcon,
   RocketLaunchIcon,
-  TrendingUpIcon,
+  ArrowTrendingUpIcon,
   ChartBarIcon,
   ClockIcon,
   FireIcon
@@ -115,7 +115,7 @@ const EngagementAnalytics: React.FC<{ postId?: string; userId?: string }> = ({
   const getBoostTypeInfo = (type: string) => {
     const boostTypes = {
       'views_boost': { name: 'Views Boost', color: 'text-blue-600 bg-blue-100 dark:bg-blue-900/20', icon: EyeIcon },
-      'visibility_boost': { name: 'Visibility Boost', color: 'text-green-600 bg-green-100 dark:bg-green-900/20', icon: TrendingUpIcon },
+      'visibility_boost': { name: 'Visibility Boost', color: 'text-green-600 bg-green-100 dark:bg-green-900/20', icon: ArrowTrendingUpIcon },
       'trending_boost': { name: 'Trending Boost', color: 'text-orange-600 bg-orange-100 dark:bg-orange-900/20', icon: FireIcon },
       'premium_placement': { name: 'Premium Placement', color: 'text-purple-600 bg-purple-100 dark:bg-purple-900/20', icon: RocketLaunchIcon }
     };
@@ -206,7 +206,7 @@ const EngagementAnalytics: React.FC<{ postId?: string; userId?: string }> = ({
 
               <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
                 <div className="flex items-center">
-                  <TrendingUpIcon className="h-8 w-8 text-green-600" />
+                  <ArrowTrendingUpIcon className="h-8 w-8 text-green-600" />
                   <div className="ml-3">
                     <p className="text-sm font-medium text-green-600 dark:text-green-400">
                       Engagement Rate

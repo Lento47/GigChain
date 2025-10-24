@@ -3,14 +3,15 @@ GigChain.io - AI Chat Module
 Sistema de chat inteligente con agentes especializados
 """
 
-import os
 import json
 import uuid
 from datetime import datetime
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Union
 from dataclasses import dataclass
 import logging
-from openai import OpenAI
+
+# Import centralized OpenAI service
+from services import get_openai_client, OpenAIClientProtocol, MockOpenAIClient
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +27,16 @@ class ChatSession:
 class ChatAgent:
     """Agente base para chat con IA"""
     
-    def __init__(self, model: str = "gpt-4o-mini", temperature: float = 0.7):
-        self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+    def __init__(self, model: str = "gpt-4o-mini", temperature: float = 0.7, client: Optional[Union[OpenAIClientProtocol, MockOpenAIClient]] = None):
+        """
+        Initialize chat agent with proper dependency injection.
+        
+        Args:
+            model: AI model to use
+            temperature: Temperature for AI responses
+            client: OpenAI client (injected dependency)
+        """
+        self.client = client or get_openai_client()
         self.model = model
         self.temperature = temperature
     

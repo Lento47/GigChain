@@ -134,13 +134,208 @@
   border-color: var(--primary-color);
 }
 
-/* Light theme specific adjustments */
-[data-theme="light"] .theme-toggle {
-  border: 1px solid var(--border-color);
+/* White theme specific adjustments */
+[data-theme="white"] .theme-toggle {
+  border: 1px solid var(--theme-border);
 }
 
-[data-theme="light"] .theme-toggle:hover {
-  background: var(--bg-tertiary);
-  border-color: var(--primary-color);
+[data-theme="white"] .theme-toggle:hover {
+  background: var(--theme-hover);
+  border-color: var(--theme-accent);
   box-shadow: var(--shadow-sm);
+}
+
+/* Theme Palette Styles */
+.theme-palette-container {
+  position: relative;
+  display: inline-block;
+}
+
+.theme-palette {
+  background: var(--theme-card-bg);
+  border: 1px solid var(--theme-border);
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--theme-text-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.theme-palette:hover {
+  background: var(--theme-hover);
+  border-color: var(--theme-accent);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.theme-palette:active {
+  transform: translateY(0);
+}
+
+.theme-palette__container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.theme-palette__label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--theme-text-primary);
+}
+
+/* Size variants for palette */
+.theme-palette--small {
+  padding: 6px 10px;
+}
+
+.theme-palette--small .theme-palette__container {
+  gap: 6px;
+}
+
+.theme-palette--medium {
+  padding: 8px 12px;
+}
+
+.theme-palette--large {
+  padding: 12px 16px;
+}
+
+/* Dropdown Styles */
+.theme-palette-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: var(--theme-card-bg);
+  border: 1px solid var(--theme-border);
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  min-width: 200px;
+  overflow: hidden;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.theme-palette-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--theme-border);
+  background: var(--theme-bg-secondary);
+}
+
+.theme-palette-header h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--theme-text-primary);
+}
+
+.theme-palette-options {
+  padding: 8px;
+}
+
+.theme-palette-option {
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 12px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  color: var(--theme-text-primary);
+  position: relative;
+}
+
+.theme-palette-option:hover {
+  background: var(--theme-hover);
+}
+
+.theme-palette-option.active {
+  background: var(--theme-accent);
+  color: white;
+}
+
+.theme-palette-option.active .theme-palette-option-name {
+  color: white;
+  font-weight: 600;
+}
+
+.theme-palette-option-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.theme-palette-option-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--theme-text-primary);
+}
+
+.theme-palette-option-desc {
+  font-size: 12px;
+  color: var(--theme-text-secondary);
+}
+
+.theme-palette-check {
+  font-size: 16px;
+  font-weight: bold;
+  color: white;
+}
+
+/* Update existing theme toggle styles to use new variables */
+.theme-toggle {
+  color: var(--theme-text-primary);
+}
+
+.theme-toggle:hover {
+  background: var(--theme-hover);
+}
+
+.theme-toggle__icon {
+  color: var(--theme-text-primary);
+}
+
+.theme-toggle__icon--white {
+  color: #f59e0b;
+}
+
+.theme-toggle__icon--dark {
+  color: var(--theme-accent);
+}
+
+.theme-toggle__icon--indigo {
+  color: var(--theme-accent-secondary);
+}
+
+.theme-toggle__label {
+  color: var(--theme-text-primary);
+}
+
+.theme-toggle:hover .theme-toggle__icon {
+  color: var(--theme-accent);
+}
+
+.theme-toggle:hover .theme-toggle__label {
+  color: var(--theme-text-primary);
 }

@@ -193,5 +193,8 @@ def sanitize_for_ai(input_data: Any) -> Any:
         return sanitizer.sanitize_agent_input(input_data)
     elif isinstance(input_data, str):
         return sanitizer.sanitize_text(input_data)
+    elif hasattr(input_data, '__dict__'):
+        # Handle dataclass or object with __dict__
+        return sanitizer.sanitize_agent_input(input_data.__dict__)
     else:
         return input_data

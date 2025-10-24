@@ -772,26 +772,26 @@
   background: linear-gradient(145deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.7));
 }
 
-/* Light Theme Specific Enhancements */
-[data-theme="light"] .ai-agents-view {
-  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+/* White Theme Specific Enhancements */
+[data-theme="white"] .ai-agents-view {
+  background: var(--theme-bg-primary);
 }
 
-[data-theme="light"] .agent-card {
-  background: #ffffff;
+[data-theme="white"] .agent-card {
+  background: var(--theme-card-bg);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
-[data-theme="light"] .agent-card:hover {
+[data-theme="white"] .agent-card:hover {
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
 }
 
-[data-theme="light"] .metric-item {
-  background: #f8fafc;
+[data-theme="white"] .metric-item {
+  background: var(--theme-bg-secondary);
 }
 
-[data-theme="light"] .metric-item:hover {
-  background: #f0f9ff;
+[data-theme="white"] .metric-item:hover {
+  background: var(--theme-hover);
 }
 
 /* Responsive Design - Optimized */

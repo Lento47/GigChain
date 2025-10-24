@@ -7,7 +7,7 @@ import {
   Award, Shield, Users, Target, Zap, Calendar,
   ArrowUpRight, ArrowDownRight, CheckCircle, AlertCircle,
   Info, Download, ExternalLink, MessageSquare, Eye,
-  TrendingUpIcon as CompareIcon
+  TrendingUp as CompareIcon
 } from 'lucide-react';
 import './AnalyticsWeb3.css';
 
